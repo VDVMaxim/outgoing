@@ -1,0 +1,238 @@
+{
+  "@@locale": "fr",
+  "appName": "Club App",
+
+  "navHome": "Accueil",
+  "navMap": "Carte",
+  "navActivities": "Sorties",
+  "navSettings": "Réglages",
+
+  "onboardingSkip": "Passer",
+  "onboardingNext": "Suivant",
+  "onboardingStart": "Démarrer",
+  "onboarding1Title": "Découvrez votre ville",
+  "onboarding1Desc": "Voyez d'un coup d'œil quels quartiers sont animés, trouvez vos clubs préférés et planifiez votre nuit avec notre carte interactive.",
+  "onboarding2Title": "Mode Squad",
+  "onboarding2Desc": "Ne perdez plus jamais vos amis. Créez un Squad avec un code PIN et partagez temporairement votre position sur la carte. S'arrête automatiquement à 6h du matin.",
+  "onboarding3Title": "Confort & Sécurité",
+  "onboarding3Desc": "Recherchez spécifiquement des clubs avec de l'eau gratuite, des zones chill sécurisées et consultez les 'Vibes' en temps réel confirmées par les visiteurs.",
+  "onboarding4Title": "Votre avis compte",
+  "onboarding4Desc": "Cette app est développée chaque semaine pour et par les étudiants. Envoyez des bugs ou des commentaires en 1 clic depuis les réglages.",
+
+  "onboardingNicknameTitle": "Quel est votre nom ?",
+  "onboardingNicknameDesc": "Choisissez un pseudo pour que vos copains de squad sachent qui vous êtes.",
+  "onboardingNicknameHint": "Votre pseudo...",
+  "onboardingNicknameGenerate": "Générer un pseudo aléatoire",
+  "onboardingLocationTitle": "Découvrez l'Ambiance",
+  "onboardingLocationDesc": "Nous utilisons votre position pour montrer en direct quels clubs sont à proximité et quelle est l'ambiance actuelle. Pas de compte nécessaire, restez anonyme.",
+  "onboardingLocationAllow": "Autoriser la Position",
+  "onboardingLocationSkip": "Peut-être Plus Tard",
+
+  "homeHighlightsTitle": "Top 3 à la une",
+  "homeTrendingTitle": "Tendances : Les plus populaires",
+  "homeAlertTitle": "Attention : Contrôle policier",
+  "homeAlertDesc": "Une forte affluence et un contrôle policier ont été signalés au début de l'Overpoortstraat. Soyez prudent.",
+
+  "activitiesTitle": "Sorties & Promotions",
+  "activitiesSearchHint": "Rechercher par association, club, thème...",
+  "activitiesEmpty": "Aucune sortie trouvée.",
+  "activitiesDetails": "Détails",
+  "activitiesUnknownCrowd": "Inconnu",
+
+  "mapSearchHint": "Rechercher par quartier ou club...",
+  "mapFood": "Manger",
+  "mapFilters": "Filtres",
+  "mapClearAll": "Tout effacer",
+  "mapCategories": "Catégories",
+  "mapOpenClubs": "{count} clubs ouverts",
+  "@mapOpenClubs": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mapOnline": "En ligne",
+  "mapLastSeen": "Vu pour la dernière fois",
+  "mapJustNow": "à l'instant",
+  "mapMinuteAgo": "il y a 1 minute",
+  "mapMinutesAgo": "il y a {count} minutes",
+  "@mapMinutesAgo": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mapHourAgo": "il y a 1 heure",
+  "mapHoursAgo": "il y a {count} heures",
+  "@mapHoursAgo": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "clubVibeTitle": "Ambiance",
+  "clubVibeConfirmed": "confirmé il y a {minutes} min",
+  "@clubVibeConfirmed": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "clubVibeUpdate": "Mettre à jour",
+  "clubRoute": "Itinéraire",
+  "clubTaxi": "Taxi",
+  "clubUnknownCrowd": "Inconnu",
+
+  "toastLocationUnknown": "Position inconnue, impossible de vérifier l'ambiance.",
+  "toastTooFarAway": "Vous êtes à {distance}m. Vous devez être à moins de 50m.",
+  "@toastTooFarAway": {
+    "placeholders": {
+      "distance": { "type": "int" }
+    }
+  },
+
+  "squadTitle": "Mode Squad",
+  "squadSubtitle": "Ne perdez pas vos amis de vue.",
+  "squadDesc": "Voyez où sont vos amis sur la carte jusqu'à 06:00. Ensuite, le Squad disparaît automatiquement pour la confidentialité de tous.",
+  "squadCreate": "Créer un nouveau Squad",
+  "squadJoin": "Rejoindre",
+  "squadOr": "OU REJOINDRE",
+  "squadPinHint": "Entrez un PIN à 6 chiffres",
+  "squadPinLabel": "VOTRE PIN SQUAD",
+  "squadMembers": "Membres actifs ({count}/10)",
+  "@squadMembers": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "squadYou": "Vous (Anonyme)",
+  "squadSharingOn": "Partage de localisation activé",
+  "squadSharingLive": "La position est partagée en direct",
+  "squadLeave": "Quitter le Squad",
+  "squadWrongPin": "Le PIN est incorrect ou la session n'existe pas.",
+  "squadLocationRequired": "Position Requise",
+  "squadLocationDesc": "Le mode Squad a besoin de votre position pour partager avec les membres. Votre position n'est partagée que pendant un squad actif.",
+  "squadEnableLocation": "Activer la Position",
+  "squadNicknameRequired": "Pseudo Requis",
+  "squadNicknameRequiredDesc": "Vous devez définir un pseudo avant de rejoindre un squad. Allez dans Réglages pour définir votre pseudo.",
+  "squadError": "Erreur",
+  "squadPinCopied": "PIN copié",
+  "squadCopyPin": "Copier le PIN",
+  "squadScanQR": "Scanner le code QR",
+  "squadOffline": "Hors ligne",
+  "squadOnline": "En ligne",
+  "squadFailedToJoin": "Impossible de rejoindre le squad",
+  "squadFailedToCreate": "Impossible de créer le squad",
+  "squadNicknameFirst": "Veuillez d'abord définir un pseudo dans Réglages",
+  "squadLocationRequiredToast": "La permission de localisation est requise pour le mode squad",
+
+  "settingsTitle": "Réglages",
+  "settingsSquadProfile": "Profil Squad",
+  "settingsNickname": "Pseudo",
+  "settingsNoNickname": "Aucun pseudo défini",
+  "settingsNicknameHint": "Définissez un pseudo pour le mode squad",
+  "settingsChangeNickname": "Changer le Pseudo",
+  "settingsNicknameSet": "Pseudo défini sur : {nickname}",
+  "@settingsNicknameSet": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "settingsSetNickname": "Définir le Pseudo",
+  "settingsSave": "Enregistrer",
+  "settingsDisplay": "Affichage",
+  "settingsDarkMode": "Mode sombre",
+  "settingsNotifications": "Notifications & Confidentialité",
+  "settingsPushNotifs": "Notifications push",
+  "settingsPushNotifsSub": "Pour les Flash Promos et alertes Squad",
+  "settingsAnonSession": "Session anonyme",
+  "settingsAnonSessionSub": "ID d'appareil lié",
+  "settingsDestroySession": "Détruire la session",
+  "settingsDestroySessionTitle": "Effacer la session ?",
+  "settingsDestroySessionDesc": "Cela effacera votre session anonyme. Vous n'êtes connecté nulle part de façon permanente.",
+  "settingsCancel": "Annuler",
+  "settingsDelete": "Effacer",
+  "settingsAbout": "À propos de Club App",
+  "settingsFeedback": "Signaler des bugs & commentaires",
+  "settingsFeedbackSub": "Aidez à améliorer l'application",
+  "settingsLanguage": "Langue",
+  "settingsLanguageNl": "Nederlands",
+  "settingsLanguageFr": "Français",
+  "settingsLanguageEn": "English",
+
+  "splashSetupVerifying": "Vérification des services et des données…",
+  "splashSetupReady": "Tout est prêt",
+  "splashSetupErrorTitle": "Impossible de vérifier la configuration",
+  "splashSetupErrorTimeout": "Délai dépassé. Vérifiez le réseau et réessayez.",
+  "splashSetupErrorGeneric": "Une erreur s'est produite. Vérifiez la connexion et réessayez.",
+  "splashRetry": "Réessayer",
+
+  "optionScreenTitle": "Comment voulez-vous commencer ?",
+  "optionScreenAnonymous": "Rester anonyme",
+  "optionScreenAnonymousDesc": "Vous pouvez toujours créer un compte plus tard",
+  "optionScreenCreateAccount": "Créer un compte",
+  "optionScreenCreateAccountDesc": "Enregistrez votre profil et synchronisez sur tous les appareils",
+
+  "accountFormTitle": "Créer un compte",
+  "accountFormFirstName": "Prénom",
+  "accountFormLastName": "Nom",
+  "accountFormEmail": "Email",
+  "accountFormBirthday": "Date de naissance",
+  "accountFormBirthdayRequired": "Veuillez sélectionner votre date de naissance",
+  "accountFormBirthdaySelect": "Sélectionner la date",
+  "accountFormPersonalInfo": "À propos de vous",
+  "accountFormPersonalInfoDesc": "Parlez-nous de vous",
+  "accountFormEmailDesc": "Votre email est uniquement utilisé pour vous connecter",
+  "accountFormNickname": "Pseudo pour Squad",
+  "accountFormNicknameHint": "Votre pseudo est uniquement visible pour les membres du squad",
+  "accountFormPassword": "Mot de passe",
+  "accountFormPasswordHint": "Au moins 6 caractères",
+  "accountFormConfirmPassword": "Confirmer le mot de passe",
+  "accountFormPasswordMismatch": "Les mots de passe ne correspondent pas",
+  "accountFormNext": "Suivant",
+  "accountFormCreate": "Créer un Compte",
+  "accountFormAlreadyHave": "Vous avez déjà un compte ?",
+  "accountFormLogin": "Se connecter",
+  "accountFormRequired": "Ce champ est obligatoire",
+  "accountFormInvalidEmail": "Adresse email invalide",
+  "accountFormEmailTaken": "Cette adresse email est déjà utilisée",
+  "accountFormMinPassword": "Le mot de passe doit contenir au moins 6 caractères",
+
+  "creatingTitle": "Création du compte...",
+  "creatingError": "Quelque chose s'est mal passé. Veuillez réessayer.",
+
+  "accountSuccessTitle": "Bienvenue, {name} !",
+  "@accountSuccessTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "accountSuccessSubtitle": "Votre profil a été créé",
+  "accountSuccessContinue": "Continuer",
+
+  "loginTitle": "Se connecter",
+  "loginEmail": "Email",
+  "loginPassword": "Mot de passe",
+  "loginButton": "Se connecter",
+  "loginInvalidCredentials": "Email ou mot de passe incorrect",
+  "loginNoAccount": "Pas encore de compte ?",
+  "loginRegister": "S'inscrire",
+
+  "settingsAnonymous": "Anonyme",
+  "settingsLogin": "Se connecter",
+  "settingsLogout": "Se déconnecter",
+  "settingsLogoutConfirm": "Êtes-vous sûr ? Votre pseudo sera sauvegardé.",
+  "settingsDeleteAccount": "Supprimer le compte",
+  "settingsDeleteAccountDesc": "Toutes les données seront définitivement supprimées",
+  "settingsDeleteAccountConfirm": "Supprimer le compte ?",
+  "settingsDeleteAccountWarning": "Toutes vos données seront définitivement supprimées. Cette action ne peut pas être annulée.",
+  "settingsOk": "OK",
+  "settingsYes": "Oui",
+  "settingsNo": "Non",
+
+  "settingsAccount": "Compte",
+  "settingsHelpSupport": "Aide & Support",
+  "settingsReportBug": "Signaler un bug",
+  "settingsRateApp": "Noter l'app",
+  "settingsShareApp": "Partager l'app",
+  "settingsPreferences": "Préférences",
+  "settingsTerms": "Conditions d'utilisation",
+  "settingsPrivacy": "Politique de confidentialité"
+}

@@ -1,0 +1,238 @@
+{
+  "@@locale": "nl",
+  "appName": "Club App",
+
+  "navHome": "Home",
+  "navMap": "Kaart",
+  "navActivities": "Acties",
+  "navSettings": "Instellingen",
+
+  "onboardingSkip": "Overslaan",
+  "onboardingNext": "Volgende",
+  "onboardingStart": "Starten",
+  "onboarding1Title": "Ontdek je stad",
+  "onboarding1Desc": "Bekijk in één oogopslag welke buurten bruisen, vind je favoriete clubs en plan je nachtleven met onze interactieve kaart.",
+  "onboarding2Title": "Squad Mode",
+  "onboarding2Desc": "Raak nooit meer je vrienden kwijt. Creëer een Squad via een pincode en deel tijdelijk jullie locatie op de kaart. Stopt automatisch om 6 uur 's ochtends.",
+  "onboarding3Title": "Comfort & Veiligheid",
+  "onboarding3Desc": "Zoek specifiek naar clubs met gratis water, veilige chillzones en bekijk real-time 'Vibes' die door mede-bezoekers bevestigd zijn.",
+  "onboarding4Title": "Jouw Stem Telt",
+  "onboarding4Desc": "Deze app is wekelijks in ontwikkeling vóór en dóór de student. Bugs of feedback stuur je in 1 klik in de instellingen door.",
+
+  "onboardingNicknameTitle": "Wat is je naam?",
+  "onboardingNicknameDesc": "Kies een nickname om je squad mates te laten weten wie je bent.",
+  "onboardingNicknameHint": "Je nickname...",
+  "onboardingNicknameGenerate": "Genereer random nickname",
+  "onboardingLocationTitle": "Ontdek de Vibe",
+  "onboardingLocationDesc": "We gebruiken je locatie om live te tonen welke clubs dichtbij zijn en wat de actuele sfeer is. Geen account nodig, blijf anoniem.",
+  "onboardingLocationAllow": "Locatie Toestaan",
+  "onboardingLocationSkip": "Misschien Later",
+
+  "homeHighlightsTitle": "Top 3 Highlights",
+  "homeTrendingTitle": "Trending: Meest Populair",
+  "homeAlertTitle": "Let op: Controleactie",
+  "homeAlertDesc": "Er is momenteel veel drukte en politiecontrole gemeld aan het begin van de Overpoortstraat. Wees voorzichtig.",
+
+  "activitiesTitle": "Activiteiten & Acties",
+  "activitiesSearchHint": "Zoek vereniging, club, thema...",
+  "activitiesEmpty": "Geen acties gevonden.",
+  "activitiesDetails": "Details",
+  "activitiesUnknownCrowd": "Onbekend",
+
+  "mapSearchHint": "Zoek op wijk of club...",
+  "mapFood": "Eten",
+  "mapFilters": "Filters",
+  "mapClearAll": "Alles wissen",
+  "mapCategories": "Categorieën",
+  "mapOpenClubs": "{count} clubs open",
+  "@mapOpenClubs": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mapOnline": "Online",
+  "mapLastSeen": "Laatst gezien",
+  "mapJustNow": "zojuist",
+  "mapMinuteAgo": "1 minuut geleden",
+  "mapMinutesAgo": "{count} minuten geleden",
+  "@mapMinutesAgo": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mapHourAgo": "1 uur geleden",
+  "mapHoursAgo": "{count} uur geleden",
+  "@mapHoursAgo": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "clubVibeTitle": "Vibe",
+  "clubVibeConfirmed": "{minutes} min geleden bevestigd",
+  "@clubVibeConfirmed": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "clubVibeUpdate": "Update",
+  "clubRoute": "Route",
+  "clubTaxi": "Taxi",
+  "clubUnknownCrowd": "Onbekend",
+
+  "toastLocationUnknown": "Locatie onbekend, kan Vibe niet checken.",
+  "toastTooFarAway": "Je bent {distance}m verwijderd. Je moet binnen 50m zijn.",
+  "@toastTooFarAway": {
+    "placeholders": {
+      "distance": { "type": "int" }
+    }
+  },
+
+  "squadTitle": "Squad Mode",
+  "squadSubtitle": "Verlies elkaar niet uit het oog.",
+  "squadDesc": "Zien waar je maten zijn op de kaart tot 06:00. Danana verdwijnt de Squad automatisch voor ieders privacy.",
+  "squadCreate": "Nieuwe Squad Maken",
+  "squadJoin": "Deelnemen",
+  "squadOr": "OF DEELNEMEN",
+  "squadPinHint": "Voer 6-cijferige PIN in",
+  "squadPinLabel": "JULLIE SQUAD PIN",
+  "squadMembers": "Actieve Leden ({count}/10)",
+  "@squadMembers": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "squadYou": "Jij (Anoniem)",
+  "squadSharingOn": "Locatie delen staat aan",
+  "squadSharingLive": "Live locatie wordt gedeeld",
+  "squadLeave": "Squad Verlaten",
+  "squadWrongPin": "Pin is onjuist of sessie bestaat niet.",
+  "squadLocationRequired": "Locatie Nodig",
+  "squadLocationDesc": "Squad mode heeft je locatie nodig om je positie te delen met squad leden. Je locatie wordt alleen gedeeld tijdens een actieve squad.",
+  "squadEnableLocation": "Locatie Inschakelen",
+  "squadNicknameRequired": "Nickname Nodig",
+  "squadNicknameRequiredDesc": "Je moet een nickname instellen voordat je bij een squad kan. Ga naar Instellingen om je nickname in te stellen.",
+  "squadError": "Fout",
+  "squadPinCopied": "PIN gekopieerd",
+  "squadCopyPin": "Kopieer PIN",
+  "squadScanQR": "Scan QR code",
+  "squadOffline": "Offline",
+  "squadOnline": "Online",
+  "squadFailedToJoin": "Kon niet deelnemen aan squad",
+  "squadFailedToCreate": "Kon geen squad maken",
+  "squadNicknameFirst": "Stel eerst een nickname in bij Instellingen",
+  "squadLocationRequiredToast": "Locatie toestemming is nodig voor squad modus",
+
+  "settingsTitle": "Instellingen",
+  "settingsSquadProfile": "Squad Profiel",
+  "settingsNickname": "Nickname",
+  "settingsNoNickname": "Geen nickname ingesteld",
+  "settingsNicknameHint": "Stel een nickname in voor squad modus",
+  "settingsChangeNickname": "Nickname Wijzigen",
+  "settingsNicknameSet": "Nickname ingesteld op: {nickname}",
+  "@settingsNicknameSet": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "settingsSetNickname": "Nickname Instellen",
+  "settingsSave": "Opslaan",
+  "settingsDisplay": "Weergave",
+  "settingsDarkMode": "Dark Mode",
+  "settingsNotifications": "Meldingen & Privacy",
+  "settingsPushNotifs": "Push Notificaties",
+  "settingsPushNotifsSub": "Voor Flash Promo's en Squad alerts",
+  "settingsAnonSession": "Anonieme Sessie",
+  "settingsAnonSessionSub": "Device ID gelinkt",
+  "settingsDestroySession": "Sessie Vernietigen",
+  "settingsDestroySessionTitle": "Sessie wissen?",
+  "settingsDestroySessionDesc": "Dit wist je anonieme sessie. Je bent momenteel nergens permanent ingelogd.",
+  "settingsCancel": "Annuleren",
+  "settingsDelete": "Wissen",
+  "settingsAbout": "Over Club App",
+  "settingsFeedback": "Bugs & Feedback Rapporteren",
+  "settingsFeedbackSub": "Help de app beter te maken",
+  "settingsLanguage": "Taal",
+  "settingsLanguageNl": "Nederlands",
+  "settingsLanguageFr": "Français",
+  "settingsLanguageEn": "English",
+
+  "splashSetupVerifying": "Services en data controleren…",
+  "splashSetupReady": "Alles in orde",
+  "splashSetupErrorTitle": "Setup kon niet worden gecontroleerd",
+  "splashSetupErrorTimeout": "Time-out. Controleer je netwerk en probeer opnieuw.",
+  "splashSetupErrorGeneric": "Er ging iets mis. Controleer je verbinding en probeer opnieuw.",
+  "splashRetry": "Opnieuw proberen",
+
+  "optionScreenTitle": "Hoe wil je beginnen?",
+  "optionScreenAnonymous": "Anoniem blijven",
+  "optionScreenAnonymousDesc": "Je kunt later altijd nog een account aanmaken",
+  "optionScreenCreateAccount": "Account aanmaken",
+  "optionScreenCreateAccountDesc": "Bewaar je profiel en sync across apparaten",
+
+  "accountFormTitle": "Account aanmaken",
+  "accountFormFirstName": "Voornaam",
+  "accountFormLastName": "Achternaam",
+  "accountFormEmail": "Email",
+  "accountFormBirthday": "Geboortedatum",
+  "accountFormBirthdayRequired": "Selecteer je geboortedatum",
+  "accountFormBirthdaySelect": "Selecteer datum",
+  "accountFormPersonalInfo": "Over jou",
+  "accountFormPersonalInfoDesc": "Vertel ons wie je bent",
+  "accountFormEmailDesc": "Je email wordt alleen gebruikt om in te loggen",
+  "accountFormNickname": "Nickname voor Squad",
+  "accountFormNicknameHint": "Je nickname is alleen zichtbaar voor squad-leden",
+  "accountFormPassword": "Wachtwoord",
+  "accountFormPasswordHint": "Minimaal 6 tekens",
+  "accountFormConfirmPassword": "Bevestig wachtwoord",
+  "accountFormPasswordMismatch": "Wachtwoorden komen niet overeen",
+  "accountFormNext": "Volgende",
+  "accountFormCreate": "Account Aanmaken",
+  "accountFormAlreadyHave": "Heb je al een account?",
+  "accountFormLogin": "Inloggen",
+  "accountFormRequired": "Dit veld is verplicht",
+  "accountFormInvalidEmail": "Ongeldig email adres",
+  "accountFormEmailTaken": "Dit email adres is al in gebruik",
+  "accountFormMinPassword": "Wachtwoord moet minimaal 6 tekens zijn",
+
+  "creatingTitle": "Account aanmaken...",
+  "creatingError": "Er ging iets mis. Probeer opnieuw.",
+
+  "accountSuccessTitle": "Welkom, {name}!",
+  "@accountSuccessTitle": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "accountSuccessSubtitle": "Je profiel is aangemaakt",
+  "accountSuccessContinue": "Doorgaan",
+
+  "loginTitle": "Inloggen",
+  "loginEmail": "Email",
+  "loginPassword": "Wachtwoord",
+  "loginButton": "Inloggen",
+  "loginInvalidCredentials": "Email of wachtwoord is incorrect",
+  "loginNoAccount": "Nog geen account?",
+  "loginRegister": "Registreren",
+
+  "settingsAnonymous": "Anoniem",
+  "settingsLogin": "Inloggen",
+  "settingsLogout": "Uitloggen",
+  "settingsLogoutConfirm": "Weet je het zeker? Je nickname blijft bewaard.",
+  "settingsDeleteAccount": "Account verwijderen",
+  "settingsDeleteAccountDesc": "Alle data wordt permanent verwijderd",
+  "settingsDeleteAccountConfirm": "Account verwijderen?",
+  "settingsDeleteAccountWarning": "Al je data wordt permanent verwijderd. Deze actie kan niet ongedaan worden.",
+  "settingsOk": "OK",
+  "settingsYes": "Ja",
+  "settingsNo": "Nee",
+
+  "settingsAccount": "Account",
+  "settingsHelpSupport": "Help & Support",
+  "settingsReportBug": "Een bug melden",
+  "settingsRateApp": "App beoordelen",
+  "settingsShareApp": "App delen",
+  "settingsPreferences": "Voorkeuren",
+  "settingsTerms": "Algemene Voorwaarden",
+  "settingsPrivacy": "Privacy Policy"
+}
