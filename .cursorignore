@@ -1,0 +1,6 @@
+# AI Agent Ignore Files
+# Prevent AI assistants from reading your API keys
+
+.env
+.env.*
+lib/core/constants/env.g.dart

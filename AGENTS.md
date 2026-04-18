@@ -3,6 +3,7 @@
 ## Project Description
 
 A Flutter mobile app for club/venue discovery with features for:
+
 - Club and venue discovery with map-based navigation
 - Real-time "vibe" checking (crowd level status)
 - Squad Mode for sharing location with friends
@@ -13,11 +14,13 @@ A Flutter mobile app for club/venue discovery with features for:
 ## Architecture
 
 ### State Management
+
 - **Riverpod** for dependency injection and state management
 - **ValueNotifier** for theme and locale state (defined in `main.dart`)
 - Provider-based architecture: `authProvider`, `favoritesProvider`, `squadProvider`
 
 ### Navigation Flow
+
 ```
 SplashScreen → OnboardingIntroScreen (4 pages) → OptionScreen
                                                            ↓
@@ -29,6 +32,7 @@ SplashScreen → OnboardingIntroScreen (4 pages) → OptionScreen
 ```
 
 ### Data Layer
+
 - **Repositories**: Abstract data sources via interfaces
   - `ClubRepository` - places/clubs data
   - `SquadRepository` - squad management
@@ -53,30 +57,35 @@ SplashScreen → OnboardingIntroScreen (4 pages) → OptionScreen
 ## Key Features Implementation
 
 ### 1. Animated Background
+
 - `AnimatedBlurBackground` widget wraps content in Stack
 - 4 gradient circles (purple, blue, pink, cyan) with sinusoidal animation
 - Duration: 60 seconds for seamless looping
 - Applied to: Home, Activities, Settings screens via MainNavigation
 
 ### 2. Home Highlights Carousel
+
 - Full-width PageView (no viewportFraction)
 - Scale animation on scroll (Transform.scale)
 - Page indicators
 - Cards have semi-transparent background (0xCC dark / 0.8 light)
 
 ### 3. Onboarding Flow
+
 - **Intro**: 4 swipeable pages (Welcome → SquadMode → ComfortSafety → VoiceMatters)
 - **Option**: Anonymous vs authenticated choice
 - **Setup**: 3 steps (Nickname required for anonymous, Location/Complete for all)
 - Nickname generator for random anonymous names
 
 ### 4. Squad Mode
+
 - Real-time location sharing with friends
 - PIN-based join system
 - Auto-disappear at 6 AM for privacy
 - Pulse animation on current user avatar
 
 ### 5. Auth
+
 - Anonymous mode with device-linked profile
 - Supabase authentication for account creation
 - Profile sync across devices
@@ -93,6 +102,7 @@ SplashScreen → OnboardingIntroScreen (4 pages) → OptionScreen
 ## Localization
 
 Supported locales: `nl`, `en`, `fr`
+
 - ARB files in `lib/l10n/`
 - AppLocalizations for string access
 

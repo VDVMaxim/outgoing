@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
+import 'package:flutter_clubapp/core/constants/env.dart';
 import 'features/onboarding/screens/splash_screen.dart';
 import 'core/config/supabase_config.dart';
 import 'core/config/supabase_client.dart';
@@ -13,10 +14,6 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 final ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
 
 const Color _kSplashSurface = Color(0xFF09090B);
-
-const _supabaseUrl = 'https://gucwsgnxvawtfrnhnqtw.supabase.co';
-const _supabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1Y3dzZ254dmF3dGZybmhucXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNTUyMzgsImV4cCI6MjA5MTgzMTIzOH0.lhrZ0RAs9PzCf3tCBloim-tpsAB9_wifNtqTgu169ws';
 
 ThemeData _appThemeForBrightness(Brightness brightness) {
   if (brightness == Brightness.dark) {
@@ -32,8 +29,8 @@ ThemeData _appThemeForBrightness(Brightness brightness) {
 
 Future<void> _initializeSupabase() async {
   if (!await SupabaseConfig.hasCredentials()) {
-    await SupabaseConfig.setUrl(_supabaseUrl);
-    await SupabaseConfig.setAnonKey(_supabaseAnonKey);
+    await SupabaseConfig.setUrl(Env.supabaseUrl);
+    await SupabaseConfig.setAnonKey(Env.supabaseAnonKey);
   }
 
   await SupabaseClientProvider.initialize();
