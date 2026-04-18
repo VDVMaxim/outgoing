@@ -176,6 +176,8 @@
   "optionScreenAnonymousDesc": "You can always create an account later",
   "optionScreenCreateAccount": "Create account",
   "optionScreenCreateAccountDesc": "Save your profile and sync across devices",
+  "optionScreenLogin": "Log in",
+  "optionScreenLoginDesc": "Already have an account? Sign in to sync your progress",
 
   "accountFormTitle": "Create account",
   "accountFormFirstName": "First name",

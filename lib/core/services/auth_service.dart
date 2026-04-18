@@ -10,11 +10,9 @@ class AuthResult {
 }
 
 class AuthService {
-  static final AuthService _instance = AuthService._internal();
-  factory AuthService() => _instance;
-  AuthService._internal();
-
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+  
+  AuthService(this._supabase);
 
   bool get isAuthenticated => _supabase.auth.currentUser != null;
   String? get userId => _supabase.auth.currentUser?.id;
@@ -32,7 +30,6 @@ class AuthService {
         email: email,
         password: password,
       );
-
       if (response.user != null) {
         await _supabase.from('profiles').insert({
           'user_id': response.user!.id,
@@ -42,10 +39,8 @@ class AuthService {
           'birthday': birthday.toIso8601String().split('T')[0],
           'nickname': nickname,
         });
-
         return AuthResult(status: AuthResultStatus.success);
       }
-
       return AuthResult(
         status: AuthResultStatus.error,
         errorMessage: 'Unknown error occurred',
@@ -57,53 +52,32 @@ class AuthService {
           errorMessage: 'Dit email adres is al in gebruik',
         );
       }
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.message,
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.message);
     } catch (e) {
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.toString(),
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
     }
   }
 
-  Future<AuthResult> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<AuthResult> signIn({required String email, required String password}) async {
     try {
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
-
       if (response.user != null) {
         return AuthResult(status: AuthResultStatus.success);
       }
-
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: 'Unknown error occurred',
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: 'Unknown error occurred');
     } on AuthException catch (e) {
-      if (e.message.contains('Invalid login') ||
-          e.message.contains('Invalid credentials')) {
+      if (e.message.contains('Invalid login') || e.message.contains('Invalid credentials')) {
         return AuthResult(
           status: AuthResultStatus.invalidCredentials,
           errorMessage: 'Email of wachtwoord is incorrect',
         );
       }
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.message,
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.message);
     } catch (e) {
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.toString(),
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
     }
   }
 
@@ -115,22 +89,13 @@ class AuthService {
     try {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
-        return AuthResult(
-          status: AuthResultStatus.error,
-          errorMessage: 'Not logged in',
-        );
+        return AuthResult(status: AuthResultStatus.error, errorMessage: 'Not logged in');
       }
-
       await _supabase.from('profiles').delete().eq('user_id', userId);
-
       await _supabase.auth.admin.deleteUser(userId);
-
       return AuthResult(status: AuthResultStatus.success);
     } catch (e) {
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.toString(),
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
     }
   }
 
@@ -143,7 +108,6 @@ class AuthService {
         .select('nickname')
         .eq('user_id', userId)
         .maybeSingle();
-
     return profile?['nickname'];
   }
 
@@ -156,7 +120,6 @@ class AuthService {
         .select()
         .eq('user_id', userId)
         .maybeSingle();
-
     return profile;
   }
 }

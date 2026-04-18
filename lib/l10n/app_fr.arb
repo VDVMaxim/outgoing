@@ -176,6 +176,8 @@
   "optionScreenAnonymousDesc": "Vous pouvez toujours créer un compte plus tard",
   "optionScreenCreateAccount": "Créer un compte",
   "optionScreenCreateAccountDesc": "Enregistrez votre profil et synchronisez sur tous les appareils",
+  "optionScreenLogin": "Se connecter",
+  "optionScreenLoginDesc": "Vous avez déjà un compte ? Connectez-vous pour synchroniser votre progression",
 
   "accountFormTitle": "Créer un compte",
   "accountFormFirstName": "Prénom",

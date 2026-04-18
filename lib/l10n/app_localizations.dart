@@ -874,6 +874,18 @@ abstract class AppLocalizations {
   /// **'Bewaar je profiel en sync across apparaten'**
   String get optionScreenCreateAccountDesc;
 
+  /// No description provided for @optionScreenLogin.
+  ///
+  /// In nl, this message translates to:
+  /// **'Inloggen'**
+  String get optionScreenLogin;
+
+  /// No description provided for @optionScreenLoginDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Heb je al een account? Log in om je voortgang te sync.'**
+  String get optionScreenLoginDesc;
+
   /// No description provided for @accountFormTitle.
   ///
   /// In nl, this message translates to:

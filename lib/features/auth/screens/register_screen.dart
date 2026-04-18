@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/widgets/app_text_field.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker.dart';
 import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
@@ -32,7 +32,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
   String? _firstNameError;
   String? _lastNameError;
   String? _birthdayError;
@@ -360,104 +359,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildPersonalInfoPage(bool isDark, AppLocalizations l10n) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.accountFormPersonalInfo,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.accountFormPersonalInfoDesc,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.white70 : Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 32),
-          AppTextField(
-            controller: _firstNameController,
-            placeholder: l10n.accountFormFirstName,
-            errorText: _firstNameError,
-            onChanged: (_) {
-              if (_firstNameError != null) {
-                setState(() => _firstNameError = null);
-              }
-            },
-          ),
-          const SizedBox(height: 20),
-          AppTextField(
-            controller: _lastNameController,
-            placeholder: l10n.accountFormLastName,
-            errorText: _lastNameError,
-            onChanged: (_) {
-              if (_lastNameError != null) {
-                setState(() => _lastNameError = null);
-              }
-            },
-          ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.accountFormBirthday,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _selectBirthday,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.black.withValues(alpha: 0.05),
-                border: Border.all(
-                  color: _birthdayError != null
-                      ? Colors.red
-                      : (isDark ? Colors.white24 : Colors.black12),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    _birthday != null
-                        ? '${_birthday!.day}/${_birthday!.month}/${_birthday!.year}'
-                        : l10n.accountFormBirthdaySelect,
-                    style: TextStyle(
-                      color: _birthday != null
-                          ? (isDark ? Colors.white : Colors.black)
-                          : Colors.grey,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.calendar_today, color: Colors.grey[600], size: 20),
-                ],
-              ),
-            ),
-          ),
-          if (_birthdayError != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _birthdayError!,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildFirstNamePage(bool isDark, AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -490,7 +391,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             errorText: _firstNameError,
             autofocus: true,
             onChanged: (_) {
-              if (_firstNameError != null) {
+               if (_firstNameError != null) {
                 setState(() => _firstNameError = null);
               }
             },
@@ -532,7 +433,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             errorText: _lastNameError,
             autofocus: true,
             onChanged: (_) {
-              if (_lastNameError != null) {
+               if (_lastNameError != null) {
                 setState(() => _lastNameError = null);
               }
             },
@@ -607,7 +508,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             const SizedBox(height: 8),
             Text(
               _birthdayError!,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
+               style: const TextStyle(color: Colors.red, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],
@@ -736,7 +637,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             },
             onChanged: (_) {
               if (_confirmPasswordError != null) {
-                setState(() => _confirmPasswordError = null);
+                 setState(() => _confirmPasswordError = null);
               }
             },
           ),

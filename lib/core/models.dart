@@ -1,4 +1,5 @@
 export 'models/place.dart';
 export 'models/vibe_check.dart';
+export 'models/vibe_profile.dart';
 export 'models/squad.dart';
 export 'models/squad_member.dart';

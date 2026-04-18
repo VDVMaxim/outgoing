@@ -1,12 +1,15 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_clubapp/core/models/squad_member.dart' as models;
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
-import 'package:flutter_clubapp/core/services/location_service.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/core/repositories/interfaces/squad_repository.dart';
 import 'package:flutter_clubapp/core/services/settings_service.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
+import 'package:flutter_clubapp/core/services/location_service.dart';
 
 const double _positionUpdateThresholdMeters = 5.0;
 const int _positionUpdateFallbackSeconds = 30;
@@ -79,8 +82,7 @@ class SquadMemberDisplay {
   ) {
     final now = DateTime.now();
     final lastUpdate = model.updatedAt;
-    final isOnline =
-        now.difference(lastUpdate).inMilliseconds < offlineThresholdMs;
+    final isOnline = now.difference(lastUpdate).inMilliseconds < offlineThresholdMs;
 
     return SquadMemberDisplay(
       id: model.id,
@@ -112,39 +114,28 @@ class SquadMemberDisplay {
   }
 }
 
-class SquadProvider extends ChangeNotifier {
-  static final SquadProvider instance = SquadProvider._internal();
-  SquadProvider._internal();
-
-  SquadProviderState _state = const SquadProviderState();
-  SquadProviderState get state => _state;
-
-  SettingsService? _settingsService;
-  UserProfileService? _userProfileService;
-  LocationService get _locationService => LocationService.instance;
+class SquadNotifier extends StateNotifier<SquadProviderState> {
+  final Ref _ref;
 
   Timer? _positionUpdateTimer;
   Timer? _onlineCheckTimer;
   StreamSubscription<List<models.SquadMember>>? _realtimeSubscription;
-  String? _currentUserId;
 
   VoidCallback? _onPositionPulse;
-
   LatLng? _lastSentPosition;
   DateTime? _lastSentTime;
 
-  bool get isInSquad => _state.isInSquad;
-  String? get squadPin => _state.squadPin;
-  List<SquadMemberDisplay> get members => _state.members;
+  SquadNotifier(this._ref) : super(const SquadProviderState());
+
+  SettingsService get _settingsService => _ref.read(settingsServiceProvider);
+  UserProfileService get _userProfileService => _ref.read(userProfileServiceProvider);
+  LocationService get _locationService => _ref.read(locationServiceProvider);
+  SquadRepository get _squadRepository => _ref.read(squadRepositoryProvider);
+
+  String? get currentUserId => _userProfileService.userId;
 
   void setPositionPulseCallback(VoidCallback? callback) {
     _onPositionPulse = callback;
-  }
-
-  Future<void> initialize() async {
-    _settingsService = await SettingsService.getInstance();
-    _userProfileService = await UserProfileService.getInstance();
-    _currentUserId = _userProfileService?.userId;
   }
 
   Future<bool> checkLocationPermission() async {
@@ -160,49 +151,57 @@ class SquadProvider extends ChangeNotifier {
   }
 
   Future<SquadProviderState> createSquad() async {
-    if (_userProfileService == null || !_userProfileService!.hasNickname) {
-      return _state = _state.copyWith(
+    if (!_userProfileService.hasNickname) {
+      state = state.copyWith(
         status: SquadConnectionStatus.error,
-        errorMessage: 'Please set a nickname first',
+        errorMessage: 'Je moet eerst een nickname instellen.',
       );
+      return state;
     }
 
-    final hasLocation = await checkLocationPermission();
-    if (!hasLocation) {
+    final hasLocationPermission = await checkLocationPermission();
+    if (!hasLocationPermission) {
       final granted = await requestLocationPermission();
       if (!granted) {
-        return _state = _state.copyWith(
+        state = state.copyWith(
           status: SquadConnectionStatus.error,
-          errorMessage: 'Location permission is required for squad mode',
+          errorMessage: 'Locatietoegang is geweigerd. Zet dit aan in je instellingen om Squads te gebruiken.',
         );
+        return state;
       }
     }
 
-    _state = _state.copyWith(status: SquadConnectionStatus.connecting);
-    notifyListeners();
+    state = state.copyWith(status: SquadConnectionStatus.connecting);
 
+    // 1. EERST LOCATIE CHECKEN ZONDER FALLBACKS
+    LatLng userPosition;
     try {
-      final squad = await squadRepository.createSquad();
-
-      LatLng userPosition;
-      try {
-        final position = await _locationService.getCurrentPosition();
-        if (position != null) {
-          userPosition = LatLng(position.latitude, position.longitude);
-        } else {
-          userPosition = const LatLng(51.0543, 3.7174);
-        }
-      } catch (e) {
-        userPosition = const LatLng(51.0543, 3.7174);
+      final position = await _locationService.getCurrentPosition();
+      if (position != null) {
+        userPosition = LatLng(position.latitude, position.longitude);
+      } else {
+        throw Exception('Locatie kon niet worden bepaald.');
       }
+    } catch (e) {
+      // Meteen afbreken als de GPS uit staat of geen signaal heeft
+      state = state.copyWith(
+        status: SquadConnectionStatus.error,
+        errorMessage: 'Kan je locatie niet bepalen. Controleer of je GPS aan staat.',
+      );
+      return state;
+    }
 
-      final member = await squadRepository.joinSquad(
+    // 2. PAS ALS LOCATIE GELUKT IS, SQUAD AANMAKEN IN DATABASE
+    try {
+      final squad = await _squadRepository.createSquad();
+
+      final member = await _squadRepository.joinSquad(
         squad.id,
-        _userProfileService!.nickname ?? 'Anonymous',
+        _userProfileService.nickname ?? 'Anonymous',
         userPosition,
       );
 
-      _state = _state.copyWith(
+      state = state.copyWith(
         status: SquadConnectionStatus.connected,
         squadId: squad.id,
         squadPin: squad.pin,
@@ -210,7 +209,7 @@ class SquadProvider extends ChangeNotifier {
         members: [
           SquadMemberDisplay.fromModel(
             member,
-            _currentUserId ?? '',
+            currentUserId ?? '',
             _offlineThresholdMs,
           ),
         ],
@@ -219,76 +218,82 @@ class SquadProvider extends ChangeNotifier {
       _startTracking();
       _startOnlineCheck();
 
-      _realtimeSubscription = squadRepository
+      _realtimeSubscription = _squadRepository
           .subscribeToSquad(squad.id)
           .listen(_onSquadMembersUpdate);
 
       HapticFeedback.mediumImpact();
-
-      notifyListeners();
-      return _state;
-    } catch (e) {
-      String userMessage = 'Failed to create squad';
-
-      if (e.toString().contains('timeout') ||
-          e.toString().contains('connection')) {
-        userMessage = 'Connection error. Please check your internet.';
-      } else {
-        userMessage = 'Something went wrong. Please try again.';
+      return state;
+    } catch (e, stackTrace) {
+      debugPrint('SQUAD CREATE ERROR: $e');
+      debugPrint('STACKTRACE: $stackTrace');
+      
+      String userMessage = 'Er is iets misgegaan bij het aanmaken van de squad.';
+      if (e.toString().contains('timeout') || e.toString().contains('connection')) {
+        userMessage = 'Verbindingsfout. Controleer je internet.';
       }
 
-      _state = _state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: userMessage,
-      );
-      notifyListeners();
-      return _state;
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: userMessage);
+      return state;
     }
   }
 
   Future<SquadProviderState> joinSquad(String pin) async {
-    if (_userProfileService == null || !_userProfileService!.hasNickname) {
-      return _state = _state.copyWith(
+    if (!_userProfileService.hasNickname) {
+      state = state.copyWith(
         status: SquadConnectionStatus.error,
-        errorMessage: 'Please set a nickname first',
+        errorMessage: 'Je moet eerst een nickname instellen.',
       );
+      return state;
     }
 
-    final hasLocation = await checkLocationPermission();
-    if (!hasLocation) {
+    final hasLocationPermission = await checkLocationPermission();
+    if (!hasLocationPermission) {
       final granted = await requestLocationPermission();
       if (!granted) {
-        return _state = _state.copyWith(
+        state = state.copyWith(
           status: SquadConnectionStatus.error,
-          errorMessage: 'Location permission is required for squad mode',
+          errorMessage: 'Locatietoegang is geweigerd. Zet dit aan in je instellingen om Squads te gebruiken.',
         );
+        return state;
       }
     }
 
-    _state = _state.copyWith(status: SquadConnectionStatus.connecting);
-    notifyListeners();
+    state = state.copyWith(status: SquadConnectionStatus.connecting);
 
+    // 1. EERST LOCATIE CHECKEN ZONDER FALLBACKS
+    LatLng userPosition;
     try {
-      final squad = await squadRepository.getSquadByPin(pin);
+      final position = await _locationService.getCurrentPosition();
+      if (position != null) {
+        userPosition = LatLng(position.latitude, position.longitude);
+      } else {
+        throw Exception('Locatie kon niet worden bepaald.');
+      }
+    } catch (e) {
+      // Meteen afbreken als de GPS uit staat of geen signaal heeft
+      state = state.copyWith(
+        status: SquadConnectionStatus.error,
+        errorMessage: 'Kan je locatie niet bepalen. Controleer of je GPS aan staat.',
+      );
+      return state;
+    }
+
+    // 2. PAS ALS LOCATIE GELUKT IS, SQUAD JOINEN IN DATABASE
+    try {
+      final squad = await _squadRepository.getSquadByPin(pin);
       if (squad == null) {
-        return _state = _state.copyWith(
-          status: SquadConnectionStatus.error,
-          errorMessage: 'Invalid squad PIN',
-        );
+        state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Ongeldige squad PIN.');
+        return state;
       }
 
-      final position = await _locationService.getCurrentPosition();
-      final userPosition = position != null
-          ? LatLng(position.latitude, position.longitude)
-          : const LatLng(51.0543, 3.7174);
-
-      final member = await squadRepository.joinSquad(
+      final member = await _squadRepository.joinSquad(
         squad.id,
-        _userProfileService!.nickname ?? 'Anonymous',
+        _userProfileService.nickname ?? 'Anonymous',
         userPosition,
       );
 
-      _state = _state.copyWith(
+      state = state.copyWith(
         status: SquadConnectionStatus.connected,
         squadId: squad.id,
         squadPin: squad.pin,
@@ -296,7 +301,7 @@ class SquadProvider extends ChangeNotifier {
         members: [
           SquadMemberDisplay.fromModel(
             member,
-            _currentUserId ?? '',
+            currentUserId ?? '',
             _offlineThresholdMs,
           ),
         ],
@@ -305,37 +310,29 @@ class SquadProvider extends ChangeNotifier {
       _startTracking();
       _startOnlineCheck();
 
-      _realtimeSubscription = squadRepository
+      _realtimeSubscription = _squadRepository
           .subscribeToSquad(squad.id)
           .listen(_onSquadMembersUpdate);
 
       HapticFeedback.mediumImpact();
-
-      notifyListeners();
-      return _state;
-    } catch (e) {
-      String userMessage = 'Failed to join squad';
-
-      if (e.toString().contains('timeout') ||
-          e.toString().contains('connection')) {
-        userMessage = 'Connection error. Please check your internet.';
-      } else {
-        userMessage = 'Something went wrong. Please try again.';
+      return state;
+    } catch (e, stackTrace) {
+      debugPrint('SQUAD JOIN ERROR: $e');
+      debugPrint('STACKTRACE: $stackTrace');
+      
+      String userMessage = 'Er is iets misgegaan bij het joinen van de squad.';
+      if (e.toString().contains('timeout') || e.toString().contains('connection')) {
+        userMessage = 'Verbindingsfout. Controleer je internet.';
       }
 
-      _state = _state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: userMessage,
-      );
-      notifyListeners();
-      return _state;
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: userMessage);
+      return state;
     }
   }
 
   void _startTracking() {
     _positionUpdateTimer?.cancel();
-    final frequencySeconds = _settingsService?.trackingFrequency ?? 5;
-
+    final frequencySeconds = _settingsService.trackingFrequency;
     _positionUpdateTimer = Timer.periodic(
       Duration(seconds: frequencySeconds),
       (_) => _updateMyPosition(),
@@ -344,8 +341,7 @@ class SquadProvider extends ChangeNotifier {
 
   void _startOnlineCheck() {
     _onlineCheckTimer?.cancel();
-    final frequencySeconds = _settingsService?.trackingFrequency ?? 5;
-
+    final frequencySeconds = _settingsService.trackingFrequency;
     _onlineCheckTimer = Timer.periodic(
       Duration(seconds: frequencySeconds),
       (_) => _checkOnlineStatus(),
@@ -353,7 +349,7 @@ class SquadProvider extends ChangeNotifier {
   }
 
   Future<void> _updateMyPosition() async {
-    if (_state.memberId == null || _state.squadId == null) return;
+    if (state.memberId == null || state.squadId == null) return;
 
     try {
       final position = await _locationService.getCurrentPosition();
@@ -361,17 +357,18 @@ class SquadProvider extends ChangeNotifier {
         final currentPosition = LatLng(position.latitude, position.longitude);
 
         if (_shouldSendPositionUpdate(currentPosition)) {
-          await squadRepository.updateMemberPosition(
-            _state.memberId!,
+          await _squadRepository.updateMemberPosition(
+            state.memberId!,
             currentPosition,
           );
+
           _lastSentPosition = currentPosition;
           _lastSentTime = DateTime.now();
           _onPositionPulse?.call();
         }
       }
     } catch (e) {
-      // Silently fail position updates
+      // Stil falen tijdens het updaten van positie is prima (als je even geen bereik hebt in de club)
     }
   }
 
@@ -399,41 +396,32 @@ class SquadProvider extends ChangeNotifier {
   }
 
   void _checkOnlineStatus() {
-    if (_state.members.isEmpty) return;
+    if (state.members.isEmpty) return;
 
-    final updatedMembers = _state.members.map((member) {
+    final updatedMembers = state.members.map((member) {
       final now = DateTime.now();
       final timeSinceUpdate = now.difference(member.lastUpdate).inMilliseconds;
       final isOnline = timeSinceUpdate < _offlineThresholdMs;
       return member.copyWith(isOnline: isOnline);
     }).toList();
 
-    if (!_listEquals(updatedMembers, _state.members)) {
-      _state = _state.copyWith(members: updatedMembers);
-      notifyListeners();
+    if (!_listEquals(updatedMembers, state.members)) {
+      state = state.copyWith(members: updatedMembers);
     }
   }
 
   void _onSquadMembersUpdate(List<models.SquadMember> modelMembers) {
-    final currentUserId = _currentUserId ?? '';
-
+    final cId = currentUserId ?? '';
     final displayMembers = modelMembers
-        .map(
-          (m) => SquadMemberDisplay.fromModel(
-            m,
-            currentUserId,
-            _offlineThresholdMs,
-          ),
-        )
+        .map((m) => SquadMemberDisplay.fromModel(m, cId, _offlineThresholdMs))
         .toList();
 
-    _state = _state.copyWith(members: displayMembers);
-    notifyListeners();
+    state = state.copyWith(members: displayMembers);
   }
 
   int get _offlineThresholdMs {
-    final frequency = _settingsService?.trackingFrequency ?? 5;
-    final multiplier = _settingsService?.offlineMultiplier ?? 4;
+    final frequency = _settingsService.trackingFrequency;
+    final multiplier = _settingsService.offlineMultiplier;
     return frequency * multiplier * 1000;
   }
 
@@ -443,17 +431,16 @@ class SquadProvider extends ChangeNotifier {
     _realtimeSubscription?.cancel();
     _locationService.stopTracking();
 
-    if (_state.squadId != null && _currentUserId != null) {
-      squadRepository.leaveSquad(_state.squadId!, _currentUserId!);
+    if (state.squadId != null && currentUserId != null) {
+      _squadRepository.leaveSquad(state.squadId!, currentUserId!);
     }
 
-    squadRepository.unsubscribeFromSquad();
+    _squadRepository.unsubscribeFromSquad();
 
-    _state = const SquadProviderState();
+    state = const SquadProviderState();
     _onPositionPulse = null;
     _lastSentPosition = null;
     _lastSentTime = null;
-    notifyListeners();
   }
 
   bool _listEquals(List<SquadMemberDisplay> a, List<SquadMemberDisplay> b) {
@@ -478,3 +465,7 @@ class SquadProvider extends ChangeNotifier {
     super.dispose();
   }
 }
+
+final squadProvider = StateNotifierProvider<SquadNotifier, SquadProviderState>((ref) {
+  return SquadNotifier(ref);
+});

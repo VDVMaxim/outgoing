@@ -206,3 +206,117 @@ CREATE TRIGGER update_profiles_updated_at
     BEFORE UPDATE ON profiles
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- VIBE POINTS SYSTEM (MVP)
+-- ============================================
+
+-- Vibe Profiles (VP + Level + Streak per user)
+CREATE TABLE IF NOT EXISTS vibe_profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    total_vp INTEGER DEFAULT 0,
+    current_level INTEGER DEFAULT 1,
+    weekend_streak INTEGER DEFAULT 0,
+    last_check_in TIMESTAMPTZ,
+    visited_places UUID[] DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+-- Vibe Actions (audit trail for VP earning)
+CREATE TABLE IF NOT EXISTS vibe_actions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL,
+    place_id UUID REFERENCES places(id) ON DELETE SET NULL,
+    vp_earned INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for vibe tables
+CREATE INDEX IF NOT EXISTS idx_vibe_profiles_user_id ON vibe_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_vibe_actions_user_id ON vibe_actions(user_id);
+CREATE INDEX IF NOT EXISTS idx_vibe_actions_created_at ON vibe_actions(created_at DESC);
+
+-- Enable RLS on vibe tables
+ALTER TABLE vibe_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vibe_actions ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for vibe tables (users can only access their own data)
+CREATE POLICY "Users can own vibe_profile" ON vibe_profiles 
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can own vibe_actions" ON vibe_actions 
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Enable realtime for vibe_actions (optional - for live updates)
+ALTER PUBLICATION supabase_realtime ADD TABLE vibe_actions;
+
+-- ============================================
+-- BADGES & CHALLENGES SYSTEM
+-- ============================================
+
+-- User Badges (using TEXT to match squad_members pattern)
+CREATE TABLE IF NOT EXISTS user_badges (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id TEXT NOT NULL,
+    badge_type TEXT NOT NULL,
+    unlocked_at TIMESTAMPTZ DEFAULT NOW(),
+    xp_earned INTEGER DEFAULT 0,
+    UNIQUE(user_id, badge_type)
+);
+
+-- Squad Challenges
+CREATE TABLE IF NOT EXISTS squad_challenges (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
+    challenge_type TEXT NOT NULL,
+    status TEXT DEFAULT 'available',
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    check_in_locations UUID[] DEFAULT '{}',
+    current_progress INTEGER DEFAULT 0
+);
+
+-- Safety First (I'm home safe) tracking
+CREATE TABLE IF NOT EXISTS safety_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id TEXT NOT NULL,
+    checked_in_at TIMESTAMPTZ DEFAULT NOW(),
+    location_lat DOUBLE PRECISION,
+    location_lng DOUBLE PRECISION
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id);
+CREATE INDEX IF NOT EXISTS idx_squad_challenges_squad_id ON squad_challenges(squad_id);
+CREATE INDEX IF NOT EXISTS idx_safety_sessions_user_id ON safety_sessions(user_id);
+
+-- RLS
+ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE squad_challenges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE safety_sessions ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Users can own user_badges" ON user_badges 
+    FOR ALL USING (user_id::text = auth.uid()::text);
+
+CREATE POLICY "Squad members can view squad_challenges" ON squad_challenges 
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM squad_members 
+            WHERE squad_id = squad_challenges.squad_id 
+            AND user_id::text = auth.uid()::text
+        )
+    );
+
+CREATE POLICY "Users can own safety_sessions" ON safety_sessions 
+    FOR ALL USING (user_id::text = auth.uid()::text);
+
+-- Trigger for vibe_profiles table
+CREATE TRIGGER update_vibe_profiles_updated_at
+    BEFORE UPDATE ON vibe_profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

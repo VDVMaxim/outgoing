@@ -56,6 +56,7 @@ dependencies:
   share_plus: ^10.1.4
   flutter_riverpod: ^2.6.1
   envied: ^0.5.4
+  flutter_compass: ^0.8.1
 
 dev_dependencies:
   flutter_test:

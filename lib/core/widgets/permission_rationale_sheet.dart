@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-class PermissionRationaleSheet extends StatelessWidget {
+class PermissionRationaleSheet extends StatefulWidget {
   final IconData icon;
   final String title;
   final String message;
@@ -32,6 +32,8 @@ class PermissionRationaleSheet extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       builder: (context) => PermissionRationaleSheet(
         icon: icon,
         title: title,
@@ -44,14 +46,21 @@ class PermissionRationaleSheet extends StatelessWidget {
   }
 
   @override
+  State<PermissionRationaleSheet> createState() =>
+      _PermissionRationaleSheetState();
+}
+
+class _PermissionRationaleSheetState extends State<PermissionRationaleSheet> {
+  final bool _isLoading = false; // Is nu 'final' zoals de compiler adviseerde
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF18181B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
         child: Padding(
@@ -66,11 +75,11 @@ class PermissionRationaleSheet extends StatelessWidget {
                   color: Colors.blueAccent.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 32, color: Colors.blueAccent),
+                child: Icon(widget.icon, size: 32, color: Colors.blueAccent),
               ),
               const SizedBox(height: 20),
               Text(
-                title,
+                widget.title,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -80,7 +89,7 @@ class PermissionRationaleSheet extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                message,
+                widget.message,
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark ? Colors.white70 : Colors.black87,
@@ -92,16 +101,22 @@ class PermissionRationaleSheet extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ShadButton(
-                  onPressed: onPrimary,
-                  child: Text(primaryButtonText),
+                  onPressed: _isLoading ? null : widget.onPrimary,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(widget.primaryButtonText),
                 ),
               ),
-              if (onSecondary != null) ...[
+              if (widget.onSecondary != null) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: ShadButton.ghost(
-                    onPressed: onSecondary,
+                    onPressed: _isLoading ? null : widget.onSecondary,
                     child: const Text('Not now'),
                   ),
                 ),

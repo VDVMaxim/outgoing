@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
+import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import 'package:flutter_clubapp/features/onboarding/screens/onboarding_setup.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
+import 'package:flutter_clubapp/features/auth/screens/login_screen.dart';
 
 class OptionScreen extends StatelessWidget {
   const OptionScreen({super.key});
@@ -11,70 +13,114 @@ class OptionScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const Spacer(),
-              Icon(
-                Icons.groups,
-                size: 80,
-                color: isDark ? Colors.white24 : Colors.black26,
-              ),
-              const SizedBox(height: 32),
-              Text(
-                l10n.optionScreenTitle,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
+    return AnimatedBlurBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const Spacer(),
+                Icon(
+                  Icons.groups,
+                  size: 80,
+                  color: isDark ? Colors.white24 : Colors.black26,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              _OptionCard(
-                icon: Icons.face,
-                title: l10n.optionScreenAnonymous,
-                description: l10n.optionScreenAnonymousDesc,
-                isDark: isDark,
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const OnboardingSetup()),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              _OptionCard(
-                icon: Icons.person_add,
-                title: l10n.optionScreenCreateAccount,
-                description: l10n.optionScreenCreateAccountDesc,
-                isDark: isDark,
-                isPrimary: true,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => RegisterScreen(
-                        onSuccess: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const OnboardingSetup(),
-                            ),
-                          );
-                        },
-                        onCancel: () => Navigator.pop(context),
+                const SizedBox(height: 32),
+                Text(
+                  l10n.optionScreenTitle,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+                _OptionCard(
+                  icon: Icons.face,
+                  title: l10n.optionScreenAnonymous,
+                  description: l10n.optionScreenAnonymousDesc,
+                  isDark: isDark,
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const OnboardingSetup(),
                       ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                _OptionCard(
+                  icon: Icons.person_add,
+                  title: l10n.optionScreenCreateAccount,
+                  description: l10n.optionScreenCreateAccountDesc,
+                  isDark: isDark,
+                  isPrimary: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RegisterScreen(
+                          onSuccess: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const OnboardingSetup(),
+                              ),
+                            );
+                          },
+                          onCancel: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LoginScreen(
+                          onSuccess: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const OnboardingSetup(),
+                              ),
+                            );
+                          },
+                          onCancel: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
+                  },
+                  child: RichText(
+                    text: TextSpan(
+                      text: '${l10n.accountFormAlreadyHave} ',
+                      style: TextStyle(
+                        color: isDark ? Colors.white60 : Colors.black54,
+                        fontSize: 14,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: l10n.accountFormLogin,
+                          style: TextStyle(
+                            color: Colors.blueAccent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
-              const Spacer(),
-            ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),

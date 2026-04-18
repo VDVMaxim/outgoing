@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/services/app_startup.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'onboarding_intro_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -39,9 +40,10 @@ class _SplashScreenState extends State<SplashScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _runStartup());
   }
 
-  Future<void> _runStartup() async {
+Future<void> _runStartup() async {
     final t0 = DateTime.now();
-    final result = await AppStartup.verify();
+    final result = await AppStartup.verify(ProviderScope.containerOf(context));
+    
     if (!mounted) return;
 
     const minSplash = Duration(milliseconds: 1100);

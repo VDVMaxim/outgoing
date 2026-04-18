@@ -5,10 +5,6 @@ export 'supabase_vibe_repository.dart';
 export 'supabase_squad_repository.dart';
 export 'repository_provider.dart'
     show
-        clubRepository,
-        vibeRepository,
-        squadRepository,
-        DataBackend,
-        kClubDataBackend,
-        kClubDataBackendFallback,
-        initializeRepositories;
+        clubRepositoryProvider,
+        vibeRepositoryProvider,
+        squadRepositoryProvider;

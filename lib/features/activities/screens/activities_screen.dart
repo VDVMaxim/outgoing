@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/repositories/repositories.dart';
+import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/favorites_provider.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../../main.dart';
 
-class ActivitiesScreen extends StatefulWidget {
+class ActivitiesScreen extends ConsumerStatefulWidget {
   const ActivitiesScreen({super.key});
 
   @override
-  State<ActivitiesScreen> createState() => _ActivitiesScreenState();
+  ConsumerState<ActivitiesScreen> createState() => _ActivitiesScreenState();
 }
 
-class _ActivitiesScreenState extends State<ActivitiesScreen> {
+class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
   String _searchQuery = '';
   bool _showFavoritesOnly = false;
   final TextEditingController _searchController = TextEditingController();
@@ -23,7 +24,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   @override
   void initState() {
     super.initState();
-    _placesFuture = clubRepository.getPlaces();
+    _placesFuture = ref.read(clubRepositoryProvider).getPlaces();
   }
 
   @override
@@ -122,7 +123,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               }
 
               final allPlaces = snapshot.data ?? [];
-
               return ValueListenableBuilder<Set<String>>(
                 valueListenable: FavoritesProvider.instance,
                 builder: (context, favorites, _) {
@@ -156,7 +156,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     if (b.startTime == null) return -1;
                     return a.startTime!.compareTo(b.startTime!);
                   });
-
                   if (events.isEmpty) {
                     return Center(
                       child: Text(
@@ -262,7 +261,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                     ),
                                   ],
                                 ),
-                              ],
+                               ],
                               if (place.startTime != null) ...[
                                 const SizedBox(height: 2),
                                 Row(
@@ -285,13 +284,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                             ],
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 12.0),
+                             padding: const EdgeInsets.only(top: 12.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (place.promo != null) ...[
                                   Text(
-                                    place.promo!,
+                                     place.promo!,
                                     style: TextStyle(
                                       color: place.isFlashPromoActive
                                           ? Colors.purpleAccent
@@ -316,8 +315,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          place.crowdLevel ??
-                                              l10n.activitiesUnknownCrowd,
+                                          place.crowdLevel ?? l10n.activitiesUnknownCrowd,
                                           style: TextStyle(
                                             color: isDark
                                                 ? Colors.white54

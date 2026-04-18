@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
-import 'package:flutter_clubapp/core/services/user_profile_service.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import '../providers/squad_provider.dart';
 
 void showSquadSheet(BuildContext context) {
@@ -17,14 +18,14 @@ void showSquadSheet(BuildContext context) {
   );
 }
 
-class SquadBottomSheet extends StatefulWidget {
+class SquadBottomSheet extends ConsumerStatefulWidget {
   const SquadBottomSheet({super.key});
 
   @override
-  State<SquadBottomSheet> createState() => _SquadBottomSheetState();
+  ConsumerState<SquadBottomSheet> createState() => _SquadBottomSheetState();
 }
 
-class _SquadBottomSheetState extends State<SquadBottomSheet>
+class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _pinController = TextEditingController();
@@ -35,7 +36,6 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    SquadProvider.instance.initialize();
   }
 
   @override
@@ -47,71 +47,68 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
 
   Future<void> _handleCreateSquad() async {
     final l10n = AppLocalizations.of(context)!;
-    final userProfile = await UserProfileService.getInstance();
+    final userProfile = ref.read(userProfileServiceProvider);
 
     if (!userProfile.hasNickname) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.squadNicknameFirst),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.squadNicknameFirst),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
-    final hasPermission = await SquadProvider.instance
-        .checkLocationPermission();
+    final squadNotifier = ref.read(squadProvider.notifier);
+    final hasPermission = await squadNotifier.checkLocationPermission();
+
     if (!hasPermission) {
-      final granted = await SquadProvider.instance.requestLocationPermission();
+      final granted = await squadNotifier.requestLocationPermission();
       if (!granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.squadLocationRequiredToast),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.squadLocationRequiredToast),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
-
-    final result = await SquadProvider.instance.createSquad();
-
+    
+    final result = await squadNotifier.createSquad();
+    
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (mounted) {
-      setState(() {});
-      if (result.status == SquadConnectionStatus.error) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(l10n.squadError),
-            content: Text(result.errorMessage ?? l10n.squadFailedToCreate),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      } else if (result.status == SquadConnectionStatus.connected) {
-        Navigator.pop(context);
-      }
+    if (result.status == SquadConnectionStatus.error) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.squadError),
+          content: Text(result.errorMessage ?? l10n.squadFailedToCreate),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
-  Future<void> _handleJoinSquad(
-    BuildContext context,
-    AppLocalizations l10n,
-  ) async {
+  Future<void> _handleJoinSquad() async {
+    final l10n = AppLocalizations.of(context)!;
     final pin = _pinController.text.trim();
+
     if (pin.length != 6) {
+      if (!mounted) return;
       ShadSonner.of(context).show(
         ShadToast.raw(
           variant: ShadToastVariant.destructive,
@@ -121,152 +118,128 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
       return;
     }
 
-    final userProfile = await UserProfileService.getInstance();
+    final userProfile = ref.read(userProfileServiceProvider);
 
     if (!userProfile.hasNickname) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.squadNicknameFirst),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.squadNicknameFirst),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
-    final hasPermission = await SquadProvider.instance
-        .checkLocationPermission();
+    final squadNotifier = ref.read(squadProvider.notifier);
+    final hasPermission = await squadNotifier.checkLocationPermission();
+
     if (!hasPermission) {
-      final granted = await SquadProvider.instance.requestLocationPermission();
+      final granted = await squadNotifier.requestLocationPermission();
       if (!granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.squadLocationRequiredToast),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.squadLocationRequiredToast),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
-
-    final result = await SquadProvider.instance.joinSquad(pin);
-
+    
+    final result = await squadNotifier.joinSquad(pin);
+    
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (mounted) {
-      setState(() {});
-      if (result.status == SquadConnectionStatus.error) {
-        ShadSonner.of(context).show(
-          ShadToast.raw(
-            variant: ShadToastVariant.destructive,
-            description: Text(result.errorMessage ?? l10n.squadFailedToJoin),
-          ),
-        );
-      } else if (result.status == SquadConnectionStatus.connected) {
-        _pinController.clear();
-        Navigator.pop(context);
-      }
+    if (result.status == SquadConnectionStatus.error) {
+      if (!mounted) return;
+      ShadSonner.of(context).show(
+        ShadToast.raw(
+          variant: ShadToastVariant.destructive,
+          description: Text(result.errorMessage ?? l10n.squadFailedToJoin),
+        ),
+      );
+    } else if (result.status == SquadConnectionStatus.connected) {
+      _pinController.clear();
     }
   }
 
   void _leaveSquad() {
-    SquadProvider.instance.leaveSquad();
-    setState(() {});
+    ref.read(squadProvider.notifier).leaveSquad();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
+    final squadState = ref.watch(squadProvider);
+    final inSquad = squadState.isInSquad;
 
-    return ListenableBuilder(
-      listenable: SquadProvider.instance,
-      builder: (context, _) {
-        final provider = SquadProvider.instance;
-        final inSquad = provider.isInSquad;
-
-        return Stack(
-          children: [
-            Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.85,
-              ),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF09090B) : Colors.white,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
+    return Stack(
+      children: [
+        Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF09090B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[600],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 12, bottom: 8),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[600],
-                          borderRadius: BorderRadius.circular(2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.groups, color: Colors.blueAccent, size: 28),
+                      const SizedBox(width: 12),
+                      Text(
+                        l10n.squadTitle,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.groups,
-                            color: Colors.blueAccent,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            l10n.squadTitle,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (inSquad)
-                      _buildActiveView(context, isDark, l10n, provider)
-                    else
-                      _buildJoinCreateView(context, isDark, l10n),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                if (inSquad)
+                  _buildActiveView(isDark, l10n, squadState)
+                else
+                  _buildJoinCreateView(isDark, l10n),
+              ],
             ),
-            if (_isLoading)
-              Container(
-                color: Colors.black54,
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-          ],
-        );
-      },
+          ),
+        ),
+        if (_isLoading)
+          Container(
+            color: Colors.black54,
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 
-  Widget _buildActiveView(
-    BuildContext context,
-    bool isDark,
-    AppLocalizations l10n,
-    SquadProvider provider,
-  ) {
-    final state = provider.state;
+  Widget _buildActiveView(bool isDark, AppLocalizations l10n, SquadProviderState state) {
     final members = state.members;
     final textColor = isDark ? Colors.white : Colors.black;
 
@@ -312,22 +285,15 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
                   ),
                   const SizedBox(height: 12),
                   TextButton.icon(
-                    onPressed: () {
-                      Clipboard.setData(
-                        ClipboardData(text: state.squadPin ?? ''),
-                      );
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: state.squadPin ?? ''));
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.squadPinCopied),
-                          duration: const Duration(seconds: 1),
-                        ),
+                        SnackBar(content: Text(l10n.squadPinCopied), duration: const Duration(seconds: 1)),
                       );
                     },
                     icon: const Icon(Icons.copy, size: 16, color: Colors.grey),
-                    label: Text(
-                      l10n.squadCopyPin,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
+                    label: Text(l10n.squadCopyPin, style: const TextStyle(color: Colors.grey)),
                   ),
                 ],
               ),
@@ -356,12 +322,8 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
                 subtitle: Text(
                   m.isCurrentUser
                       ? l10n.squadSharingOn
-                      : (m.isOnline
-                            ? l10n.squadSharingLive
-                            : l10n.squadOffline),
-                  style: TextStyle(
-                    color: m.isOnline ? Colors.green : Colors.grey,
-                  ),
+                      : (m.isOnline ? l10n.squadSharingLive : l10n.squadOffline),
+                  style: TextStyle(color: m.isOnline ? Colors.green : Colors.grey),
                 ),
               ),
             ),
@@ -380,11 +342,7 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
     );
   }
 
-  Widget _buildJoinCreateView(
-    BuildContext context,
-    bool isDark,
-    AppLocalizations l10n,
-  ) {
+  Widget _buildJoinCreateView(bool isDark, AppLocalizations l10n) {
     return Expanded(
       child: Column(
         children: [
@@ -402,8 +360,8 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildCreateTab(context, isDark, l10n),
-                _buildJoinTab(context, isDark, l10n),
+                _buildCreateTab(isDark, l10n),
+                _buildJoinTab(isDark, l10n),
               ],
             ),
           ),
@@ -412,13 +370,8 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
     );
   }
 
-  Widget _buildCreateTab(
-    BuildContext context,
-    bool isDark,
-    AppLocalizations l10n,
-  ) {
+  Widget _buildCreateTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -469,13 +422,8 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
     );
   }
 
-  Widget _buildJoinTab(
-    BuildContext context,
-    bool isDark,
-    AppLocalizations l10n,
-  ) {
+  Widget _buildJoinTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -491,9 +439,7 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
                 color: isDark ? Colors.white10 : Colors.grey[100],
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _scanning
-                      ? Colors.blueAccent
-                      : Colors.grey.withValues(alpha: 0.4),
+                  color: _scanning ? Colors.blueAccent : Colors.grey.withValues(alpha: 0.4),
                   width: _scanning ? 2 : 1,
                 ),
               ),
@@ -505,14 +451,11 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
                           final barcodes = capture.barcodes;
                           for (final barcode in barcodes) {
                             final raw = barcode.rawValue ?? '';
-                            final pin = raw.replaceFirst(
-                              'clubapp://squad/',
-                              '',
-                            );
+                            final pin = raw.replaceFirst('clubapp://squad/', '');
                             if (pin.length == 6) {
                               setState(() => _scanning = false);
                               _pinController.text = pin;
-                              _handleJoinSquad(context, l10n);
+                              _handleJoinSquad();
                               return;
                             }
                           }
@@ -522,18 +465,11 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.blueAccent,
-                          size: 28,
-                        ),
+                        const Icon(Icons.qr_code_scanner, color: Colors.blueAccent, size: 28),
                         const SizedBox(width: 12),
                         Text(
                           l10n.squadScanQR,
-                          style: TextStyle(
-                            color: textColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -547,11 +483,7 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   l10n.squadOr,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
               const Expanded(child: Divider()),
@@ -570,9 +502,7 @@ class _SquadBottomSheetState extends State<SquadBottomSheet>
             width: double.infinity,
             height: 52,
             child: ShadButton.secondary(
-              onPressed: _isLoading
-                  ? null
-                  : () => _handleJoinSquad(context, l10n),
+              onPressed: _isLoading ? null : () => _handleJoinSquad(),
               child: Text(l10n.squadJoin),
             ),
           ),

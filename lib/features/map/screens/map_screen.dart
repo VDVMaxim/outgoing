@@ -1,64 +1,70 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/mock_data.dart';
-import 'package:flutter_clubapp/core/repositories/repositories.dart';
-import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
+import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/main.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
 import '../../squad/providers/squad_provider.dart';
 
-class MapScreen extends StatefulWidget {
+class MapScreen extends ConsumerStatefulWidget {
   final LatLng? userLocation;
   const MapScreen({super.key, this.userLocation});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen> {
   final MapController _mapController = MapController();
-
   List<Place> _allPlaces = [];
   bool _isLoading = true;
 
+  // Filter & Search state
   final Set<String> _selectedFilters = {};
-  bool get _foodModeActive => _selectedFilters.contains('__food__');
-
   String _searchQuery = '';
-  double _currentZoom = 8.0;
 
-  bool _pulseTrigger = false;
+  // Map, Location & Compass State
+  double _currentZoom = 14.0;
+  LatLng? _liveUserLocation;
+  StreamSubscription<Position>? _locationSubscription;
+  StreamSubscription<CompassEvent>? _compassSubscription;
+  
+  bool _isFollowingUser = false; // Zorgt voor centreren op je positie
+  bool _isCompassMode = false;   // Zorgt voor de rotatie van de kaart
 
   @override
   void initState() {
     super.initState();
+    _liveUserLocation = widget.userLocation;
     _loadPlaces();
     _setupSquadPulse();
+    _startLocationTracking();
+    _startCompassTracking();
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    _compassSubscription?.cancel();
+    super.dispose();
   }
 
   void _setupSquadPulse() {
-    SquadProvider.instance.setPositionPulseCallback(() {
-      if (mounted) {
-        setState(() {
-          _pulseTrigger = false;
-        });
-        Future.delayed(const Duration(milliseconds: 16), () {
-          if (mounted) {
-            setState(() {
-              _pulseTrigger = true;
-            });
-          }
-        });
-      }
+    ref.read(squadProvider.notifier).setPositionPulseCallback(() {
+      if (mounted) setState(() {}); 
     });
   }
 
   Future<void> _loadPlaces() async {
-    final places = await clubRepository.getPlaces();
+    final places = await ref.read(clubRepositoryProvider).getPlaces();
     if (mounted) {
       setState(() {
         _allPlaces = places;
@@ -67,74 +73,112 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  List<String> get _availableTagFilters {
-    final Set<String> tags = {};
-    for (final p in _allPlaces) {
-      if (p.type == LocationType.club) tags.addAll(p.tags);
+  Future<void> _startLocationTracking() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      return; 
     }
-    return tags.toList()..sort();
+
+    _locationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
+    ).listen((Position position) {
+      if (mounted) {
+        final newLocation = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _liveUserLocation = newLocation;
+        });
+        
+        // Alleen de kaart forceren te centreren als we aan het 'volgen' zijn [cite: 1354, 1364]
+        if (_isFollowingUser) {
+          _mapController.move(newLocation, _currentZoom);
+        }
+      }
+    });
   }
 
-  List<Place> get _visiblePlaces {
-    if (_foodModeActive) {
-      return _allPlaces.where((p) => p.type == LocationType.food).toList();
-    }
-    return _allPlaces.where((p) {
-      if (p.type != LocationType.club) return false;
+  void _startCompassTracking() {
+    _compassSubscription = FlutterCompass.events?.listen((CompassEvent event) {
+      if (mounted && _isCompassMode && event.heading != null) {
+        final double mapRotation = 360 - event.heading!;
+        _mapController.rotate(mapRotation);
+      }
+    });
+  }
+
+  void _onMyLocationTapped() {
+    if (_liveUserLocation == null) return;
+
+    setState(() {
+      if (!_isFollowingUser && !_isCompassMode) {
+        // Status 1: Begin met volgen, geen kompas
+        _isFollowingUser = true;
+        _mapController.move(_liveUserLocation!, 15.0);
+        _mapController.rotate(0);
+      } else if (_isFollowingUser && !_isCompassMode) {
+        // Status 2: Zet kompas aan (volgen staat al aan)
+        _isCompassMode = true;
+      } else if (!_isFollowingUser && _isCompassMode) {
+        // Status 2.5: Gebruiker had gepanned tijdens kompas modus, we centreren weer
+        _isFollowingUser = true;
+        _mapController.move(_liveUserLocation!, 15.0);
+      } else {
+        // Status 3: Zet alles weer uit
+        _isCompassMode = false;
+        _isFollowingUser = false;
+        _mapController.rotate(0);
+      }
+    });
+  }
+
+  List<Place> get _filteredPlaces {
+    return _allPlaces.where((place) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          place.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (place.eventName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+
+      bool matchesFilter = true;
       if (_selectedFilters.isNotEmpty) {
-        bool match = false;
-        for (final f in _selectedFilters) {
-          if (p.tags.contains(f)) {
-            match = true;
-            break;
-          }
+        if (_selectedFilters.contains('club') && !place.type.toString().contains('club')) {
+          matchesFilter = false;
         }
-        if (!match) return false;
-      }
-      if (_searchQuery.isNotEmpty) {
-        final q = _searchQuery.toLowerCase();
-        if (!p.name.toLowerCase().contains(q) &&
-            !p.address.toLowerCase().contains(q) &&
-            !(p.genre?.toLowerCase().contains(q) ?? false)) {
-          return false;
+        if (_selectedFilters.contains('event') && !place.status.toString().contains('event')) {
+          matchesFilter = false;
+        }
+        if (_selectedFilters.contains('__food__') && !place.type.toString().contains('food')) {
+          matchesFilter = false;
         }
       }
-      return true;
+
+      return matchesSearch && matchesFilter;
     }).toList();
   }
 
-  void _showPlaceDetails(BuildContext context, Place place) {
+  void _openDetails(BuildContext context, Place place) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          ClubBottomSheet(place: place, userLocation: widget.userLocation),
+      builder: (context) => ClubBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
     );
   }
 
-  void _openFilterSheet(
-    BuildContext context,
-    bool isDark,
-    AppLocalizations l10n,
-  ) {
+  void _showFilterSheet(BuildContext context, bool isDark) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          final textColor = isDark ? Colors.white : Colors.black;
-          return Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF09090B) : Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-            child: SafeArea(
-              child: Column(
+      builder: (BuildContext sheetContext) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF18181B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setSheetState) {
+              return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -142,167 +186,76 @@ class _MapScreenState extends State<MapScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
+                      margin: const EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
                         color: Colors.grey[600],
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.mapFilters,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                      if (_selectedFilters.isNotEmpty)
-                        TextButton(
-                          onPressed: () {
-                            setModalState(() => _selectedFilters.clear());
-                            setState(() {});
-                          },
-                          child: Text(
-                            l10n.mapClearAll,
-                            style: const TextStyle(color: Colors.blueAccent),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildFilterTile(
-                    isDark: isDark,
-                    icon: Icons.restaurant,
-                    label: '🍔  ${l10n.mapFood}',
-                    value: '__food__',
-                    setModalState: setModalState,
-                    textColor: textColor,
-                  ),
-                  const Divider(height: 24),
-
                   Text(
-                    l10n.mapCategories,
+                    'Filters',
                     style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[500],
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 12),
-
+                  const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _availableTagFilters.map((tag) {
-                      final isSelected = _selectedFilters.contains(tag);
-                      return FilterChip(
-                        label: Text(
-                          tag,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : textColor,
-                            fontSize: 13,
-                          ),
-                        ),
-                        selected: isSelected,
-                        onSelected: (val) {
-                          setModalState(() {
-                            if (val) {
-                              _selectedFilters.add(tag);
-                              _selectedFilters.remove('__food__');
-                            } else {
-                              _selectedFilters.remove(tag);
-                            }
-                          });
-                          setState(() {});
-                        },
-                        backgroundColor: isDark
-                            ? Colors.white10
-                            : Colors.grey[100],
-                        selectedColor: Colors.blueAccent,
-                        checkmarkColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: isSelected
-                                ? Colors.blueAccent
-                                : Colors.grey.withValues(alpha: 0.3),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    children: [
+                      _buildSheetFilterChip('__food__', 'Food & Drinks', isDark, setSheetState),
+                      _buildSheetFilterChip('club', 'Clubs', isDark, setSheetState),
+                      _buildSheetFilterChip('event', 'Events', isDark, setSheetState),
+                    ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ShadButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Toepassen'),
+                    ),
+                  )
                 ],
-              ),
-            ),
-          );
-        },
-      ),
+              );
+            }
+          ),
+        );
+      }
     );
   }
 
-  Widget _buildFilterTile({
-    required bool isDark,
-    required IconData icon,
-    required String label,
-    required String value,
-    required StateSetter setModalState,
-    required Color textColor,
-  }) {
-    final isSelected = _selectedFilters.contains(value);
-    return GestureDetector(
-      onTap: () {
-        setModalState(() {
-          if (isSelected) {
-            _selectedFilters.remove(value);
+  Widget _buildSheetFilterChip(String filterKey, String label, bool isDark, StateSetter setSheetState) {
+    final isSelected = _selectedFilters.contains(filterKey);
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        setSheetState(() {
+          if (selected) {
+            _selectedFilters.add(filterKey);
           } else {
-            _selectedFilters.clear();
-            _selectedFilters.add(value);
+            _selectedFilters.remove(filterKey);
           }
         });
-        setState(() {});
+        setState(() {}); 
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.blueAccent.withValues(alpha: 0.15)
-              : (isDark ? Colors.white10 : Colors.grey[100]),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.blueAccent : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isSelected ? Colors.blueAccent : textColor,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.blueAccent : textColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.blueAccent,
-                size: 20,
-              ),
-          ],
+      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+      selectedColor: Colors.blueAccent.withValues(alpha: 0.2),
+      checkmarkColor: Colors.blueAccent,
+      labelStyle: TextStyle(
+        color: isSelected 
+            ? Colors.blueAccent 
+            : (isDark ? Colors.white70 : Colors.black87),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected ? Colors.blueAccent : Colors.transparent,
         ),
       ),
     );
@@ -310,549 +263,363 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF09090B)
-            : Colors.white,
+        backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
+    final squadState = ref.watch(squadProvider);
+
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
-        final isDark =
-            currentMode == ThemeMode.dark ||
+        final currentIsDark = currentMode == ThemeMode.dark ||
             (currentMode == ThemeMode.system &&
                 MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-        final l10n = AppLocalizations.of(context)!;
-
-        final mapUrl = isDark
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-
-        final activeFilterCount = _selectedFilters.length;
-
+                
         return Scaffold(
           body: Stack(
             children: [
-              ListenableBuilder(
-                listenable: SquadProvider.instance,
-                builder: (context, _) {
-                  return FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter:
-                          widget.userLocation ?? const LatLng(50.8503, 4.3517),
-                      initialZoom: 8.0,
-                      maxZoom: 22.0,
-                      onPositionChanged: (position, _) {
-                        if (position.zoom != _currentZoom) {
-                          setState(() => _currentZoom = position.zoom);
-                        }
-                      },
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: mapUrl,
-                        subdomains: const ['a', 'b', 'c', 'd'],
-                        userAgentPackageName: 'com.example.flutter_clubapp',
-                      ),
-                      MarkerLayer(markers: _buildMarkers()),
-                    ],
-                  );
-                },
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _liveUserLocation ?? widget.userLocation ?? const LatLng(51.0543, 3.7174),
+                  initialZoom: _currentZoom,
+                  onPositionChanged: (position, hasGesture) {
+                    // FIX: Als de gebruiker sleept, zetten we ALLEEN _isFollowingUser uit.
+                    // Zo blijft _isCompassMode aanstaan en blijft de kaart roteren met je telefoon!
+                    if (hasGesture && _isFollowingUser) {
+                      setState(() {
+                        _isFollowingUser = false;
+                      });
+                    }
+                    if (position.zoom != _currentZoom) {
+                      setState(() => _currentZoom = position.zoom);
+                    }
+                  },
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: currentIsDark 
+                      ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.jouwnaam.flutter_clubapp', 
+                  ),
+                  MarkerLayer(markers: _buildMarkers(squadState, currentIsDark)),
+                ],
               ),
-
-              SafeArea(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: Row(
-                        children: [
-                          Expanded(child: _buildSearchBar(isDark, l10n)),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () =>
-                                _openFilterSheet(context, isDark, l10n),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: activeFilterCount > 0
-                                    ? Colors.blueAccent
-                                    : (isDark
-                                          ? const Color(0xFF18181B)
-                                          : Colors.white),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: activeFilterCount > 0
-                                      ? Colors.blueAccent
-                                      : (isDark
-                                            ? Colors.white12
-                                            : Colors.black12),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.tune,
-                                    color: activeFilterCount > 0
-                                        ? Colors.white
-                                        : (isDark
-                                              ? Colors.white
-                                              : Colors.black),
-                                  ),
-                                  if (activeFilterCount > 0)
-                                    Positioned(
-                                      top: 6,
-                                      right: 6,
-                                      child: Container(
-                                        width: 14,
-                                        height: 14,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            '$activeFilterCount',
-                                            style: const TextStyle(
-                                              color: Colors.blueAccent,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: currentIsDark 
+                            ? const Color(0xFF18181B).withValues(alpha: 0.9) 
+                            : Colors.white.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                    ),
-
-                    if (poiCenters.containsKey(_searchQuery))
-                      Container(
-                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blueAccent.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.blueAccent.withValues(alpha: 0.5),
+                      child: TextField(
+                        cursorColor: currentIsDark ? Colors.white : Colors.black,
+                        style: TextStyle(color: currentIsDark ? Colors.white : Colors.black),
+                        decoration: InputDecoration(
+                          hintText: l10n.activitiesSearchHint,
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              Icons.tune, 
+                              color: _selectedFilters.isNotEmpty 
+                                  ? Colors.blueAccent 
+                                  : (currentIsDark ? Colors.white70 : Colors.black87),
+                            ),
+                            onPressed: () => _showFilterSheet(context, currentIsDark),
                           ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.analytics,
-                              color: Colors.blueAccent,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.mapOpenClubs(
-                                _visiblePlaces
-                                    .where(
-                                      (p) => p.isOpen && p.poi == _searchQuery,
-                                    )
-                                    .length,
-                              ),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blueAccent,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-          floatingActionButton: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              ListenableBuilder(
-                listenable: SquadProvider.instance,
-                builder: (context, _) {
-                  final inSquad = SquadProvider.instance.isInSquad;
-                  return FloatingActionButton(
-                    heroTag: 'squad_fab',
-                    onPressed: () {
-                      showSquadSheet(context);
-                    },
-                    backgroundColor: inSquad
-                        ? Colors.blueAccent
-                        : (isDark ? const Color(0xFF18181B) : Colors.white),
-                    elevation: 4,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Icon(
-                          Icons.groups,
-                          color: inSquad
-                              ? Colors.white
-                              : (isDark ? Colors.white : Colors.black),
-                        ),
-                        if (inSquad)
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                color: Colors.greenAccent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const SizedBox(width: 6, height: 6),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              FloatingActionButton(
-                heroTag: 'location_fab',
-                onPressed: () {
-                  _mapController.move(
-                    widget.userLocation ?? overpoortCenter,
-                    17.5,
-                  );
-                },
-                backgroundColor: isDark ? Colors.white : Colors.black,
-                elevation: 4,
-                child: Icon(
-                  Icons.my_location,
-                  color: isDark ? Colors.black : Colors.white,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSearchBar(bool isDark, AppLocalizations l10n) {
-    final searchOptions = [
-      ...poiCenters.keys,
-      ..._allPlaces
-          .where((p) => p.type == LocationType.club)
-          .map((p) => p.name),
-    ];
-
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF18181B) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Autocomplete<String>(
-        optionsBuilder: (val) {
-          if (val.text.isEmpty) return const Iterable<String>.empty();
-          return searchOptions.where(
-            (o) => o.toLowerCase().contains(val.text.toLowerCase()),
-          );
-        },
-        onSelected: (selection) {
-          setState(() {
-            _searchQuery = selection;
-            if (poiCenters.containsKey(selection)) {
-              _mapController.move(poiCenters[selection]!, 15.5);
-            } else {
-              final club = _allPlaces.firstWhere((p) => p.name == selection);
-              _mapController.move(club.location, 18.5);
-            }
-          });
-        },
-        fieldViewBuilder: (ctx, controller, focusNode, _) => Row(
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Icon(Icons.search, color: Colors.grey, size: 20),
-            ),
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                onChanged: (val) => setState(() => _searchQuery = val),
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                cursorColor: isDark ? Colors.white : Colors.black,
-                decoration: InputDecoration(
-                  hintText: l10n.mapSearchHint,
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
-                  isDense: true,
-                ),
-              ),
-            ),
-            if (_searchQuery.isNotEmpty)
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: const Icon(Icons.clear, color: Colors.grey, size: 18),
-                onPressed: () {
-                  controller.clear();
-                  setState(() => _searchQuery = '');
-                },
-              ),
-            const SizedBox(width: 8),
-          ],
-        ),
-        optionsViewBuilder: (ctx, onSelected, options) => Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 6,
-            borderRadius: BorderRadius.circular(12),
-            color: isDark ? const Color(0xFF18181B) : Colors.white,
-            child: Container(
-              width: MediaQuery.of(ctx).size.width - 88,
-              constraints: const BoxConstraints(maxHeight: 220),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isDark ? Colors.white10 : Colors.black12,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (ctx, i) {
-                  final option = options.elementAt(i);
-                  final isPOI = poiCenters.containsKey(option);
-                  return ListTile(
-                    leading: Icon(
-                      isPOI ? Icons.place : Icons.local_bar,
-                      color: Colors.blueAccent,
-                    ),
-                    title: Text(
-                      option,
-                      style: TextStyle(
-                        fontWeight: isPOI ? FontWeight.bold : FontWeight.normal,
-                        color: isDark ? Colors.white : Colors.black,
+                        onChanged: (val) => setState(() => _searchQuery = val),
                       ),
                     ),
-                    onTap: () {
-                      onSelected(option);
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Marker> _buildMarkers() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context)!;
-    final markers = <Marker>[];
-
-    if (widget.userLocation != null) {
-      markers.add(
-        Marker(
-          point: widget.userLocation!,
-          width: 40,
-          height: 40,
-          child: const Icon(
-            Icons.radio_button_checked,
-            color: Colors.blueAccent,
-            size: 30,
-          ),
-        ),
-      );
-    }
-
-    if (_currentZoom < 13.0) {
-      for (final entry in poiCenters.entries) {
-        markers.add(
-          Marker(
-            point: entry.value,
-            width: 120,
-            height: 40,
-            child: GestureDetector(
-              onTap: () {
-                _mapController.move(entry.value, 15.0);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 1.5),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    entry.key,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-            ),
+            ]
           ),
+          floatingActionButton: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (_liveUserLocation != null) ...[
+                FloatingActionButton(
+                  heroTag: 'my_location_fab',
+                  mini: true,
+                  onPressed: _onMyLocationTapped,
+                  backgroundColor: _isCompassMode 
+                      ? Colors.blueAccent 
+                      : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                  child: Icon(
+                    _isCompassMode ? Icons.explore : (_isFollowingUser ? Icons.my_location : Icons.location_searching), 
+                    color: _isCompassMode ? Colors.white : (currentIsDark ? Colors.white : Colors.black)
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              FloatingActionButton(
+                heroTag: 'squad_fab',
+                onPressed: () {
+                  showSquadSheet(context);
+                },
+                backgroundColor: squadState.isInSquad
+                    ? Colors.blueAccent
+                    : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                child: Icon(
+                  Icons.groups,
+                  color: squadState.isInSquad
+                      ? Colors.white
+                      : (currentIsDark ? Colors.white : Colors.black),
+                ),
+              ),
+            ]
+          )
         );
       }
-    } else {
-      for (final place in _visiblePlaces) {
-        Color markerColor;
-        IconData iconData;
-        double opacity = 1.0;
+    );
+  }
 
-        if (_foodModeActive) {
-          markerColor = Colors.orangeAccent;
-          iconData = Icons.fastfood;
-        } else {
-          if (place.status == ClubStatus.event || place.isFlashPromoActive) {
-            markerColor = Colors.purpleAccent;
-            iconData = Icons.local_fire_department;
-          } else if (place.status == ClubStatus.open) {
-            markerColor = Colors.white;
-            iconData = Icons.nightlife;
-          } else {
-            markerColor = Colors.grey;
-            iconData = Icons.location_off;
-            opacity = 0.5;
-          }
+  List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
+    final markers = <Marker>[];
+    final activePlaces = _filteredPlaces;
+
+    if (_currentZoom < 14.5) {
+      final poiGroups = <String, List<Place>>{};
+      
+      for (final p in activePlaces) {
+        final poi = p.poi ?? 'Andere';
+        poiGroups.putIfAbsent(poi, () => []).add(p);
+      }
+
+      for (final entry in poiGroups.entries) {
+        final poiName = entry.key;
+        final places = entry.value;
+
+        double sumLat = 0, sumLng = 0;
+        for (var p in places) {
+          sumLat += p.location.latitude;
+          sumLng += p.location.longitude;
         }
+        final centerPoint = LatLng(sumLat / places.length, sumLng / places.length);
+
+        markers.add(
+          Marker(
+            point: centerPoint,
+            width: 140, 
+            height: 48,
+            rotate: true, 
+            child: GestureDetector(
+              onTap: () {
+                _mapController.move(centerPoint, 15.5);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.blueAccent, width: 2),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 3))
+                  ]
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      poiName, 
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      )
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.blueAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${places.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          )
+        );
+      }
+    } 
+    else {
+      final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
+      final double baseSize = 54.0 * scale;
+      final double iconSize = 26.0 * scale;
+
+      for (final place in activePlaces) {
+        final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
+        final isEvent = place.status.toString().contains('event');
+
+        final IconData pinIcon = isFood 
+            ? Icons.fastfood_rounded 
+            : (isEvent ? Icons.local_fire_department : Icons.nightlife);
+            
+        final Color pinColor = isFood 
+            ? Colors.orange 
+            : (isEvent ? Colors.purpleAccent : Colors.blueAccent);
 
         markers.add(
           Marker(
             point: place.location,
-            width: 50,
-            height: 50,
-            child: Opacity(
-              opacity: opacity,
-              child: GestureDetector(
-                onTap: () => _showPlaceDetails(context, place),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isDark ? Colors.black54 : Colors.white70,
-                    boxShadow: markerColor != Colors.grey
-                        ? [
-                            BoxShadow(
-                              color: markerColor.withValues(alpha: 0.5),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : [],
-                  ),
-                  child: Icon(iconData, color: markerColor, size: 30),
+            width: baseSize, 
+            height: baseSize,
+            rotate: true, 
+            child: GestureDetector(
+              onTap: () => _openDetails(context, place),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: pinColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5 * scale),
+                  boxShadow: [
+                    BoxShadow(
+                      color: pinColor.withValues(alpha: 0.5),
+                      blurRadius: 8 * scale,
+                      offset: Offset(0, 3 * scale),
+                    )
+                  ]
+                ),
+                child: Icon(
+                  pinIcon, 
+                  color: Colors.white, 
+                  size: iconSize,
                 ),
               ),
             ),
-          ),
+          )
         );
       }
     }
 
-    final squadProvider = SquadProvider.instance;
-    if (squadProvider.isInSquad) {
-      for (final member in squadProvider.members) {
+    if (squadState.isInSquad) {
+      for (final member in squadState.members) {
         markers.add(
           Marker(
             point: member.position,
-            width: 50,
-            height: 50,
-            child: GestureDetector(
-              onTap: () {
-                final diff = DateTime.now().difference(member.lastUpdate);
-                final lastSeen = member.isOnline
-                    ? l10n.mapOnline
-                    : '${l10n.mapLastSeen} ${_formatLastSeen(member.lastUpdate, l10n, diff)}';
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${member.nickname}: $lastSeen'),
-                    duration: const Duration(seconds: 2),
+            width: 160,
+            height: 48,
+            rotate: true, 
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: member.isOnline ? Colors.green : Colors.grey, 
+                    width: 2
                   ),
-                );
-              },
-              child: member.isCurrentUser
-                  ? PulseAvatar(
-                      key: ValueKey('pulse_${member.id}'),
-                      name: member.nickname,
-                      imageUrl: member.avatarUrl,
-                      size: 44,
-                      isOnline: member.isOnline,
-                      triggerPulse: _pulseTrigger,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     )
-                  : UserAvatar(
-                      name: member.nickname,
-                      imageUrl: member.avatarUrl,
-                      size: 44,
-                      showStatus: true,
-                      isOnline: member.isOnline,
+                  ]
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: member.isOnline ? Colors.green : Colors.grey, 
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          member.nickname.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white, 
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 16
+                          ),
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        member.nickname,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          )
         );
       }
     }
 
-    return markers;
-  }
+    if (_liveUserLocation != null && !squadState.isInSquad) {
+      markers.add(
+        Marker(
+          point: _liveUserLocation!,
+          width: 24,
+          height: 24,
+          rotate: true,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.blueAccent,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blueAccent.withValues(alpha: 0.5),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                )
+              ]
+            ),
+          ),
+        )
+      );
+    }
 
-  String _formatLastSeen(
-    DateTime lastUpdate,
-    AppLocalizations l10n,
-    Duration diff,
-  ) {
-    if (diff.inMinutes < 1) return l10n.mapJustNow;
-    if (diff.inMinutes == 1) return l10n.mapMinuteAgo;
-    if (diff.inMinutes < 60) return l10n.mapMinutesAgo(diff.inMinutes);
-    if (diff.inHours == 1) return l10n.mapHourAgo;
-    return l10n.mapHoursAgo(diff.inHours);
+    return markers;
   }
 }

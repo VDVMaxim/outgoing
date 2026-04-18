@@ -1,24 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class WebViewScreen extends StatelessWidget {
+class WebViewScreen extends StatefulWidget {
   final String title;
   final String url;
 
   const WebViewScreen({super.key, required this.title, required this.url});
 
-  Future<void> _launchUrl(BuildContext context) async {
-    final uri = Uri.parse(url);
+  @override
+  State<WebViewScreen> createState() => _WebViewScreenState();
+}
+
+class _WebViewScreenState extends State<WebViewScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    _launchExternalUrl();
+  }
+
+  Future<void> _launchExternalUrl() async {
+    final uri = Uri.parse(widget.url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not open link')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open link'))
+        );
       }
     }
-    if (context.mounted) {
+    
+    if (mounted) {
       Navigator.pop(context);
     }
   }
@@ -37,7 +50,7 @@ class WebViewScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          title,
+          widget.title,
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black,
             fontWeight: FontWeight.bold,
@@ -52,14 +65,14 @@ class WebViewScreen extends StatelessWidget {
             Icon(Icons.open_in_new, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 24),
             Text(
-              'Opening $title...',
+              'Opening ${widget.title}...',
               style: TextStyle(
                 fontSize: 16,
                 color: isDark ? Colors.white70 : Colors.black54,
               ),
             ),
             const SizedBox(height: 24),
-            CircularProgressIndicator(color: Colors.blueAccent),
+            const CircularProgressIndicator(color: Colors.blueAccent),
           ],
         ),
       ),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/repositories/repositories.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
+import 'package:flutter_clubapp/core/widgets/badge_vault.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../../main.dart';
 
@@ -14,6 +16,102 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
+Widget _buildVibeSection(WidgetRef ref, bool isDark, Color textColor) {
+  final vibeState = ref.watch(vibeProvider);
+  final profile = vibeState.profile;
+  final isLoggedIn = ref.read(authProvider).isAuthenticated;
+
+  if (!isLoggedIn || profile == null) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.bolt, color: Colors.amber, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Log in to earn Vibe Points!',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+            ),
+          ),
+          Icon(Icons.chevron_right, color: textColor.withValues(alpha: 0.5)),
+        ],
+      ),
+    );
+  }
+
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: isDark
+            ? [
+                Colors.purple.withValues(alpha: 0.3),
+                Colors.blue.withValues(alpha: 0.3),
+              ]
+            : [
+                Colors.purple.withValues(alpha: 0.15),
+                Colors.blue.withValues(alpha: 0.15),
+              ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.bolt, color: Colors.amber, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${profile.totalVp} VP',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  Text(
+                    'Level ${profile.currentLevel} • ${profile.weekendStreak}🔥 streak',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: textColor.withValues(alpha: 0.5)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const SizedBox(
+          height: 80,
+          child: BadgeVaultWidget(compact: true, showLocked: false),
+        ),
+      ],
+    ),
+  );
+}
+
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late Future<List<Place>> _placesFuture;
   late PageController _pageController;
@@ -22,7 +120,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _placesFuture = clubRepository.getPlaces();
+    _placesFuture = ref.read(clubRepositoryProvider).getPlaces();
     _pageController = PageController();
   }
 
@@ -67,7 +165,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               }
 
               final allPlaces = snapshot.data ?? [];
-
               final featured = allPlaces
                   .where((p) => p.status == ClubStatus.event || p.promo != null)
                   .take(5)
@@ -102,6 +199,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         color: isDark ? Colors.white60 : Colors.black54,
                       ),
                     ),
+
+                    const SizedBox(height: 20),
+
+                    _buildVibeSection(ref, isDark, textColor),
 
                     const SizedBox(height: 32),
 
@@ -155,14 +256,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   animation: _pageController,
                                   builder: (context, child) {
                                     double value = 1.0;
-                                    if (_pageController
-                                        .position
-                                        .haveDimensions) {
+                                    if (_pageController.position.haveDimensions) {
                                       value = _pageController.page! - index;
-                                      value = (1 - (value.abs() * 0.3)).clamp(
-                                        0.0,
-                                        1.0,
-                                      );
+                                      value = (1 - (value.abs() * 0.3)).clamp(0.0, 1.0);
                                     }
                                     return Center(
                                       child: Transform.scale(
@@ -359,7 +455,7 @@ class _HighlightCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                place.eventName ?? place.genre ?? 'Event',
+                 place.eventName ?? place.genre ?? 'Event',
                 style: const TextStyle(color: Colors.blueAccent, fontSize: 14),
               ),
               const Spacer(),

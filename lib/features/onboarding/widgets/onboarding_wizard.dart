@@ -154,7 +154,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
+      backgroundColor: Colors.transparent,
       appBar: widget.showBackButton
           ? AppBar(
               backgroundColor: Colors.transparent,

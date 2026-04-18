@@ -1,32 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/services/user_profile_service.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 import '../providers/squad_provider.dart';
 
-class SquadScreen extends StatefulWidget {
+class SquadScreen extends ConsumerStatefulWidget {
   const SquadScreen({super.key});
 
   @override
-  State<SquadScreen> createState() => _SquadScreenState();
+  ConsumerState<SquadScreen> createState() => _SquadScreenState();
 }
 
-class _SquadScreenState extends State<SquadScreen> {
+class _SquadScreenState extends ConsumerState<SquadScreen> {
   final TextEditingController _pinController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeProvider();
-  }
-
-  Future<void> _initializeProvider() async {
-    await SquadProvider.instance.initialize();
-    if (mounted) setState(() {});
-  }
 
   @override
   void dispose() {
@@ -56,24 +46,25 @@ class _SquadScreenState extends State<SquadScreen> {
     );
 
     if (result == true && mounted) {
-      await SquadProvider.instance.requestLocationPermission();
+      await ref.read(squadProvider.notifier).requestLocationPermission();
     }
   }
 
   Future<void> _handleCreateSquad() async {
     final l10n = AppLocalizations.of(context)!;
-    final userProfile = await UserProfileService.getInstance();
+    final userProfile = ref.read(userProfileServiceProvider);
 
     if (!userProfile.hasNickname) {
       _showNicknameRequiredDialog();
       return;
     }
 
-    final hasPermission = await SquadProvider.instance
-        .checkLocationPermission();
+    final squadNotifier = ref.read(squadProvider.notifier);
+    final hasPermission = await squadNotifier.checkLocationPermission();
+
     if (!hasPermission) {
       await _showLocationRationaleDialog();
-      if (!await SquadProvider.instance.checkLocationPermission()) {
+      if (!await squadNotifier.checkLocationPermission()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -87,9 +78,7 @@ class _SquadScreenState extends State<SquadScreen> {
     }
 
     setState(() => _isLoading = true);
-
-    final result = await SquadProvider.instance.createSquad();
-
+    final result = await squadNotifier.createSquad();
     setState(() => _isLoading = false);
 
     if (result.status == SquadConnectionStatus.error && mounted) {
@@ -104,28 +93,30 @@ class _SquadScreenState extends State<SquadScreen> {
 
   Future<void> _handleJoinSquad() async {
     final l10n = AppLocalizations.of(context)!;
+
     if (_pinController.text.length != 6) {
       ShadSonner.of(context).show(
         ShadToast.raw(
           variant: ShadToastVariant.destructive,
-          description: Text(AppLocalizations.of(context)!.squadWrongPin),
+          description: Text(l10n.squadWrongPin),
         ),
       );
       return;
     }
 
-    final userProfile = await UserProfileService.getInstance();
+    final userProfile = ref.read(userProfileServiceProvider);
 
     if (!userProfile.hasNickname) {
       _showNicknameRequiredDialog();
       return;
     }
 
-    final hasPermission = await SquadProvider.instance
-        .checkLocationPermission();
+    final squadNotifier = ref.read(squadProvider.notifier);
+    final hasPermission = await squadNotifier.checkLocationPermission();
+
     if (!hasPermission) {
       await _showLocationRationaleDialog();
-      if (!await SquadProvider.instance.checkLocationPermission()) {
+      if (!await squadNotifier.checkLocationPermission()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -139,9 +130,7 @@ class _SquadScreenState extends State<SquadScreen> {
     }
 
     setState(() => _isLoading = true);
-
-    final result = await SquadProvider.instance.joinSquad(_pinController.text);
-
+    final result = await squadNotifier.joinSquad(_pinController.text);
     setState(() => _isLoading = false);
 
     if (result.status == SquadConnectionStatus.error && mounted) {
@@ -177,6 +166,9 @@ class _SquadScreenState extends State<SquadScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
+    
+    // We luisteren hier naar de state via Riverpod!
+    final squadState = ref.watch(squadProvider);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
@@ -191,17 +183,9 @@ class _SquadScreenState extends State<SquadScreen> {
           ),
         ),
       ),
-      body: ListenableBuilder(
-        listenable: SquadProvider.instance,
-        builder: (context, _) {
-          final provider = SquadProvider.instance;
-          if (provider.isInSquad) {
-            return _buildActiveSquadView(provider, isDark, l10n);
-          } else {
-            return _buildJoinCreateView(isDark, l10n);
-          }
-        },
-      ),
+      body: squadState.isInSquad 
+          ? _buildActiveSquadView(squadState, isDark, l10n)
+          : _buildJoinCreateView(isDark, l10n),
     );
   }
 
@@ -296,11 +280,10 @@ class _SquadScreenState extends State<SquadScreen> {
   }
 
   Widget _buildActiveSquadView(
-    SquadProvider provider,
+    SquadProviderState state,
     bool isDark,
     AppLocalizations l10n,
   ) {
-    final state = provider.state;
     final members = state.members;
 
     return Padding(
@@ -385,7 +368,9 @@ class _SquadScreenState extends State<SquadScreen> {
             width: double.infinity,
             height: 56,
             child: ShadButton.destructive(
-              onPressed: () => provider.leaveSquad(),
+              onPressed: () {
+                ref.read(squadProvider.notifier).leaveSquad();
+              },
               child: Text(
                 l10n.squadLeave,
                 style: const TextStyle(fontSize: 16),

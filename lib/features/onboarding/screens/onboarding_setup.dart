@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
+import 'package:flutter_clubapp/core/widgets/animated_background.dart';
+import 'package:flutter_clubapp/core/widgets/permission_rationale_sheet.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker_with_button.dart';
 import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.dart';
@@ -26,6 +28,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
   @override
   void initState() {
     super.initState();
+    _LocationWizardStep._hasShownSheetGlobal = false;
     _initializeProfile();
   }
 
@@ -116,17 +119,15 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading while initializing
     if (!_isInitialized) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
-        body: const Center(child: CircularProgressIndicator()),
+      return const AnimatedBlurBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
-    // Only skip nickname if user is authenticated AND has nickname
-    // Anonymous users should ALWAYS see the nickname step
     final bool skipNickname = _isAuthenticated && _hasNickname;
 
     final steps = skipNickname
@@ -159,19 +160,21 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
             ),
           ];
 
-    return OnboardingWizard(
-      steps: steps,
-      onComplete: _finishOnboarding,
-      showBackButton: false,
-      showProgressIndicator: false,
-      swipeable: false,
-      showNextButtonForStep: (currentStep, totalSteps) {
-        return !skipNickname && currentStep == 0;
-      },
-      nextButtonText: (context, currentStep, totalSteps) {
-        if (!skipNickname && currentStep == 0) return 'Next';
-        return '';
-      },
+    return AnimatedBlurBackground(
+      child: OnboardingWizard(
+        steps: steps,
+        onComplete: _finishOnboarding,
+        showBackButton: false,
+        showProgressIndicator: false,
+        swipeable: false,
+        showNextButtonForStep: (currentStep, totalSteps) {
+          return !skipNickname && currentStep == 0;
+        },
+        nextButtonText: (context, currentStep, totalSteps) {
+          if (!skipNickname && currentStep == 0) return 'Next';
+          return '';
+        },
+      ),
     );
   }
 }
@@ -257,6 +260,8 @@ class _LocationWizardStep implements OnboardingStep {
   final VoidCallback finishOnboarding;
   final VoidCallback onSkip;
 
+  static bool _hasShownSheetGlobal = false;
+
   _LocationWizardStep({
     required this.isLoading,
     required this.setLoading,
@@ -266,12 +271,39 @@ class _LocationWizardStep implements OnboardingStep {
 
   @override
   Widget build(BuildContext context, VoidCallback onStateRefresh) {
-    return _LocationContent(
-      isLoading: isLoading,
-      setLoading: setLoading,
-      finishOnboarding: finishOnboarding,
-      onSkip: onSkip,
+    if (!_hasShownSheetGlobal) {
+      _hasShownSheetGlobal = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          _showLocationSheet(context);
+        }
+      });
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  void _showLocationSheet(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    await PermissionRationaleSheet.show(
+      context: context,
+      icon: Icons.location_on,
+      title: l10n.onboardingLocationTitle,
+      message: l10n.onboardingLocationDesc,
+      primaryButtonText: l10n.onboardingLocationAllow,
+      onPrimary: () async {
+        setLoading(true);
+        final permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          await Geolocator.requestPermission();
+        }
+        setLoading(false);
+        finishOnboarding();
+      },
+      onSecondary: onSkip,
     );
+    onSkip();
   }
 
   @override
@@ -283,111 +315,6 @@ class _LocationWizardStep implements OnboardingStep {
   @override
   void setOnNextCallback(VoidCallback? callback) {
     onNextPressed = callback;
-  }
-}
-
-class _LocationContent extends StatelessWidget {
-  final bool isLoading;
-  final Function(bool) setLoading;
-  final VoidCallback finishOnboarding;
-  final VoidCallback onSkip;
-
-  const _LocationContent({
-    required this.isLoading,
-    required this.setLoading,
-    required this.finishOnboarding,
-    required this.onSkip,
-  });
-
-  Future<void> _requestLocation(BuildContext context) async {
-    setLoading(true);
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    setLoading(false);
-    finishOnboarding();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context)!;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.location_on,
-              size: 80,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 48),
-          Text(
-            l10n.onboardingLocationTitle,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.onboardingLocationDesc,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ShadButton(
-              onPressed: isLoading ? null : () => _requestLocation(context),
-              child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.black)
-                  : Text(
-                      l10n.onboardingLocationAllow,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ShadButton.ghost(
-              onPressed: isLoading ? null : onSkip,
-              child: Text(
-                l10n.onboardingLocationSkip,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

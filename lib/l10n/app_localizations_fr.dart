@@ -433,6 +433,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Enregistrez votre profil et synchronisez sur tous les appareils';
 
   @override
+  String get optionScreenLogin => 'Se connecter';
+
+  @override
+  String get optionScreenLoginDesc =>
+      'Vous avez déjà un compte ? Connectez-vous pour synchroniser votre progression';
+
+  @override
   String get accountFormTitle => 'Créer un compte';
 
   @override

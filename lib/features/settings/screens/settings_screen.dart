@@ -5,9 +5,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/main.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart'; // Gefixt
 import 'package:flutter_clubapp/core/config/app_config.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
+import 'package:flutter_clubapp/core/widgets/vp_display.dart';
+import 'package:flutter_clubapp/core/widgets/level_indicator.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/features/auth/screens/login_screen.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
@@ -16,6 +18,7 @@ import 'package:flutter_clubapp/features/settings/screens/faq_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/language_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/push_notifications_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/web_view_screen.dart';
+import 'package:flutter_clubapp/features/vibe_system/presentation/screens/vibe_screens.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -41,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
                 : Colors.white.withValues(alpha: 0.9),
             elevation: 0,
             title: Text(
-              l10n.settingsTitle,
+               l10n.settingsTitle,
               style: TextStyle(
                 color: isDark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
@@ -65,6 +68,79 @@ class SettingsScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 24),
+
+              if (authState.isAuthenticated) ...[
+                _buildSectionHeader('Vibe Points & Badges'),
+                _buildCard(
+                  isDark,
+                  Column(
+                    children: [
+                       const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: VpDisplay(showStreak: true, showRank: true),
+                      ),
+                      const Divider(),
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: LevelIndicator(),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.military_tech,
+                          color: Colors.amber,
+                        ),
+                        title: const Text('Badge Vault'),
+                        subtitle: const Text('View your collected badges'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const BadgeVaultScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.leaderboard,
+                          color: Colors.blueAccent,
+                        ),
+                        title: const Text('Leaderboard'),
+                        subtitle: const Text('Squads & Cities rankings'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LeaderboardScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.emoji_events,
+                          color: Colors.purple,
+                        ),
+                        title: const Text('Challenges'),
+                        subtitle: const Text('Complete Squad challenges'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ChallengesScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
 
               _buildSectionHeader(l10n.settingsPreferences),
               _buildCard(
@@ -283,7 +359,6 @@ class SettingsScreen extends ConsumerWidget {
         'subject': Uri.encodeComponent('Bug Report / Feedback - Club App'),
       },
     );
-
     try {
       final canLaunch = await canLaunchUrl(emailUri);
       if (canLaunch) {

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:flutter_clubapp/core/services/auth_service.dart';
-import 'package:flutter_clubapp/core/services/user_profile_service.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
-class AccountSettingsScreen extends StatelessWidget {
+class AccountSettingsScreen extends ConsumerWidget {
   const AccountSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
@@ -18,39 +18,32 @@ class AccountSettingsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? Colors.white : Colors.black,
-          ),
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           l10n.settingsAccount,
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const SizedBox(height: 8),
           _SettingsListTile(
             isDark: isDark,
             icon: Icons.logout,
             iconColor: Colors.orange,
             title: l10n.settingsLogout,
-            onTap: () => _showLogoutDialog(context, isDark, l10n),
+            onTap: () => _showLogoutDialog(context, isDark, l10n, ref),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _SettingsListTile(
             isDark: isDark,
             icon: Icons.delete_forever,
             iconColor: Colors.red,
-            title: l10n.settingsDelete,
-            onTap: () => _showDeleteDialog(context, isDark, l10n),
+            title: l10n.settingsDeleteAccount,
+            onTap: () => _showDeleteDialog(context, isDark, l10n, ref),
           ),
         ],
       ),
@@ -61,31 +54,27 @@ class AccountSettingsScreen extends StatelessWidget {
     BuildContext context,
     bool isDark,
     AppLocalizations l10n,
+    WidgetRef ref,
   ) async {
-    final profile = await UserProfileService.getInstance();
+    final profile = ref.read(userProfileServiceProvider);
+    final authService = ref.read(authServiceProvider);
+
     if (!context.mounted) return;
 
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
-        title: Text(
-          l10n.settingsLogout,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          l10n.settingsLogoutConfirm,
-          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
-        ),
+        title: Text(l10n.settingsLogoutConfirm, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         actions: [
-          ShadButton.ghost(
+          TextButton(
             onPressed: () => Navigator.pop(c),
             child: Text(l10n.settingsCancel),
           ),
           ShadButton(
             onPressed: () async {
               Navigator.pop(c);
-              await AuthService().signOut();
+              await authService.signOut();
               await profile.syncNicknameFromProfile();
               if (context.mounted) {
                 Navigator.pop(context);
@@ -102,46 +91,29 @@ class AccountSettingsScreen extends StatelessWidget {
     BuildContext context,
     bool isDark,
     AppLocalizations l10n,
+    WidgetRef ref,
   ) async {
-    final profile = await UserProfileService.getInstance();
+    final authService = ref.read(authServiceProvider);
+
     if (!context.mounted) return;
 
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
-        title: Text(
-          l10n.settingsDeleteAccountConfirm,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          l10n.settingsDeleteAccountWarning,
-          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
-        ),
+        title: Text(l10n.settingsDeleteAccountConfirm, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        content: Text(l10n.settingsDeleteAccountWarning, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
         actions: [
-          ShadButton.ghost(
+          TextButton(
             onPressed: () => Navigator.pop(c),
             child: Text(l10n.settingsCancel),
           ),
           ShadButton.destructive(
             onPressed: () async {
               Navigator.pop(c);
-              final result = await AuthService().deleteAccount();
+              await authService.deleteAccount();
               if (context.mounted) {
-                if (result.status == AuthResultStatus.success) {
-                  profile.clearProfile();
-                  profile.resetOnboarding();
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil('/onboarding', (route) => false);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(result.errorMessage ?? 'Error'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                Navigator.pop(context);
               }
             },
             child: Text(l10n.settingsDelete),

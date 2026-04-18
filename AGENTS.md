@@ -1,4 +1,4 @@
-﻿# Club App - Project Overview
+# Club App - Project Overview
 
 ## Project Description
 
@@ -118,3 +118,102 @@ Supported locales: `nl`, `en`, `fr`
 
 - Supabase URL: `https://gucwsgnxvawtfrnhnqtw.supabase.co`
 - Min SDK: Android 21 / iOS 12
+
+## 6. Vibe Points Gamification System
+
+MVP: Alleen voor **ingelogde gebruikers** (anonieme gebruikers kunnen geen VP verdienen).
+
+### Database (Supabase)
+
+Nieuwe tabellen in `supabase/schema.sql`:
+- `vibe_profiles` - VP, level, streak per user
+- `vibe_actions` - Audit trail voor VP verdienen
+
+### Models (`lib/core/models/`)
+
+| File | Purpose |
+|------|---------|
+| `vibe_profile.dart` | VP model (userId, totalVp, currentLevel, weekendStreak, visitedPlaces) |
+| `vibe_action.dart` | Action types enum (checkIn, vibeUpdate, squadInvite, earlyBird, explorer) |
+
+### Services (`lib/core/services/`)
+
+| File | Purpose |
+|------|---------|
+| `vibe_points_service.dart` | VP berekeningen, level thresholds, streak logic, early bird check |
+
+### Repositories (`lib/core/repositories/`)
+
+| File | Purpose |
+|------|---------|
+| `vibe_repository.dart` | Supabase database operaties (addVp, updateStreak, getLeaderboard, getRank) |
+
+### Providers (`lib/core/providers/`)
+
+| File | Purpose |
+|------|---------|
+| `vibe_provider.dart` | Riverpod state voor VP (vibeProvider, vpDisplayProvider, VibeDisplayData) |
+
+### UI Widgets (`lib/core/widgets/`)
+
+| File | Purpose |
+|------|---------|
+| `vp_display.dart` | Toont VP balans + streak + rank |
+| `level_indicator.dart` | Level badge met progress bar + StreakIndicator widget |
+
+### VP Verdien Mechaniek (MVP)
+
+| Action | VP | Voorwaarde |
+|--------|-----|-------------|
+| Check-in | +10 | Altijd (via ClubBottomSheet) |
+| Vibe Update | +20 | Bij vibe check bevestigen (via VibeCheckDialog) |
+| Early Bird | +30 | Bonus: Check-in vóór 23:30 |
+| Explorer | +40 | Bonus: Eerste keer op nieuwe locatie |
+
+### Level Systeem
+
+| Level | VP Range | Naam | Badge |
+|-------|----------|------|-------|
+| 1 | 0-99 | Newbie | Grijs |
+| 2 | 100-499 | Club Hopper | Blauw |
+| 3 | 500-1499 | Vibe Master | Paars |
+| 4 | 1500+ | Legend | Goud (gloed effect) |
+
+### Integratie
+
+- `ClubBottomSheet` - Check-in knop (+10 VP) alleen zichtbaar voor ingelogde gebruikers
+- `VibeCheckDialog` - Vibe update knop (+20 VP) met VP beloning
+- `auth_provider.dart` - Auto-create vibe_profile bij eerste login
+
+### Weekend Streak
+
+- Streak teller in vibe_profiles
+- Streak multiplier: 1.2x VP na 3+ weekends
+- Visual indicator: Vlam icoon (StreakIndicator widget)
+
+### Supabase Tabellen (in schema.sql)
+
+```sql
+-- vibe_profiles
+CREATE TABLE vibe_profiles (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    total_vp INTEGER DEFAULT 0,
+    current_level INTEGER DEFAULT 1,
+    weekend_streak INTEGER DEFAULT 0,
+    last_check_in TIMESTAMPTZ,
+    visited_places UUID[],
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- vibe_actions (audit trail)
+CREATE TABLE vibe_actions (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    action_type TEXT NOT NULL,
+    place_id UUID REFERENCES places(id),
+    vp_earned INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```

@@ -1,93 +1,24 @@
-import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/auth_service.dart';
-import '../services/user_profile_service.dart';
 
-class AuthState {
-  final bool isAuthenticated;
-  final bool isLoading;
-  final String? nickname;
-  final String? email;
-  final String? displayName;
+enum AuthResultStatus { success, error, emailAlreadyInUse, invalidCredentials }
+
+class AuthResult {
+  final AuthResultStatus status;
   final String? errorMessage;
 
-  const AuthState({
-    this.isAuthenticated = false,
-    this.isLoading = true,
-    this.nickname,
-    this.email,
-    this.displayName,
-    this.errorMessage,
-  });
-
-  AuthState copyWith({
-    bool? isAuthenticated,
-    bool? isLoading,
-    String? nickname,
-    String? email,
-    String? displayName,
-    String? errorMessage,
-  }) {
-    return AuthState(
-      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      isLoading: isLoading ?? this.isLoading,
-      nickname: nickname ?? this.nickname,
-      email: email ?? this.email,
-      displayName: displayName ?? this.displayName,
-      errorMessage: errorMessage,
-    );
-  }
+  AuthResult({required this.status, this.errorMessage});
 }
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  StreamSubscription? _authStateSubscription;
+class AuthService {
+  final SupabaseClient _supabase;
+  
+  // Geen singleton meer, we injecteren de client via de constructor
+  AuthService(this._supabase); 
 
-  AuthNotifier() : super(const AuthState()) {
-    _init();
-  }
+  bool get isAuthenticated => _supabase.auth.currentUser != null;
+  String? get userId => _supabase.auth.currentUser?.id;
 
-  Future<void> _init() async {
-    final profile = await UserProfileService.getInstance();
-    _updateFromProfile(profile);
-
-    _authStateSubscription = Supabase.instance.client.auth.onAuthStateChange
-        .listen((event) async {
-          final profile = await UserProfileService.getInstance();
-          _updateFromProfile(profile);
-        });
-  }
-
-  void _updateFromProfile(UserProfileService profile) {
-    state = AuthState(
-      isAuthenticated: profile.isAuthenticated,
-      isLoading: false,
-      nickname: profile.nickname,
-      email: profile.email,
-      displayName: profile.displayName,
-    );
-  }
-
-  Future<bool> signIn({required String email, required String password}) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-
-    final result = await AuthService().signIn(email: email, password: password);
-
-    if (result.status == AuthResultStatus.success) {
-      final profile = await UserProfileService.getInstance();
-      await profile.loadProfileFromSupabase();
-      _updateFromProfile(profile);
-      return true;
-    } else {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: result.errorMessage,
-      );
-      return false;
-    }
-  }
-
-  Future<bool> signUp({
+  Future<AuthResult> signUp({
     required String email,
     required String password,
     required String firstName,
@@ -95,51 +26,77 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required DateTime birthday,
     required String nickname,
   }) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-
-    final result = await AuthService().signUp(
-      email: email,
-      password: password,
-      firstName: firstName,
-      lastName: lastName,
-      birthday: birthday,
-      nickname: nickname,
-    );
-
-    if (result.status == AuthResultStatus.success) {
-      final profile = await UserProfileService.getInstance();
-      await profile.loadProfileFromSupabase();
-      _updateFromProfile(profile);
-      return true;
-    } else {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: result.errorMessage,
+    try {
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
       );
-      return false;
+      if (response.user != null) {
+        await _supabase.from('profiles').insert({
+          'user_id': response.user!.id,
+          'first_name': firstName,
+          'last_name': lastName,
+          'email': email,
+          'birthday': birthday.toIso8601String().split('T')[0],
+          'nickname': nickname,
+        });
+        return AuthResult(status: AuthResultStatus.success);
+      }
+      return AuthResult(
+        status: AuthResultStatus.error,
+        errorMessage: 'Unknown error occurred',
+      );
+    } on AuthException catch (e) {
+      if (e.message.contains('already') || e.statusCode == '422') {
+        return AuthResult(
+          status: AuthResultStatus.emailAlreadyInUse,
+          errorMessage: 'Dit email adres is al in gebruik',
+        );
+      }
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.message);
+    } catch (e) {
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
     }
   }
 
-  Future<void> logout() async {
-    state = state.copyWith(isLoading: true);
-    await Supabase.instance.client.auth.signOut();
-    final profile = await UserProfileService.getInstance();
-    profile.clearAuthData();
-    _updateFromProfile(profile);
+  Future<AuthResult> signIn({required String email, required String password}) async {
+    try {
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      if (response.user != null) {
+        return AuthResult(status: AuthResultStatus.success);
+      }
+      return AuthResult(status: AuthResultStatus.error, errorMessage: 'Unknown error occurred');
+    } on AuthException catch (e) {
+      if (e.message.contains('Invalid login') || e.message.contains('Invalid credentials')) {
+        return AuthResult(
+          status: AuthResultStatus.invalidCredentials,
+          errorMessage: 'Email of wachtwoord is incorrect',
+        );
+      }
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.message);
+    } catch (e) {
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
+    }
   }
 
-  Future<void> refresh() async {
-    final profile = await UserProfileService.getInstance();
-    _updateFromProfile(profile);
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
   }
 
-  @override
-  void dispose() {
-    _authStateSubscription?.cancel();
-    super.dispose();
+  Future<AuthResult> deleteAccount() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        return AuthResult(status: AuthResultStatus.error, errorMessage: 'Not logged in');
+      }
+      await _supabase.from('profiles').delete().eq('user_id', userId);
+      await _supabase.auth.admin.deleteUser(userId);
+      return AuthResult(status: AuthResultStatus.success);
+    } catch (e) {
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
+    }
   }
 }
-
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
-});

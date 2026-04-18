@@ -428,6 +428,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Save your profile and sync across devices';
 
   @override
+  String get optionScreenLogin => 'Log in';
+
+  @override
+  String get optionScreenLoginDesc =>
+      'Already have an account? Sign in to sync your progress';
+
+  @override
   String get accountFormTitle => 'Create account';
 
   @override

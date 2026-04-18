@@ -429,6 +429,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Bewaar je profiel en sync across apparaten';
 
   @override
+  String get optionScreenLogin => 'Inloggen';
+
+  @override
+  String get optionScreenLoginDesc =>
+      'Heb je al een account? Log in om je voortgang te sync.';
+
+  @override
   String get accountFormTitle => 'Account aanmaken';
 
   @override

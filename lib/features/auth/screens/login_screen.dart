@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/widgets/app_text_field.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
@@ -69,14 +69,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_validate()) return;
-
     final result = await ref
         .read(authProvider.notifier)
         .signIn(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-
     if (!mounted) return;
 
     if (result) {

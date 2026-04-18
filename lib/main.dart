@@ -7,12 +7,12 @@ import 'package:flutter_clubapp/core/constants/env.dart';
 import 'features/onboarding/screens/splash_screen.dart';
 import 'core/config/supabase_config.dart';
 import 'core/config/supabase_client.dart';
-import 'core/repositories/repository_provider.dart';
+import 'core/providers/service_providers.dart';
+import 'core/services/user_profile_service.dart';
+import 'core/services/settings_service.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-
 final ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
-
 const Color _kSplashSurface = Color(0xFF09090B);
 
 ThemeData _appThemeForBrightness(Brightness brightness) {
@@ -22,9 +22,10 @@ ThemeData _appThemeForBrightness(Brightness brightness) {
       canvasColor: _kSplashSurface,
     );
   }
-  return ThemeData.light(
-    useMaterial3: true,
-  ).copyWith(scaffoldBackgroundColor: Colors.white, canvasColor: Colors.white);
+  return ThemeData.light(useMaterial3: true).copyWith(
+    scaffoldBackgroundColor: Colors.white,
+    canvasColor: Colors.white,
+  );
 }
 
 Future<void> _initializeSupabase() async {
@@ -32,17 +33,27 @@ Future<void> _initializeSupabase() async {
     await SupabaseConfig.setUrl(Env.supabaseUrl);
     await SupabaseConfig.setAnonKey(Env.supabaseAnonKey);
   }
-
   await SupabaseClientProvider.initialize();
-  initializeRepositories();
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await _initializeSupabase();
+  
+  await UserProfileService.getInstance();
+  
+  // 1. Wacht tot de settings service volledig is ingeladen en sla hem op in een variabele
+  final ingeladenSettingsService = await SettingsService.getInstance();
 
-  runApp(const ProviderScope(child: ClubApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        // 2. Injecteer de ingeladen service direct in de provider!
+        settingsServiceProvider.overrideWithValue(ingeladenSettingsService),
+      ],
+      child: const ClubApp(),
+    ),
+  );
 }
 
 class ClubApp extends StatelessWidget {

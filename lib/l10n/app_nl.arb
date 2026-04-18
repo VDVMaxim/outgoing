@@ -176,6 +176,8 @@
   "optionScreenAnonymousDesc": "Je kunt later altijd nog een account aanmaken",
   "optionScreenCreateAccount": "Account aanmaken",
   "optionScreenCreateAccountDesc": "Bewaar je profiel en sync across apparaten",
+  "optionScreenLogin": "Inloggen",
+  "optionScreenLoginDesc": "Heb je al een account? Log in om je voortgang te sync.",
 
   "accountFormTitle": "Account aanmaken",
   "accountFormFirstName": "Voornaam",
