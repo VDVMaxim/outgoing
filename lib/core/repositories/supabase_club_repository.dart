@@ -8,21 +8,37 @@ class SupabaseClubRepository implements ClubRepository {
     final client = SupabaseClientProvider.client;
 
     final placesResponse = await client.from('places').select();
-    final tagsResponse = await client.from('place_tags').select();
-    final facilitiesResponse = await client.from('place_facilities').select();
+
+    // Fetch tags with join to get tag names
+    final tagsWithNames = await client
+        .from('place_tags')
+        .select('place_id, tags:tag_id(name)');
+
+    // Fetch facilities with join to get facility names
+    final facilitiesWithNames = await client
+        .from('place_facilities')
+        .select('place_id, facilities:facility_id(name)');
 
     final tagsByPlace = <String, List<String>>{};
-    for (final tag in tagsResponse) {
+    for (final tag in tagsWithNames) {
       final placeId = tag['place_id'] as String;
-      tagsByPlace.putIfAbsent(placeId, () => []).add(tag['tag'] as String);
+      final tagData = tag['tags'];
+      if (tagData != null && tagData['name'] != null) {
+        tagsByPlace
+            .putIfAbsent(placeId, () => [])
+            .add(tagData['name'] as String);
+      }
     }
 
     final facilitiesByPlace = <String, List<String>>{};
-    for (final facility in facilitiesResponse) {
+    for (final facility in facilitiesWithNames) {
       final placeId = facility['place_id'] as String;
-      facilitiesByPlace
-          .putIfAbsent(placeId, () => [])
-          .add(facility['facility'] as String);
+      final facilityData = facility['facilities'];
+      if (facilityData != null && facilityData['name'] != null) {
+        facilitiesByPlace
+            .putIfAbsent(placeId, () => [])
+            .add(facilityData['name'] as String);
+      }
     }
 
     return (placesResponse as List).map((json) {
@@ -46,22 +62,28 @@ class SupabaseClubRepository implements ClubRepository {
 
     if (placeResponse == null) return null;
 
+    // Fetch tags with join
     final tagsResponse = await client
         .from('place_tags')
-        .select()
+        .select('tags:tag_id(name)')
         .eq('place_id', id);
 
+    // Fetch facilities with join
     final facilitiesResponse = await client
         .from('place_facilities')
-        .select()
+        .select('facilities:facility_id(name)')
         .eq('place_id', id);
 
     final enrichedJson = Map<String, dynamic>.from(placeResponse);
     enrichedJson['tags'] = (tagsResponse as List)
-        .map((t) => t['tag'] as String)
+        .map((t) => (t['tags'] as Map<String, dynamic>?)?['name'] as String?)
+        .whereType<String>()
         .toList();
     enrichedJson['facilities'] = (facilitiesResponse as List)
-        .map((f) => f['facility'] as String)
+        .map(
+          (f) => (f['facilities'] as Map<String, dynamic>?)?['name'] as String?,
+        )
+        .whereType<String>()
         .toList();
 
     return Place.fromJson(enrichedJson);

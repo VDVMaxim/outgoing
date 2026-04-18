@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'features/onboarding/screens/splash_screen.dart';
 import 'core/config/supabase_config.dart';
@@ -44,7 +45,7 @@ void main() async {
 
   await _initializeSupabase();
 
-  runApp(const ClubApp());
+  runApp(const ProviderScope(child: ClubApp()));
 }
 
 class ClubApp extends StatelessWidget {

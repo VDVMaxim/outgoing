@@ -1,25 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/repositories/repositories.dart';
+import 'package:flutter_clubapp/core/providers/auth_provider.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../../main.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   late Future<List<Place>> _placesFuture;
+  late PageController _pageController;
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
     _placesFuture = clubRepository.getPlaces();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _openDetails(BuildContext context, Place place) {
@@ -36,129 +46,368 @@ class _HomeScreenState extends State<HomeScreen> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
-        final isDark = currentMode == ThemeMode.dark || (currentMode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+        final isDark =
+            currentMode == ThemeMode.dark ||
+            (currentMode == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
         final l10n = AppLocalizations.of(context)!;
         final textColor = isDark ? Colors.white : Colors.black87;
+        final authState = ref.watch(authProvider);
+        final nickname = authState.nickname;
 
-        return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
-          body: SafeArea(
-            child: FutureBuilder<List<Place>>(
-              future: _placesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return const Center(child: Text('Fout bij het laden van data'));
-                }
+        return SafeArea(
+          child: FutureBuilder<List<Place>>(
+            future: _placesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return const Center(child: Text('Fout bij het laden van data'));
+              }
 
-                final allPlaces = snapshot.data ?? [];
-                
-                final featured = allPlaces.where((p) => p.status == ClubStatus.event || p.promo != null).take(3).toList();
-                final trending = allPlaces.where((p) => p.crowdLevel == 'Sfeervol' || p.crowdLevel == 'Druk').take(3).toList();
+              final allPlaces = snapshot.data ?? [];
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShadAlert(
-                        icon: const Icon(Icons.warning_amber, color: Colors.amberAccent),
-                        title: Text(l10n.homeAlertTitle,
-                            style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                        description: Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(l10n.homeAlertDesc,
-                              style: TextStyle(color: textColor)),
-                        ),
-                        decoration: ShadDecoration(
-                          border: ShadBorder.all(color: Colors.amberAccent.withValues(alpha: 0.5)),
-                          color: Colors.amberAccent.withValues(alpha: 0.1),
-                        ),
+              final featured = allPlaces
+                  .where((p) => p.status == ClubStatus.event || p.promo != null)
+                  .take(5)
+                  .toList();
+              final trending = allPlaces
+                  .where(
+                    (p) => p.crowdLevel == 'Sfeervol' || p.crowdLevel == 'Druk',
+                  )
+                  .take(3)
+                  .toList();
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+
+                    Text(
+                      nickname != null ? 'Welcome, $nickname!' : 'Welcome!',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Discover what\'s happening tonight',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
-                      Text(l10n.homeHighlightsTitle,
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
-                      const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l10n.homeHighlightsTitle,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        if (featured.isNotEmpty)
+                          Text(
+                            '${_currentPage + 1}/${featured.length}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white60 : Colors.black54,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
 
-                      SizedBox(
-                        height: 180,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: featured.length,
-                          separatorBuilder: (_, i) => const SizedBox(width: 16),
-                          itemBuilder: (context, index) {
-                            final place = featured[index];
-                            return GestureDetector(
-                              onTap: () => _openDetails(context, place),
-                              child: Container(
-                                width: 250,
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF18181B) : Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
-                                ),
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(child: Text(place.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: textColor), overflow: TextOverflow.ellipsis)),
-                                        if (place.isFlashPromoActive) const Icon(Icons.local_fire_department, color: Colors.purpleAccent, size: 20),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(place.eventName ?? place.genre ?? '', style: const TextStyle(color: Colors.blueAccent)),
-                                    const Spacer(),
-                                    if (place.promo != null)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(color: Colors.purpleAccent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                                        child: Text(place.promo!, style: const TextStyle(color: Colors.purpleAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                                      )
-                                  ],
+                    SizedBox(
+                      height: 200,
+                      child: featured.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No events or promotions right now',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white60
+                                      : Colors.black54,
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
+                            )
+                          : PageView.builder(
+                              controller: _pageController,
+                              itemCount: featured.length,
+                              onPageChanged: (index) {
+                                setState(() {
+                                  _currentPage = index;
+                                });
+                              },
+                              itemBuilder: (context, index) {
+                                final place = featured[index];
+                                return AnimatedBuilder(
+                                  animation: _pageController,
+                                  builder: (context, child) {
+                                    double value = 1.0;
+                                    if (_pageController
+                                        .position
+                                        .haveDimensions) {
+                                      value = _pageController.page! - index;
+                                      value = (1 - (value.abs() * 0.3)).clamp(
+                                        0.0,
+                                        1.0,
+                                      );
+                                    }
+                                    return Center(
+                                      child: Transform.scale(
+                                        scale: value,
+                                        child: _HighlightCard(
+                                          place: place,
+                                          isDark: isDark,
+                                          textColor: textColor,
+                                          onTap: () =>
+                                              _openDetails(context, place),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                    ),
 
-                      const SizedBox(height: 32),
-                      Text(l10n.homeTrendingTitle,
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
-                      const SizedBox(height: 12),
+                    const SizedBox(height: 8),
 
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: trending.length,
-                        separatorBuilder: (_, i) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final place = trending[index];
-                          return ListTile(
-                            onTap: () => _openDetails(context, place),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            tileColor: isDark ? const Color(0xFF18181B) : Colors.grey[50],
-                            title: Text(place.name, style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                            subtitle: Text('Vibe: ${place.crowdLevel}', style: const TextStyle(color: Colors.grey)),
-                            trailing: Icon(Icons.chevron_right, color: textColor),
+                    if (featured.isNotEmpty)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(featured.length, (index) {
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentPage == index ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _currentPage == index
+                                  ? Colors.blueAccent
+                                  : (isDark ? Colors.white24 : Colors.black26),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                           );
-                        },
+                        }),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+
+                    const SizedBox(height: 32),
+                    Text(
+                      l10n.homeTrendingTitle,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    trending.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(
+                                'No trending places right now',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white60
+                                      : Colors.black54,
+                                ),
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: trending.length,
+                            separatorBuilder: (_, i) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final place = trending[index];
+                              return ListTile(
+                                onTap: () => _openDetails(context, place),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                tileColor: isDark
+                                    ? const Color(0xFF18181B)
+                                    : Colors.white.withValues(alpha: 0.5),
+                                title: Text(
+                                  place.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Vibe: ${place.crowdLevel}',
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: textColor,
+                                ),
+                              );
+                            },
+                          ),
+                  ],
+                ),
+              );
+            },
           ),
         );
       },
+    );
+  }
+}
+
+class _HighlightCard extends StatelessWidget {
+  final Place place;
+  final bool isDark;
+  final Color textColor;
+  final VoidCallback onTap;
+
+  const _HighlightCard({
+    required this.place,
+    required this.isDark,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xCC18181B)
+              : Colors.white.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      place.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        color: textColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (place.isFlashPromoActive)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.purpleAccent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.local_fire_department,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'HOT',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                place.eventName ?? place.genre ?? 'Event',
+                style: const TextStyle(color: Colors.blueAccent, fontSize: 14),
+              ),
+              const Spacer(),
+              if (place.promo != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.purpleAccent.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    place.promo!,
+                    style: const TextStyle(
+                      color: Colors.purpleAccent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              if (place.poi != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      place.poi!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

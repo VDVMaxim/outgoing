@@ -87,6 +87,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingLocationSkip => 'Maybe Later';
 
   @override
+  String get onboardingSetupTitle => 'Setup';
+
+  @override
+  String get onboardingStartExploring => 'Start Exploring';
+
+  @override
+  String get onboardingAllSet => 'You\'re all set!';
+
+  @override
+  String get onboardingExploreNearby =>
+      'Let\'s explore what\'s happening nearby.';
+
+  @override
+  String get onboardingSettingUp => 'Setting up your account...';
+
+  @override
+  String get onboardingNicknameRequired => 'Please enter a nickname';
+
+  @override
+  String get onboardingNicknameMinLength =>
+      'Nickname must be at least 3 characters';
+
+  @override
   String get homeHighlightsTitle => 'Top 3 Highlights';
 
   @override
@@ -344,7 +367,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCancel => 'Cancel';
 
   @override
-  String get settingsDelete => 'Clear';
+  String get settingsDelete => 'Delete account';
 
   @override
   String get settingsAbout => 'About Club App';

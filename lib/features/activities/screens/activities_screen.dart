@@ -46,14 +46,19 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
-        final isDark = currentMode == ThemeMode.dark || (currentMode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+        final isDark =
+            currentMode == ThemeMode.dark ||
+            (currentMode == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
         final l10n = AppLocalizations.of(context)!;
         final textColor = isDark ? Colors.white : Colors.black87;
 
         return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
-            backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
+            backgroundColor: isDark
+                ? const Color(0xFF09090B).withValues(alpha: 0.7)
+                : Colors.white.withValues(alpha: 0.9),
             elevation: 0,
             titleSpacing: 12,
             title: TextField(
@@ -66,7 +71,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 border: InputBorder.none,
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 filled: true,
-                fillColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                fillColor: isDark
+                    ? Colors.white10
+                    : Colors.black.withValues(alpha: 0.06),
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -74,7 +81,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.blueAccent.withValues(alpha: 0.5)),
+                  borderSide: BorderSide(
+                    color: Colors.blueAccent.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
               onChanged: (val) {
@@ -87,12 +96,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               IconButton(
                 icon: Icon(
                   _showFavoritesOnly ? Icons.favorite : Icons.favorite_border,
-                  color: _showFavoritesOnly ? Colors.redAccent : (isDark ? Colors.white : Colors.black),
+                  color: _showFavoritesOnly
+                      ? Colors.redAccent
+                      : (isDark ? Colors.white : Colors.black),
                 ),
                 onPressed: () {
                   setState(() => _showFavoritesOnly = !_showFavoritesOnly);
                 },
-              )
+              ),
             ],
           ),
           body: FutureBuilder<List<Place>>(
@@ -102,7 +113,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return Center(child: Text('Er is een fout opgetreden', style: TextStyle(color: textColor)));
+                return Center(
+                  child: Text(
+                    'Er is een fout opgetreden',
+                    style: TextStyle(color: textColor),
+                  ),
+                );
               }
 
               final allPlaces = snapshot.data ?? [];
@@ -112,15 +128,24 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 builder: (context, favorites, _) {
                   List<Place> events = allPlaces.where((p) {
                     if (p.type != LocationType.club) return false;
-                    if (p.status != ClubStatus.event && !p.isFlashPromoActive) return false;
-                    if (_showFavoritesOnly && !favorites.contains(p.id)) return false;
+                    if (p.status != ClubStatus.event && !p.isFlashPromoActive) {
+                      return false;
+                    }
+                    if (_showFavoritesOnly && !favorites.contains(p.id)) {
+                      return false;
+                    }
                     if (_searchQuery.isNotEmpty) {
                       final q = _searchQuery.toLowerCase();
                       final nameMatch = p.name.toLowerCase().contains(q);
-                      final orgMatch = p.organizer?.toLowerCase().contains(q) ?? false;
-                      final genreMatch = p.genre?.toLowerCase().contains(q) ?? false;
-                      final eventMatch = p.eventName?.toLowerCase().contains(q) ?? false;
-                      if (!nameMatch && !orgMatch && !genreMatch && !eventMatch) return false;
+                      final orgMatch =
+                          p.organizer?.toLowerCase().contains(q) ?? false;
+                      final genreMatch =
+                          p.genre?.toLowerCase().contains(q) ?? false;
+                      final eventMatch =
+                          p.eventName?.toLowerCase().contains(q) ?? false;
+                      if (!nameMatch && !orgMatch && !genreMatch && !eventMatch) {
+                        return false;
+                      }
                     }
                     return true;
                   }).toList();
@@ -133,13 +158,19 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   });
 
                   if (events.isEmpty) {
-                    return Center(child: Text(l10n.activitiesEmpty, style: TextStyle(color: textColor)));
+                    return Center(
+                      child: Text(
+                        l10n.activitiesEmpty,
+                        style: TextStyle(color: textColor),
+                      ),
+                    );
                   }
 
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: events.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 16),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final place = events[index];
                       final isFavorite = favorites.contains(place.id);
@@ -147,25 +178,39 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       return GestureDetector(
                         onTap: () => _openDetails(context, place),
                         child: ShadCard(
-                          backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
+                          backgroundColor: isDark
+                              ? const Color(0xCC18181B)
+                              : Colors.white.withValues(alpha: 0.85),
                           title: Row(
                             children: [
                               Expanded(
                                 child: Text(
                                   place.eventName ?? place.genre ?? 'Event',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
                                 ),
                               ),
                               IconButton(
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 icon: Icon(
-                                  isFavorite ? Icons.favorite : Icons.favorite_border,
-                                  color: isFavorite ? Colors.redAccent : (isDark ? Colors.white54 : Colors.black54),
+                                  isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isFavorite
+                                      ? Colors.redAccent
+                                      : (isDark
+                                            ? Colors.white54
+                                            : Colors.black54),
                                   size: 24,
                                 ),
                                 onPressed: () {
-                                  FavoritesProvider.instance.toggleFavorite(place.id);
+                                  FavoritesProvider.instance.toggleFavorite(
+                                    place.id,
+                                  );
                                 },
                               ),
                             ],
@@ -176,18 +221,45 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(Icons.location_on, size: 14, color: isDark ? Colors.white70 : Colors.black87),
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.black87,
+                                  ),
                                   const SizedBox(width: 4),
-                                  Text(place.name, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.w600)),
+                                  Text(
+                                    place.name,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ],
                               ),
                               if (place.organizer != null) ...[
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    Icon(Icons.shield, size: 14, color: place.isVereniging ? Colors.blueAccent : Colors.grey),
+                                    Icon(
+                                      Icons.shield,
+                                      size: 14,
+                                      color: place.isVereniging
+                                          ? Colors.blueAccent
+                                          : Colors.grey,
+                                    ),
                                     const SizedBox(width: 4),
-                                    Text(place.organizer!, style: TextStyle(color: place.isVereniging ? Colors.blueAccent : Colors.grey)),
+                                    Text(
+                                      place.organizer!,
+                                      style: TextStyle(
+                                        color: place.isVereniging
+                                            ? Colors.blueAccent
+                                            : Colors.grey,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -195,11 +267,17 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                                    const Icon(
+                                      Icons.access_time,
+                                      size: 14,
+                                      color: Colors.grey,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       '${place.startTime!.hour.toString().padLeft(2, '0')}:${place.startTime!.minute.toString().padLeft(2, '0')}',
-                                      style: const TextStyle(color: Colors.grey),
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -215,32 +293,50 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                   Text(
                                     place.promo!,
                                     style: TextStyle(
-                                      color: place.isFlashPromoActive ? Colors.purpleAccent : Colors.amber,
+                                      color: place.isFlashPromoActive
+                                          ? Colors.purpleAccent
+                                          : Colors.amber,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                 ],
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(Icons.people, size: 16, color: isDark ? Colors.white54 : Colors.black54),
+                                        Icon(
+                                          Icons.people,
+                                          size: 16,
+                                          color: isDark
+                                              ? Colors.white54
+                                              : Colors.black54,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          place.crowdLevel ?? l10n.activitiesUnknownCrowd,
-                                          style: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
+                                          place.crowdLevel ??
+                                              l10n.activitiesUnknownCrowd,
+                                          style: TextStyle(
+                                            color: isDark
+                                                ? Colors.white54
+                                                : Colors.black54,
+                                          ),
                                         ),
                                       ],
                                     ),
                                     ShadButton.outline(
                                       size: ShadButtonSize.sm,
-                                      onPressed: () => _openDetails(context, place),
-                                      child: Text(l10n.activitiesDetails, style: TextStyle(color: textColor)),
-                                    )
+                                      onPressed: () =>
+                                          _openDetails(context, place),
+                                      child: Text(
+                                        l10n.activitiesDetails,
+                                        style: TextStyle(color: textColor),
+                                      ),
+                                    ),
                                   ],
-                                )
+                                ),
                               ],
                             ),
                           ),

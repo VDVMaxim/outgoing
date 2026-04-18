@@ -2,23 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/main.dart';
-import 'package:flutter_clubapp/core/services/user_profile_service.dart';
-import 'package:flutter_clubapp/core/services/auth_service.dart';
+import 'package:flutter_clubapp/core/providers/auth_provider.dart';
 import 'package:flutter_clubapp/core/config/app_config.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
+import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/features/auth/screens/login_screen.dart';
+import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
+import 'package:flutter_clubapp/features/settings/screens/account_settings_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/faq_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/language_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/push_notifications_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/web_view_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, mode, _) {
@@ -29,9 +34,11 @@ class SettingsScreen extends StatelessWidget {
         final l10n = AppLocalizations.of(context)!;
 
         return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
-            backgroundColor: Colors.transparent,
+            backgroundColor: isDark
+                ? const Color(0xFF09090B).withValues(alpha: 0.7)
+                : Colors.white.withValues(alpha: 0.9),
             elevation: 0,
             title: Text(
               l10n.settingsTitle,
@@ -45,19 +52,77 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _buildSectionHeader(l10n.settingsAccount),
-              FutureBuilder<UserProfileService?>(
-                future: UserProfileService.getInstance().then((s) => s),
-                builder: (context, snapshot) {
-                  final profile = snapshot.data;
-                  if (profile == null) {
-                    return const SizedBox.shrink();
-                  }
-                  return _AccountSection(
-                    isDark: isDark,
-                    l10n: l10n,
-                    profile: profile,
-                  );
+              _AccountSection(
+                isDark: isDark,
+                l10n: l10n,
+                isAuthenticated: authState.isAuthenticated,
+                nickname: authState.nickname,
+                email: authState.email,
+                displayName: authState.displayName,
+                onRefresh: () {
+                  ref.read(authProvider.notifier).refresh();
                 },
+              ),
+
+              const SizedBox(height: 24),
+
+              _buildSectionHeader(l10n.settingsPreferences),
+              _buildCard(
+                isDark,
+                Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        isDark ? Icons.dark_mode : Icons.light_mode,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                      title: Text(
+                        l10n.settingsDarkMode,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      trailing: ShadSwitch(
+                        value: isDark,
+                        onChanged: (val) {
+                          themeNotifier.value = val
+                              ? ThemeMode.dark
+                              : ThemeMode.light;
+                        },
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 56, endIndent: 16),
+                    _SettingsListTile(
+                      isDark: isDark,
+                      icon: Icons.language,
+                      iconColor: Colors.purple,
+                      title: l10n.settingsLanguage,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LanguageScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(height: 1, indent: 56, endIndent: 16),
+                    _SettingsListTile(
+                      isDark: isDark,
+                      icon: Icons.notifications_outlined,
+                      iconColor: Colors.blueAccent,
+                      title: 'Push Notifications',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PushNotificationsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 24),
@@ -177,67 +242,6 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              _buildSectionHeader(l10n.settingsPreferences),
-              _buildCard(
-                isDark,
-                Column(
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        isDark ? Icons.dark_mode : Icons.light_mode,
-                        color: isDark ? Colors.white : Colors.black,
-                      ),
-                      title: Text(
-                        l10n.settingsDarkMode,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                      ),
-                      trailing: ShadSwitch(
-                        value: isDark,
-                        onChanged: (val) {
-                          themeNotifier.value = val
-                              ? ThemeMode.dark
-                              : ThemeMode.light;
-                        },
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 56, endIndent: 16),
-                    _SettingsListTile(
-                      isDark: isDark,
-                      icon: Icons.language,
-                      iconColor: Colors.purple,
-                      title: l10n.settingsLanguage,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LanguageScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(height: 1, indent: 56, endIndent: 16),
-                    _SettingsListTile(
-                      isDark: isDark,
-                      icon: Icons.notifications_outlined,
-                      iconColor: Colors.blueAccent,
-                      title: 'Push Notifications',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const PushNotificationsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 40),
             ],
           ),
@@ -272,13 +276,35 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _launchEmail(BuildContext context) async {
-    final Uri emailUri = Uri(
+    final emailUri = Uri(
       scheme: 'mailto',
       path: 'info@clubapp.be',
-      queryParameters: {'subject': 'Bug Report / Feedback - Club App'},
+      queryParameters: {
+        'subject': Uri.encodeComponent('Bug Report / Feedback - Club App'),
+      },
     );
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
+
+    try {
+      final canLaunch = await canLaunchUrl(emailUri);
+      if (canLaunch) {
+        await launchUrl(emailUri);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No email app found. Please email us at info@clubapp.be',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open email app')),
+        );
+      }
     }
   }
 
@@ -290,12 +316,20 @@ class SettingsScreen extends StatelessWidget {
 class _AccountSection extends StatelessWidget {
   final bool isDark;
   final AppLocalizations l10n;
-  final UserProfileService profile;
+  final bool isAuthenticated;
+  final String? nickname;
+  final String? email;
+  final String? displayName;
+  final VoidCallback? onRefresh;
 
   const _AccountSection({
     required this.isDark,
     required this.l10n,
-    required this.profile,
+    required this.isAuthenticated,
+    this.nickname,
+    this.email,
+    this.displayName,
+    this.onRefresh,
   });
 
   @override
@@ -304,75 +338,157 @@ class _AccountSection extends StatelessWidget {
       isDark,
       Column(
         children: [
-          ListTile(
-            leading: UserAvatar(name: profile.nickname ?? '', size: 48),
-            title: Text(
-              profile.displayName ?? profile.nickname ?? l10n.settingsAnonymous,
-              style: TextStyle(
-                color: isDark ? Colors.white : Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            subtitle: Text(
-              profile.isAuthenticated
-                  ? (profile.email ?? '')
-                  : l10n.settingsAnonymous,
-              style: const TextStyle(color: Colors.grey),
-            ),
-            trailing: profile.isAuthenticated
-                ? IconButton(
-                    icon: Icon(Icons.edit_outlined, color: Colors.grey[600]),
-                    onPressed: () {},
-                  )
-                : null,
-          ),
-          if (profile.isAuthenticated) ...[
+          if (isAuthenticated)
+            _buildAuthenticatedView(context)
+          else
+            _buildGuestView(context),
+          if (nickname != null) ...[
             const Divider(height: 1, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Expanded(
-                    child: ShadButton.secondary(
-                      onPressed: () => _showLogoutDialog(context),
-                      child: Text(l10n.settingsLogout),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ShadButton.destructive(
-                      onPressed: () => _showDeleteDialog(context),
-                      child: Text(l10n.settingsDelete),
+                  Text(
+                    nickname!,
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black54,
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-          ] else ...[
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ShadButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => LoginScreen(
-                        onSuccess: () {
-                          Navigator.pop(context);
-                        },
-                        onCancel: () => Navigator.pop(context),
-                      ),
-                    ),
-                  );
-                },
-                child: Text(l10n.settingsLogin),
-              ),
-            ),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildAuthenticatedView(BuildContext context) {
+    return InkWell(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
+        );
+        onRefresh?.call();
+      },
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            UserAvatar(name: nickname ?? '', size: 48),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName ?? nickname ?? l10n.settingsAnonymous,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (email != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      email!,
+                      style: const TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[600]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestView(BuildContext context) {
+    final profile = UserProfileService.instance;
+    final guestNickname = profile.nickname ?? 'Guest';
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              UserAvatar(name: guestNickname, size: 64),
+              const SizedBox(height: 8),
+              Text(
+                guestNickname,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Sign in to sync your data',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black54,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: ShadButton.secondary(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LoginScreen(
+                          onSuccess: () {
+                            Navigator.pop(context);
+                            onRefresh?.call();
+                          },
+                          onCancel: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
+                    onRefresh?.call();
+                  },
+                  child: Text(l10n.settingsLogin),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ShadButton(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RegisterScreen(
+                          onSuccess: () {
+                            Navigator.pop(context);
+                            onRefresh?.call();
+                          },
+                          onCancel: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
+                    onRefresh?.call();
+                  },
+                  child: Text(l10n.loginRegister),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -383,83 +499,6 @@ class _AccountSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: child,
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
-        title: Text(
-          l10n.settingsLogout,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          l10n.settingsLogoutConfirm,
-          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
-        ),
-        actions: [
-          ShadButton.ghost(
-            onPressed: () => Navigator.pop(c),
-            child: Text(l10n.settingsCancel),
-          ),
-          ShadButton(
-            onPressed: () async {
-              Navigator.pop(c);
-              await AuthService().signOut();
-              await profile.syncNicknameFromProfile();
-            },
-            child: Text(l10n.settingsYes),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
-        title: Text(
-          l10n.settingsDeleteAccountConfirm,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-        ),
-        content: Text(
-          l10n.settingsDeleteAccountWarning,
-          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
-        ),
-        actions: [
-          ShadButton.ghost(
-            onPressed: () => Navigator.pop(c),
-            child: Text(l10n.settingsCancel),
-          ),
-          ShadButton.destructive(
-            onPressed: () async {
-              Navigator.pop(c);
-              final result = await AuthService().deleteAccount();
-              if (context.mounted) {
-                if (result.status == AuthResultStatus.success) {
-                  profile.clearProfile();
-                  profile.resetOnboarding();
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil('/onboarding', (route) => false);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(result.errorMessage ?? 'Error'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(l10n.settingsDelete),
-          ),
-        ],
-      ),
     );
   }
 }

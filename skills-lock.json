@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "skills": {
+    "flutter-adding-home-screen-widgets": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "426ebe17469828db1ef6503969b9bc01de09d5c3c9700b0c47bb04682f8cb174"
+    },
+    "flutter-animating-apps": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "217700e356dae9e3624a54543aa366aca3871aa3c0368856156715e211aeac4c"
+    },
+    "flutter-architecting-apps": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "8d4c005971a6dc098557a5511cfd683de25aa88cb595c5bc8b306168c35bc7ab"
+    },
+    "flutter-building-forms": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "40c4fe9aae94f3271e63553502d9255158beef25872b5ede0bb8f54603d59558"
+    },
+    "flutter-building-layouts": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "9686218c0b724c42ea30e97a3cc081cf4de69b5f3b0aa6253bd012ce9d573834"
+    },
+    "flutter-handling-http-and-json": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "9c57a05e71557b4f8cd3ac9e72b8c65f20e8deaf5c1163a1852dfe4fd654e5c0"
+    },
+    "flutter-implementing-navigation-and-routing": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "eed907fa9e5c26df809d3db2ad80bf736b0956058dc20ba21dad386de677b7a8"
+    },
+    "flutter-localizing-apps": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "690113b21a870fd9f3621f85f2005994b3def6dbe0ad4ffc65f769cb093b4953"
+    },
+    "flutter-managing-state": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "14b60303535c07f900097f2054613f0835668f202c289b0429446aba28941576"
+    },
+    "flutter-working-with-databases": {
+      "source": "flutter/skills",
+      "sourceType": "github",
+      "computedHash": "c4b1d4a8a428696ea796c86ab3c7bdc10117caaea7d10e976f0e9e162e86d8ec"
+    }
+  }
+}

@@ -42,20 +42,34 @@ CREATE TABLE places (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Place tags (many-to-many relationship)
+-- Tags lookup table (reusable across places)
+CREATE TABLE tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Facilities lookup table (reusable across places)
+CREATE TABLE facilities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Place tags (many-to-many relationship via junction table)
 CREATE TABLE place_tags (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
-    tag TEXT NOT NULL,
-    UNIQUE(place_id, tag)
+    tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    UNIQUE(place_id, tag_id)
 );
 
--- Place facilities (many-to-many relationship)
+-- Place facilities (many-to-many relationship via junction table)
 CREATE TABLE place_facilities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
-    facility TEXT NOT NULL,
-    UNIQUE(place_id, facility)
+    facility_id UUID NOT NULL REFERENCES facilities(id) ON DELETE CASCADE,
+    UNIQUE(place_id, facility_id)
 );
 
 -- Vibe checks (crowd/energy ratings)
@@ -69,18 +83,20 @@ CREATE TABLE vibe_checks (
 );
 
 -- Squads (groups of users going to clubs together)
+-- NOTE: created_by is TEXT to support custom string IDs
 CREATE TABLE squads (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     pin TEXT UNIQUE NOT NULL,
-    created_by UUID NOT NULL,
+    created_by TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Squad members (with real-time position updates)
+-- NOTE: user_id is TEXT to support custom string IDs
 CREATE TABLE squad_members (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL,
+    user_id TEXT NOT NULL,
     nickname TEXT NOT NULL,
     latitude FLOAT8 NOT NULL,
     longitude FLOAT8 NOT NULL,
@@ -107,7 +123,11 @@ CREATE TABLE profiles (
 CREATE INDEX idx_places_location_type ON places(location_type);
 CREATE INDEX idx_places_status ON places(status);
 CREATE INDEX idx_place_tags_place_id ON place_tags(place_id);
+CREATE INDEX idx_place_tags_tag_id ON place_tags(tag_id);
 CREATE INDEX idx_place_facilities_place_id ON place_facilities(place_id);
+CREATE INDEX idx_place_facilities_facility_id ON place_facilities(facility_id);
+CREATE INDEX idx_tags_name ON tags(name);
+CREATE INDEX idx_facilities_name ON facilities(name);
 CREATE INDEX idx_vibe_checks_place_id ON vibe_checks(place_id);
 CREATE INDEX idx_vibe_checks_created_at ON vibe_checks(created_at DESC);
 CREATE INDEX idx_squad_members_squad_id ON squad_members(squad_id);
@@ -117,6 +137,8 @@ CREATE INDEX idx_profiles_nickname ON profiles(nickname);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE places ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE facilities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_facilities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vibe_checks ENABLE ROW LEVEL SECURITY;
@@ -128,6 +150,8 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can read places" ON places FOR SELECT USING (true);
 
 -- Public read access for tags and facilities
+CREATE POLICY "Public can read tags" ON tags FOR SELECT USING (true);
+CREATE POLICY "Public can read facilities" ON facilities FOR SELECT USING (true);
 CREATE POLICY "Public can read place_tags" ON place_tags FOR SELECT USING (true);
 CREATE POLICY "Public can read place_facilities" ON place_facilities FOR SELECT USING (true);
 
@@ -182,9 +206,3 @@ CREATE TRIGGER update_profiles_updated_at
     BEFORE UPDATE ON profiles
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
--- Example: Insert sample data (uncomment to use)
--- INSERT INTO places (name, address, latitude, longitude, location_type, genre, status) VALUES
--- ('Club Nova', 'Main Street 123', 51.9225, 4.4792, 'club', 'Electronic', 'open'),
--- ('The Basement', 'Underground Ave 45', 51.9245, 4.4812, 'club', 'House', 'event'),
--- ('Food Court Central', 'Food Street 789', 51.9200, 4.4750, 'food', NULL, 'open');

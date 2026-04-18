@@ -1,26 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:flutter_clubapp/core/services/auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/widgets/app_text_field.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSuccess;
   final VoidCallback? onCancel;
 
   const LoginScreen({super.key, this.onSuccess, this.onCancel});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
   bool _obscurePassword = true;
   String? _emailError;
   String? _passwordError;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfAlreadyLoggedIn();
+  }
+
+  void _checkIfAlreadyLoggedIn() {
+    final authState = ref.read(authProvider);
+    if (authState.isAuthenticated) {
+      widget.onSuccess?.call();
+    }
+  }
 
   @override
   void dispose() {
@@ -57,23 +70,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_validate()) return;
 
-    setState(() => _isLoading = true);
-
-    final result = await AuthService().signIn(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
-
-    setState(() => _isLoading = false);
+    final result = await ref
+        .read(authProvider.notifier)
+        .signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
 
     if (!mounted) return;
 
-    if (result.status == AuthResultStatus.success) {
+    if (result) {
       widget.onSuccess?.call();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.errorMessage ?? 'Login failed'),
+          content: Text(ref.read(authProvider).errorMessage ?? 'Login failed'),
           backgroundColor: Colors.red,
         ),
       );
@@ -84,6 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
+    final isLoading = ref.watch(authProvider).isLoading;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
@@ -124,132 +136,67 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              Text(
-                l10n.loginEmail,
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
+              AppTextField(
+                controller: _emailController,
+                placeholder: l10n.loginEmail,
+                keyboardType: TextInputType.emailAddress,
+                errorText: _emailError,
+                onChanged: (_) {
+                  if (_emailError != null) {
+                    setState(() => _emailError = null);
+                  }
+                },
               ),
-              const SizedBox(height: 8),
-              InputDecorator(
-                decoration: InputDecoration(
-                  hintText: l10n.loginEmail,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? Colors.white24 : Colors.black12,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? Colors.white24 : Colors.black12,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? const Color(0xFF27272A)
-                      : Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-                child: TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                  cursorColor: isDark ? Colors.white : Colors.black,
-                  onChanged: (_) {
-                    if (_emailError != null) {
-                      setState(() => _emailError = null);
-                    }
-                  },
-                ),
-              ),
-              if (_emailError != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _emailError!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
-                ),
-              ],
               const SizedBox(height: 20),
-              Text(
-                l10n.loginPassword,
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : Colors.black,
+              AppTextField(
+                controller: _passwordController,
+                placeholder: l10n.loginPassword,
+                obscureText: _obscurePassword,
+                errorText: _passwordError,
+                trailing: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: Colors.grey,
                 ),
+                onTrailingTap: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
+                onChanged: (_) {
+                  if (_passwordError != null) {
+                    setState(() => _passwordError = null);
+                  }
+                },
               ),
-              const SizedBox(height: 8),
-              InputDecorator(
-                decoration: InputDecoration(
-                  hintText: l10n.loginPassword,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? Colors.white24 : Colors.black12,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? Colors.white24 : Colors.black12,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? const Color(0xFF27272A)
-                      : Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: Colors.grey,
-                    ),
-                    onPressed: () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    },
-                  ),
-                ),
-                child: TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                  onChanged: (_) {
-                    if (_passwordError != null) {
-                      setState(() => _passwordError = null);
-                    }
-                  },
-                ),
-              ),
-              if (_passwordError != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _passwordError!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
-                ),
-              ],
               const SizedBox(height: 32),
-              ShadButton(
-                onPressed: _isLoading ? null : _handleLogin,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+              SizedBox(
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          l10n.loginButton,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      )
-                    : Text(l10n.loginButton),
+                ),
               ),
               const SizedBox(height: 24),
               Row(

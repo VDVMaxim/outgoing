@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:math';
+import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
 
 class SettingsService {
   static SettingsService? _instance;
@@ -10,52 +10,6 @@ class SettingsService {
 
   static const int defaultTrackingFrequency = 5;
   static const int defaultOfflineMultiplier = 4;
-
-  static final List<String> _nicknameAdjectives = [
-    'Swift',
-    'Mystic',
-    'Cosmic',
-    'Shadow',
-    'Electric',
-    'Silent',
-    'Golden',
-    'Silver',
-    'Neon',
-    'Phantom',
-    'Thunder',
-    'Crystal',
-    'Midnight',
-    'Starlight',
-    'Wild',
-    'Gentle',
-    'Brave',
-    'Lucky',
-    'Lucky',
-    'Happy',
-  ];
-
-  static final List<String> _nicknameNouns = [
-    'Ghoul',
-    'Wolf',
-    'Phantom',
-    'Raven',
-    'Storm',
-    'Phoenix',
-    'Dragon',
-    'Hawk',
-    'Tiger',
-    'Panther',
-    'Ninja',
-    'Knight',
-    'Wizard',
-    'Sorcerer',
-    'Mage',
-    'Spirit',
-    'Ghost',
-    'Specter',
-    'Wraith',
-    'Demon',
-  ];
 
   SettingsService._();
 
@@ -88,13 +42,6 @@ class SettingsService {
   }
 
   String generateRandomNickname() {
-    final random = Random();
-    final adjective =
-        _nicknameAdjectives[random.nextInt(_nicknameAdjectives.length)];
-    final noun = _nicknameNouns[random.nextInt(_nicknameNouns.length)];
-    final number = (1000 + random.nextInt(9000)).toString();
-    return '$adjective $noun #$number';
+    return NicknameGenerator.generate();
   }
-
-  static int get hash => 42;
 }

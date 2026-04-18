@@ -244,6 +244,48 @@ abstract class AppLocalizations {
   /// **'Misschien Later'**
   String get onboardingLocationSkip;
 
+  /// No description provided for @onboardingSetupTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Setup'**
+  String get onboardingSetupTitle;
+
+  /// No description provided for @onboardingStartExploring.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ontdekken'**
+  String get onboardingStartExploring;
+
+  /// No description provided for @onboardingAllSet.
+  ///
+  /// In nl, this message translates to:
+  /// **'Je bent klaar!'**
+  String get onboardingAllSet;
+
+  /// No description provided for @onboardingExploreNearby.
+  ///
+  /// In nl, this message translates to:
+  /// **'Laten we ontdekken wat er in de buurt gebeurt.'**
+  String get onboardingExploreNearby;
+
+  /// No description provided for @onboardingSettingUp.
+  ///
+  /// In nl, this message translates to:
+  /// **'Account wordt ingesteld...'**
+  String get onboardingSettingUp;
+
+  /// No description provided for @onboardingNicknameRequired.
+  ///
+  /// In nl, this message translates to:
+  /// **'Voer een nickname in'**
+  String get onboardingNicknameRequired;
+
+  /// No description provided for @onboardingNicknameMinLength.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nickname moet minimaal 3 tekens zijn'**
+  String get onboardingNicknameMinLength;
+
   /// No description provided for @homeHighlightsTitle.
   ///
   /// In nl, this message translates to:
@@ -721,7 +763,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDelete.
   ///
   /// In nl, this message translates to:
-  /// **'Wissen'**
+  /// **'Account verwijderen'**
   String get settingsDelete;
 
   /// No description provided for @settingsAbout.

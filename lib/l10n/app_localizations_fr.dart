@@ -87,6 +87,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onboardingLocationSkip => 'Peut-être Plus Tard';
 
   @override
+  String get onboardingSetupTitle => 'Configuration';
+
+  @override
+  String get onboardingStartExploring => 'Commencer à Explorer';
+
+  @override
+  String get onboardingAllSet => 'Vous êtes prêt !';
+
+  @override
+  String get onboardingExploreNearby =>
+      'Explorons ce qui se passe à proximité.';
+
+  @override
+  String get onboardingSettingUp => 'Configuration de votre compte...';
+
+  @override
+  String get onboardingNicknameRequired => 'Veuillez entrer un pseudo';
+
+  @override
+  String get onboardingNicknameMinLength =>
+      'Le pseudo doit comporter au moins 3 caractères';
+
+  @override
   String get homeHighlightsTitle => 'Top 3 à la une';
 
   @override
@@ -348,7 +371,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsCancel => 'Annuler';
 
   @override
-  String get settingsDelete => 'Effacer';
+  String get settingsDelete => 'Supprimer le compte';
 
   @override
   String get settingsAbout => 'À propos de Club App';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
+import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import '../../map/screens/map_screen.dart';
 import '../../activities/screens/activities_screen.dart';
 import '../../settings/screens/settings_screen.dart';
@@ -28,25 +29,40 @@ class _MainNavigationState extends State<MainNavigation> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
-        final isDark = currentMode == ThemeMode.dark || (currentMode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-        
+        final isDark =
+            currentMode == ThemeMode.dark ||
+            (currentMode == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+
         return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            // Pass unique keys to force re-evaluation if needed, or rely on normal state changes
+          body: Stack(
             children: [
-              const HomeScreen(),
-              MapScreen(userLocation: widget.userLocation),
-              const ActivitiesScreen(),
-              const SettingsScreen(),
+              AnimatedBlurBackground(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: [
+                    const HomeScreen(),
+                    MapScreen(userLocation: widget.userLocation),
+                    const ActivitiesScreen(),
+                    const SettingsScreen(),
+                  ],
+                ),
+              ),
             ],
           ),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: isDark ? Colors.white10 : Colors.black12, width: 0.5)),
+              border: Border(
+                top: BorderSide(
+                  color: isDark ? Colors.white10 : Colors.black12,
+                  width: 0.5,
+                ),
+              ),
             ),
             child: BottomNavigationBar(
-              backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
+              backgroundColor: isDark
+                  ? const Color(0xFF09090B).withValues(alpha: 0.9)
+                  : Colors.white.withValues(alpha: 0.95),
               selectedItemColor: isDark ? Colors.white : Colors.black,
               unselectedItemColor: isDark ? Colors.white38 : Colors.black38,
               selectedFontSize: 12,
@@ -79,7 +95,7 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ),
         );
-      }
+      },
     );
   }
 }

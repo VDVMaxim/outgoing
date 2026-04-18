@@ -24,6 +24,19 @@ class UserProfileService {
     return _instance!;
   }
 
+  static Future<UserProfileService> get instanceAsync => getInstance();
+
+  static UserProfileService? get instanceOrNull => _instance;
+
+  static UserProfileService get instance {
+    if (_instance == null) {
+      throw StateError(
+        'UserProfileService not initialized. Call getInstance() first.',
+      );
+    }
+    return _instance!;
+  }
+
   String get userId {
     var id = _prefs?.getString(_keyUserId);
     if (id == null || id.isEmpty) {
@@ -206,61 +219,4 @@ class UserProfileService {
   void resetOnboarding() {
     _prefs?.setBool(_keyHasCompletedOnboarding, false);
   }
-
-  static List<String> get _nicknameAdjectives => [
-    'Swift',
-    'Mystic',
-    'Cosmic',
-    'Shadow',
-    'Electric',
-    'Silent',
-    'Golden',
-    'Silver',
-    'Neon',
-    'Phantom',
-    'Thunder',
-    'Crystal',
-    'Midnight',
-    'Starlight',
-    'Wild',
-    'Gentle',
-    'Brave',
-    'Lucky',
-    'Lucky',
-    'Happy',
-  ];
-
-  static List<String> get _nicknameNouns => [
-    'Ghoul',
-    'Wolf',
-    'Phantom',
-    'Raven',
-    'Storm',
-    'Phoenix',
-    'Dragon',
-    'Hawk',
-    'Tiger',
-    'Panther',
-    'Ninja',
-    'Knight',
-    'Wizard',
-    'Sorcerer',
-    'Mage',
-    'Spirit',
-    'Ghost',
-    'Specter',
-    'Wraith',
-    'Demon',
-  ];
-
-  String generateRandomNickname() {
-    final random = Random();
-    final adjective =
-        _nicknameAdjectives[random.nextInt(_nicknameAdjectives.length)];
-    final noun = _nicknameNouns[random.nextInt(_nicknameNouns.length)];
-    final number = (1000 + random.nextInt(9000)).toString();
-    return '$adjective $noun #$number';
-  }
-
-  static UserProfileService? get instance => _instance;
 }

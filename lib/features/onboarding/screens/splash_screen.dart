@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/services/app_startup.dart';
-import 'onboarding_carousel.dart';
+import 'onboarding_intro_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,7 +11,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _entrance;
   late final Animation<double> _entranceFade;
   late final Animation<Offset> _entranceSlide;
@@ -25,11 +26,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _entrance = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _entranceFade = CurvedAnimation(parent: _entrance, curve: Curves.easeOut);
-    _entranceSlide = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
-      CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic),
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
     );
+    _entranceFade = CurvedAnimation(parent: _entrance, curve: Curves.easeOut);
+    _entranceSlide = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic));
     _entrance.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) => _runStartup());
   }
@@ -62,8 +67,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void _goOnboarding() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
-        pageBuilder: (context, a1, a2) => const OnboardingCarousel(),
-        transitionsBuilder: (context, a1, a2, child) => FadeTransition(opacity: a1, child: child),
+        pageBuilder: (context, a1, a2) => const OnboardingIntroScreen(),
+        transitionsBuilder: (context, a1, a2, child) =>
+            FadeTransition(opacity: a1, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
     );
@@ -130,7 +136,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 4.2,
-                        color: isDark ? Colors.white.withValues(alpha: 0.92) : Colors.black87,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.92)
+                            : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -139,28 +147,42 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         width: 22,
                         height: 22,
                         child: _phase == _SplashPhase.ready
-                            ? Icon(Icons.check_circle_rounded, size: 26, color: Colors.greenAccent.shade400)
+                            ? Icon(
+                                Icons.check_circle_rounded,
+                                size: 26,
+                                color: Colors.greenAccent.shade400,
+                              )
                             : CircularProgressIndicator(
                                 strokeWidth: 2.2,
-                                color: isDark ? Colors.white.withValues(alpha: 0.75) : Colors.black54,
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.75)
+                                    : Colors.black54,
                               ),
                       ),
                       const SizedBox(height: 20),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 280),
                         child: Text(
-                          _phase == _SplashPhase.ready ? l10n.splashSetupReady : l10n.splashSetupVerifying,
+                          _phase == _SplashPhase.ready
+                              ? l10n.splashSetupReady
+                              : l10n.splashSetupVerifying,
                           key: ValueKey(_phase),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.35,
-                            color: isDark ? Colors.white.withValues(alpha: 0.55) : Colors.black54,
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.55)
+                                : Colors.black54,
                           ),
                         ),
                       ),
                     ] else ...[
-                      Icon(Icons.error_outline_rounded, size: 40, color: Colors.red.shade300),
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 40,
+                        color: Colors.red.shade300,
+                      ),
                       const SizedBox(height: 20),
                       Text(
                         l10n.splashSetupErrorTitle,
@@ -168,7 +190,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.black87,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.9)
+                              : Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -178,7 +202,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         style: TextStyle(
                           fontSize: 14,
                           height: 1.4,
-                          color: isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black54,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.5)
+                              : Colors.black54,
                         ),
                       ),
                       const SizedBox(height: 28),
@@ -215,11 +241,15 @@ class _Mark extends StatelessWidget {
         shape: BoxShape.circle,
         color: isDark ? const Color(0xFF18181B) : Colors.white,
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.06),
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.45) : Colors.black.withValues(alpha: 0.06),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.45)
+                : Colors.black.withValues(alpha: 0.06),
             blurRadius: 32,
             offset: const Offset(0, 14),
           ),
