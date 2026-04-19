@@ -1,47 +1,45 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
 
-class SettingsService {
-  static SettingsService? _instance;
-  static SharedPreferences? _prefs;
+class SettingsService extends ChangeNotifier {
+  final SharedPreferences _prefs;
 
-  static const String _keyTrackingFrequency = 'tracking_frequency';
-  static const String _keyOfflineMultiplier = 'offline_multiplier';
+  SettingsService._(this._prefs);
 
-  static const int defaultTrackingFrequency = 5;
-  static const int defaultOfflineMultiplier = 4;
+  static late SettingsService _instance;
+  static SettingsService get instance => _instance;
 
-  SettingsService._();
-
-  static Future<SettingsService> getInstance() async {
-    if (_instance == null) {
-      _prefs = await SharedPreferences.getInstance();
-      _instance = SettingsService._();
-    }
-    return _instance!;
+  static Future<SettingsService> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _instance = SettingsService._(prefs);
+    return _instance;
   }
 
-  int get trackingFrequency {
-    return _prefs?.getInt(_keyTrackingFrequency) ?? defaultTrackingFrequency;
+  bool get hapticsEnabled => _prefs.getBool('hapticsEnabled') ?? true;
+
+  Future<void> setHapticsEnabled(bool value) async {
+    await _prefs.setBool('hapticsEnabled', value);
+    notifyListeners(); 
   }
 
-  set trackingFrequency(int value) {
-    _prefs?.setInt(_keyTrackingFrequency, value);
+  int get trackingFrequency => _prefs.getInt('trackingFrequency') ?? 2;
+
+  Future<void> setTrackingFrequency(int value) async {
+    await _prefs.setInt('trackingFrequency', value);
+    notifyListeners();
   }
 
-  int get offlineMultiplier {
-    return _prefs?.getInt(_keyOfflineMultiplier) ?? defaultOfflineMultiplier;
-  }
+  int get offlineMultiplier => _prefs.getInt('offlineMultiplier') ?? 5;
 
-  set offlineMultiplier(int value) {
-    _prefs?.setInt(_keyOfflineMultiplier, value);
+  Future<void> setOfflineMultiplier(int value) async {
+    await _prefs.setInt('offlineMultiplier', value);
+    notifyListeners();
   }
-
-  int get offlineThresholdSeconds {
-    return trackingFrequency * offlineMultiplier;
-  }
-
-  String generateRandomNickname() {
-    return NicknameGenerator.generate();
+  
+  bool get isDarkMode => _prefs.getBool('isDarkMode') ?? true;
+  
+  Future<void> setDarkMode(bool value) async {
+    await _prefs.setBool('isDarkMode', value);
+    notifyListeners();
   }
 }

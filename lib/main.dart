@@ -42,13 +42,12 @@ void main() async {
   
   await UserProfileService.getInstance();
   
-  // 1. Wacht tot de settings service volledig is ingeladen en sla hem op in een variabele
-  final ingeladenSettingsService = await SettingsService.getInstance();
+  // FIX: Veranderd van getInstance() naar init()
+  final ingeladenSettingsService = await SettingsService.init(); 
 
   runApp(
     ProviderScope(
       overrides: [
-        // 2. Injecteer de ingeladen service direct in de provider!
         settingsServiceProvider.overrideWithValue(ingeladenSettingsService),
       ],
       child: const ClubApp(),

@@ -13,7 +13,6 @@ class VibeRepository {
         .select()
         .eq('user_id', odUserId)
         .maybeSingle();
-
     if (response == null) return null;
     return VibeProfile.fromJson(response);
   }
@@ -31,7 +30,6 @@ class VibeRepository {
       'weekend_streak': 0,
       'visited_places': [],
     });
-
     return newProfile;
   }
 
@@ -42,7 +40,6 @@ class VibeRepository {
     List<String> visitedPlaces = const [],
   }) async {
     final profile = await getOrCreateProfile(odUserId);
-
     final now = DateTime.now();
     final isEarlyBird = VibePointsService.isEarlyBird();
     final isNewPlace = placeId != null && !visitedPlaces.contains(placeId);
@@ -77,7 +74,7 @@ class VibeRepository {
       'id': const Uuid().v4(),
       'user_id': odUserId,
       'action_type': actionType.dbValue,
-      'place_id': placeId,
+      'venue_id': placeId,
       'vp_earned': newVp,
       'created_at': now.toIso8601String(),
     });
@@ -93,10 +90,8 @@ class VibeRepository {
   Future<VibeProfile> updateStreak(String odUserId) async {
     final profile = await getOrCreateProfile(odUserId);
     final now = DateTime.now();
-
-    final shouldReset = VibePointsService.shouldUpdateStreak(
-      profile.lastCheckIn,
-    );
+    final shouldReset = VibePointsService.shouldUpdateStreak(profile.lastCheckIn);
+    
     int newStreak = shouldReset ? 1 : profile.weekendStreak;
 
     if (!shouldReset && profile.lastCheckIn != null) {
@@ -113,21 +108,17 @@ class VibeRepository {
           'updated_at': now.toIso8601String(),
         })
         .eq('user_id', odUserId);
-
+        
     return profile.copyWith(weekendStreak: newStreak);
   }
 
-  Future<List<VibeAction>> getRecentActions(
-    String odUserId, {
-    int limit = 10,
-  }) async {
+  Future<List<VibeAction>> getRecentActions(String odUserId, {int limit = 10}) async {
     final response = await _supabase
         .from('vibe_actions')
         .select()
         .eq('user_id', odUserId)
         .order('created_at', ascending: false)
         .limit(limit);
-
     return response.map((json) => VibeAction.fromJson(json)).toList();
   }
 
@@ -137,7 +128,6 @@ class VibeRepository {
         .select()
         .order('total_vp', ascending: false)
         .limit(limit);
-
     return response.map((json) => VibeProfile.fromJson(json)).toList();
   }
 
@@ -149,7 +139,7 @@ class VibeRepository {
         .from('vibe_profiles')
         .select('user_id')
         .order('total_vp', ascending: false);
-
+        
     final index = response.indexWhere((p) => p['user_id'] == odUserId);
     return index >= 0 ? index + 1 : null;
   }

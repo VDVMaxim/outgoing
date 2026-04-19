@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 
 class VibeCheckDialog extends ConsumerStatefulWidget {
   final Place place;
@@ -25,8 +26,13 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
   ];
 
   void _submit() async {
-    // Add VP for vibe update
     await ref.read(vibeProvider.notifier).updateVibe(widget.place.id);
+    
+    // Log het analytics event
+    ref.read(analyticsServiceProvider).logEvent('vibe_check_submitted', parameters: {
+      'venue_id': widget.place.id,
+      'vibe': _selectedVibe,
+    });
 
     if (mounted) {
       Navigator.pop(context, _selectedVibe);

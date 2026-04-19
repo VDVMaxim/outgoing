@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter_clubapp/core/models/squad.dart';
 import 'package:flutter_clubapp/core/models/squad_member.dart' as models;
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
@@ -10,9 +14,10 @@ import 'package:flutter_clubapp/core/repositories/interfaces/squad_repository.da
 import 'package:flutter_clubapp/core/services/settings_service.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/core/services/location_service.dart';
+import 'package:flutter_clubapp/core/services/analytics_service.dart';
 
-const double _positionUpdateThresholdMeters = 5.0;
-const int _positionUpdateFallbackSeconds = 30;
+const double _positionUpdateThresholdMeters = 2.0;
+const int _positionUpdateFallbackSeconds = 10;
 
 enum SquadConnectionStatus { disconnected, connecting, connected, error }
 
@@ -23,6 +28,7 @@ class SquadProviderState {
   final String? memberId;
   final List<SquadMemberDisplay> members;
   final String? errorMessage;
+  final bool isMuted;
 
   const SquadProviderState({
     this.status = SquadConnectionStatus.disconnected,
@@ -31,6 +37,7 @@ class SquadProviderState {
     this.memberId,
     this.members = const [],
     this.errorMessage,
+    this.isMuted = true,
   });
 
   bool get isInSquad => status == SquadConnectionStatus.connected;
@@ -42,6 +49,7 @@ class SquadProviderState {
     String? memberId,
     List<SquadMemberDisplay>? members,
     String? errorMessage,
+    bool? isMuted,
   }) {
     return SquadProviderState(
       status: status ?? this.status,
@@ -50,6 +58,7 @@ class SquadProviderState {
       memberId: memberId ?? this.memberId,
       members: members ?? this.members,
       errorMessage: errorMessage,
+      isMuted: isMuted ?? this.isMuted,
     );
   }
 }
@@ -63,6 +72,7 @@ class SquadMemberDisplay {
   final DateTime lastUpdate;
   final bool isOnline;
   final bool isCurrentUser;
+  final bool isSpeaking; // FIX: Nieuwe variabele voor de glow effecten
 
   const SquadMemberDisplay({
     required this.id,
@@ -73,6 +83,7 @@ class SquadMemberDisplay {
     required this.lastUpdate,
     required this.isOnline,
     required this.isCurrentUser,
+    this.isSpeaking = false,
   });
 
   factory SquadMemberDisplay.fromModel(
@@ -93,6 +104,7 @@ class SquadMemberDisplay {
       lastUpdate: lastUpdate,
       isOnline: isOnline,
       isCurrentUser: model.userId == currentUserId,
+      isSpeaking: false,
     );
   }
 
@@ -100,6 +112,7 @@ class SquadMemberDisplay {
     LatLng? position,
     DateTime? lastUpdate,
     bool? isOnline,
+    bool? isSpeaking,
   }) {
     return SquadMemberDisplay(
       id: id,
@@ -110,6 +123,7 @@ class SquadMemberDisplay {
       lastUpdate: lastUpdate ?? this.lastUpdate,
       isOnline: isOnline ?? this.isOnline,
       isCurrentUser: isCurrentUser,
+      isSpeaking: isSpeaking ?? this.isSpeaking,
     );
   }
 }
@@ -119,11 +133,18 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   Timer? _positionUpdateTimer;
   Timer? _onlineCheckTimer;
+  Timer? _dbAnalyticsTimer;
   StreamSubscription<List<models.SquadMember>>? _realtimeSubscription;
 
   VoidCallback? _onPositionPulse;
   LatLng? _lastSentPosition;
   DateTime? _lastSentTime;
+
+  final Map<String, RTCPeerConnection> _peers = {};
+  final Map<String, RTCDataChannel> _dataChannels = {};
+  final Map<String, MediaStream> _remoteStreams = {};
+  MediaStream? _localStream;
+  RealtimeChannel? _signalingChannel;
 
   SquadNotifier(this._ref) : super(const SquadProviderState());
 
@@ -131,6 +152,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   UserProfileService get _userProfileService => _ref.read(userProfileServiceProvider);
   LocationService get _locationService => _ref.read(locationServiceProvider);
   SquadRepository get _squadRepository => _ref.read(squadRepositoryProvider);
+  AnalyticsService get _analytics => _ref.read(analyticsServiceProvider);
 
   String? get currentUserId => _userProfileService.userId;
 
@@ -152,28 +174,17 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   Future<SquadProviderState> createSquad() async {
     if (!_userProfileService.hasNickname) {
-      state = state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: 'Je moet eerst een nickname instellen.',
-      );
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Je moet eerst een nickname instellen.');
       return state;
     }
 
-    final hasLocationPermission = await checkLocationPermission();
-    if (!hasLocationPermission) {
-      final granted = await requestLocationPermission();
-      if (!granted) {
-        state = state.copyWith(
-          status: SquadConnectionStatus.error,
-          errorMessage: 'Locatietoegang is geweigerd. Zet dit aan in je instellingen om Squads te gebruiken.',
-        );
-        return state;
-      }
+    if (!await checkLocationPermission() && !await requestLocationPermission()) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Locatietoegang is geweigerd.');
+      return state;
     }
 
     state = state.copyWith(status: SquadConnectionStatus.connecting);
 
-    // 1. EERST LOCATIE CHECKEN ZONDER FALLBACKS
     LatLng userPosition;
     try {
       final position = await _locationService.getCurrentPosition();
@@ -183,85 +194,56 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         throw Exception('Locatie kon niet worden bepaald.');
       }
     } catch (e) {
-      // Meteen afbreken als de GPS uit staat of geen signaal heeft
-      state = state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: 'Kan je locatie niet bepalen. Controleer of je GPS aan staat.',
-      );
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Kan je locatie niet bepalen. Controleer of je GPS aan staat.');
       return state;
     }
 
-    // 2. PAS ALS LOCATIE GELUKT IS, SQUAD AANMAKEN IN DATABASE
     try {
-      final squad = await _squadRepository.createSquad();
-
-      final member = await _squadRepository.joinSquad(
-        squad.id,
+      final data = await _squadRepository.createSquadWithMember(
         _userProfileService.nickname ?? 'Anonymous',
         userPosition,
       );
+      
+      final squad = data['squad'] as Squad;
+      final member = data['member'] as models.SquadMember;
 
       state = state.copyWith(
         status: SquadConnectionStatus.connected,
         squadId: squad.id,
         squadPin: squad.pin,
         memberId: member.id,
-        members: [
-          SquadMemberDisplay.fromModel(
-            member,
-            currentUserId ?? '',
-            _offlineThresholdMs,
-          ),
-        ],
+        members: [SquadMemberDisplay.fromModel(member, currentUserId ?? '', _offlineThresholdMs)],
       );
 
       _startTracking();
       _startOnlineCheck();
+      _startDbAnalyticsTimer();
+      await _initWebRTC();
 
-      _realtimeSubscription = _squadRepository
-          .subscribeToSquad(squad.id)
-          .listen(_onSquadMembersUpdate);
+      _realtimeSubscription = _squadRepository.subscribeToSquad(squad.id).listen(_onSquadMembersUpdate);
 
+      _analytics.logEvent('squad_created', parameters: {'squad_id': squad.id});
       HapticFeedback.mediumImpact();
       return state;
-    } catch (e, stackTrace) {
-      debugPrint('SQUAD CREATE ERROR: $e');
-      debugPrint('STACKTRACE: $stackTrace');
-      
-      String userMessage = 'Er is iets misgegaan bij het aanmaken van de squad.';
-      if (e.toString().contains('timeout') || e.toString().contains('connection')) {
-        userMessage = 'Verbindingsfout. Controleer je internet.';
-      }
-
-      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: userMessage);
+    } catch (e) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Er is iets misgegaan bij het aanmaken van de squad.');
       return state;
     }
   }
 
   Future<SquadProviderState> joinSquad(String pin) async {
     if (!_userProfileService.hasNickname) {
-      state = state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: 'Je moet eerst een nickname instellen.',
-      );
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Je moet eerst een nickname instellen.');
       return state;
     }
 
-    final hasLocationPermission = await checkLocationPermission();
-    if (!hasLocationPermission) {
-      final granted = await requestLocationPermission();
-      if (!granted) {
-        state = state.copyWith(
-          status: SquadConnectionStatus.error,
-          errorMessage: 'Locatietoegang is geweigerd. Zet dit aan in je instellingen om Squads te gebruiken.',
-        );
-        return state;
-      }
+    if (!await checkLocationPermission() && !await requestLocationPermission()) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Locatietoegang is geweigerd.');
+      return state;
     }
 
     state = state.copyWith(status: SquadConnectionStatus.connecting);
 
-    // 1. EERST LOCATIE CHECKEN ZONDER FALLBACKS
     LatLng userPosition;
     try {
       final position = await _locationService.getCurrentPosition();
@@ -271,15 +253,10 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         throw Exception('Locatie kon niet worden bepaald.');
       }
     } catch (e) {
-      // Meteen afbreken als de GPS uit staat of geen signaal heeft
-      state = state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: 'Kan je locatie niet bepalen. Controleer of je GPS aan staat.',
-      );
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Kan je locatie niet bepalen.');
       return state;
     }
 
-    // 2. PAS ALS LOCATIE GELUKT IS, SQUAD JOINEN IN DATABASE
     try {
       final squad = await _squadRepository.getSquadByPin(pin);
       if (squad == null) {
@@ -298,54 +275,274 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         squadId: squad.id,
         squadPin: squad.pin,
         memberId: member.id,
-        members: [
-          SquadMemberDisplay.fromModel(
-            member,
-            currentUserId ?? '',
-            _offlineThresholdMs,
-          ),
-        ],
+        members: [SquadMemberDisplay.fromModel(member, currentUserId ?? '', _offlineThresholdMs)],
       );
 
       _startTracking();
       _startOnlineCheck();
+      _startDbAnalyticsTimer();
+      await _initWebRTC();
 
-      _realtimeSubscription = _squadRepository
-          .subscribeToSquad(squad.id)
-          .listen(_onSquadMembersUpdate);
+      _realtimeSubscription = _squadRepository.subscribeToSquad(squad.id).listen(_onSquadMembersUpdate);
 
+      _analytics.logEvent('squad_joined', parameters: {'squad_id': squad.id});
       HapticFeedback.mediumImpact();
       return state;
-    } catch (e, stackTrace) {
-      debugPrint('SQUAD JOIN ERROR: $e');
-      debugPrint('STACKTRACE: $stackTrace');
-      
-      String userMessage = 'Er is iets misgegaan bij het joinen van de squad.';
-      if (e.toString().contains('timeout') || e.toString().contains('connection')) {
-        userMessage = 'Verbindingsfout. Controleer je internet.';
-      }
-
-      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: userMessage);
+    } catch (e) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Er is iets misgegaan bij het joinen van de squad.');
       return state;
     }
   }
 
+  Future<void> _initWebRTC() async {
+    try {
+      _localStream = await navigator.mediaDevices.getUserMedia({
+        'audio': true,
+        'video': false,
+      });
+      _localStream?.getAudioTracks().forEach((track) {
+        track.enabled = !state.isMuted;
+      });
+      
+      Helper.setSpeakerphoneOn(true);
+    } catch (e) {
+      debugPrint('❌ Microfoon permissie geweigerd of niet beschikbaar: $e');
+    }
+
+    _signalingChannel = Supabase.instance.client.channel('squad_signaling_${state.squadId}');
+    _signalingChannel!.onBroadcast(
+      event: 'signaling',
+      callback: _handleSignalingMessage,
+    );
+
+    _signalingChannel!.subscribe((status, [error]) {
+      if (status == RealtimeSubscribeStatus.subscribed) {
+        _broadcastSignaling({'signalType': 'peer-join', 'userId': currentUserId});
+      }
+    });
+  }
+
+  void _handleSignalingMessage(Map<String, dynamic> rawData) async {
+    final signalType = rawData['signalType'];
+    final userId = rawData['userId'];
+    final targetUserId = rawData['targetUserId'];
+
+    if (signalType == null || userId == null) return;
+    if (userId == currentUserId) return;
+    if (targetUserId != null && targetUserId != currentUserId) return;
+
+    try {
+      switch (signalType) {
+        case 'peer-join':
+          await _createPeerConnection(userId, isInitiator: true);
+          break;
+        case 'offer':
+          await _createPeerConnection(userId, isInitiator: false);
+          await _peers[userId]!.setRemoteDescription(RTCSessionDescription(rawData['sdp'], 'offer'));
+          final answer = await _peers[userId]!.createAnswer();
+          await _peers[userId]!.setLocalDescription(answer);
+          _broadcastSignaling({
+            'signalType': 'answer',
+            'userId': currentUserId,
+            'targetUserId': userId,
+            'sdp': answer.sdp,
+          });
+          break;
+        case 'answer':
+          if (_peers.containsKey(userId)) {
+            await _peers[userId]!.setRemoteDescription(RTCSessionDescription(rawData['sdp'], 'answer'));
+          }
+          break;
+        case 'ice-candidate':
+          if (_peers.containsKey(userId)) {
+            await _peers[userId]!.addCandidate(RTCIceCandidate(
+              rawData['candidate'],
+              rawData['sdpMid'],
+              rawData['sdpMLineIndex'],
+            ));
+          }
+          break;
+      }
+    } catch (e) {
+      debugPrint('❌ Fout tijdens _handleSignalingMessage verwerking: $e');
+    }
+  }
+
+  Future<void> _createPeerConnection(String peerId, {required bool isInitiator}) async {
+    if (_peers.containsKey(peerId)) return;
+
+    try {
+      final pc = await createPeerConnection({
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'},
+          {'urls': 'stun:stun1.l.google.com:19302'},
+          {
+            'urls': 'turn:openrelay.metered.ca:80',
+            'username': 'openrelayproject',
+            'credential': 'openrelayproject'
+          },
+          {
+            'urls': 'turn:openrelay.metered.ca:443',
+            'username': 'openrelayproject',
+            'credential': 'openrelayproject'
+          },
+        ]
+      });
+
+      _peers[peerId] = pc;
+
+      if (_localStream != null) {
+        _localStream!.getTracks().forEach((track) {
+          pc.addTrack(track, _localStream!);
+        });
+      }
+
+      pc.onTrack = (event) {
+        if (event.track.kind == 'audio' && event.streams.isNotEmpty) {
+          _remoteStreams[peerId] = event.streams.first;
+        }
+      };
+
+      pc.onIceConnectionState = (connState) {
+        if (connState == RTCIceConnectionState.RTCIceConnectionStateConnected) {
+          Helper.setSpeakerphoneOn(true);
+        }
+      };
+
+      pc.onIceCandidate = (candidate) {
+        _broadcastSignaling({
+          'signalType': 'ice-candidate',
+          'userId': currentUserId,
+          'targetUserId': peerId,
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        });
+      };
+
+      if (isInitiator) {
+        final init = RTCDataChannelInit()..ordered = false..maxRetransmits = 0;
+        final dc = await pc.createDataChannel('data', init);
+        _setupDataChannel(peerId, dc);
+
+        final offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        _broadcastSignaling({
+          'signalType': 'offer',
+          'userId': currentUserId,
+          'targetUserId': peerId,
+          'sdp': offer.sdp,
+        });
+      } else {
+        pc.onDataChannel = (dc) {
+          _setupDataChannel(peerId, dc);
+        };
+      }
+    } catch (e) {
+      debugPrint('❌ Fout tijdens _createPeerConnection: $e');
+    }
+  }
+
+  void _setupDataChannel(String peerId, RTCDataChannel dc) {
+    _dataChannels[peerId] = dc;
+    dc.onMessage = (message) {
+      try {
+        final data = jsonDecode(message.text);
+        final msgType = data['type'];
+        final sender = data['userId'] as String;
+
+        // FIX: Lees of we locatie ('pos') of spraak ('ptt') ontvangen
+        if (msgType == 'pos') {
+          final lat = data['lat'] as double;
+          final lng = data['lng'] as double;
+          _updateMemberStateFromWebRTC(sender, position: LatLng(lat, lng));
+        } else if (msgType == 'ptt') {
+          final isSpeaking = data['isSpeaking'] as bool;
+          _updateMemberStateFromWebRTC(sender, isSpeaking: isSpeaking);
+        }
+      } catch (_) {}
+    };
+  }
+
+  void _broadcastSignaling(Map<String, dynamic> payload) {
+    _signalingChannel?.sendBroadcastMessage(
+      event: 'signaling',
+      payload: payload,
+    );
+  }
+
+  void setMute(bool mute) {
+    if (state.isMuted == mute) return; 
+    
+    state = state.copyWith(isMuted: mute);
+    _localStream?.getAudioTracks().forEach((track) {
+      track.enabled = !mute;
+    });
+
+    // FIX: Update onszelf zodat onze marker ook gloeit
+    _updateMemberStateFromWebRTC(currentUserId!, isSpeaking: !mute);
+    
+    // FIX: Stuur direct P2P data naar de anderen dat we (stoppen met) praten
+    final pttMsg = jsonEncode({
+      'type': 'ptt',
+      'userId': currentUserId,
+      'isSpeaking': !mute,
+    });
+
+    for (final dc in _dataChannels.values) {
+      if (dc.state == RTCDataChannelState.RTCDataChannelOpen) {
+        dc.send(RTCDataChannelMessage(pttMsg));
+      }
+    }
+    
+    _analytics.logEvent('squad_ptt', parameters: {'talking': !mute});
+  }
+
+  // FIX: Herbruikbare update functie voor locatie EN spreken
+  void _updateMemberStateFromWebRTC(String userId, {LatLng? position, bool? isSpeaking}) {
+    final updatedMembers = state.members.map((m) {
+      if (m.odmemberId == userId) {
+        return m.copyWith(
+          position: position ?? m.position,
+          isSpeaking: isSpeaking ?? m.isSpeaking,
+          lastUpdate: DateTime.now(),
+          isOnline: true,
+        );
+      }
+      return m;
+    }).toList();
+    
+    state = state.copyWith(members: updatedMembers);
+    _onPositionPulse?.call();
+  }
+
   void _startTracking() {
     _positionUpdateTimer?.cancel();
-    final frequencySeconds = _settingsService.trackingFrequency;
     _positionUpdateTimer = Timer.periodic(
-      Duration(seconds: frequencySeconds),
+      const Duration(seconds: 2),
       (_) => _updateMyPosition(),
     );
   }
 
   void _startOnlineCheck() {
     _onlineCheckTimer?.cancel();
-    final frequencySeconds = _settingsService.trackingFrequency;
     _onlineCheckTimer = Timer.periodic(
-      Duration(seconds: frequencySeconds),
+      const Duration(seconds: 5),
       (_) => _checkOnlineStatus(),
     );
+  }
+
+  void _startDbAnalyticsTimer() {
+    _dbAnalyticsTimer?.cancel();
+    _dbAnalyticsTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      if (state.memberId != null && _lastSentPosition != null) {
+        try {
+          await _squadRepository.updateMemberPosition(state.memberId!, _lastSentPosition!);
+        } catch (e) {
+          // negeer
+        }
+      }
+    });
   }
 
   Future<void> _updateMyPosition() async {
@@ -355,56 +552,44 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       final position = await _locationService.getCurrentPosition();
       if (position != null) {
         final currentPosition = LatLng(position.latitude, position.longitude);
-
         if (_shouldSendPositionUpdate(currentPosition)) {
-          await _squadRepository.updateMemberPosition(
-            state.memberId!,
-            currentPosition,
-          );
+          
+          final posMsg = jsonEncode({
+            'type': 'pos', // FIX: Specificeer dat dit locatie data is
+            'lat': currentPosition.latitude,
+            'lng': currentPosition.longitude,
+            'userId': currentUserId,
+          });
 
+          for (final dc in _dataChannels.values) {
+            if (dc.state == RTCDataChannelState.RTCDataChannelOpen) {
+              dc.send(RTCDataChannelMessage(posMsg));
+            }
+          }
+
+          _updateMemberStateFromWebRTC(currentUserId!, position: currentPosition);
           _lastSentPosition = currentPosition;
           _lastSentTime = DateTime.now();
-          _onPositionPulse?.call();
         }
       }
-    } catch (e) {
-      // Stil falen tijdens het updaten van positie is prima (als je even geen bereik hebt in de club)
-    }
+    } catch (_) {}
   }
 
   bool _shouldSendPositionUpdate(LatLng currentPosition) {
-    if (_lastSentPosition == null || _lastSentTime == null) {
-      return true;
-    }
-
-    final distance = const Distance().as(
-      LengthUnit.Meter,
-      _lastSentPosition!,
-      currentPosition,
-    );
-
-    if (distance >= _positionUpdateThresholdMeters) {
-      return true;
-    }
-
-    final timeSinceLastUpdate = DateTime.now().difference(_lastSentTime!);
-    if (timeSinceLastUpdate.inSeconds >= _positionUpdateFallbackSeconds) {
-      return true;
-    }
-
+    if (_lastSentPosition == null || _lastSentTime == null) return true;
+    final distance = const Distance().as(LengthUnit.Meter, _lastSentPosition!, currentPosition);
+    if (distance >= _positionUpdateThresholdMeters) return true;
+    if (DateTime.now().difference(_lastSentTime!).inSeconds >= _positionUpdateFallbackSeconds) return true;
     return false;
   }
 
   void _checkOnlineStatus() {
     if (state.members.isEmpty) return;
-
     final updatedMembers = state.members.map((member) {
-      final now = DateTime.now();
-      final timeSinceUpdate = now.difference(member.lastUpdate).inMilliseconds;
-      final isOnline = timeSinceUpdate < _offlineThresholdMs;
-      return member.copyWith(isOnline: isOnline);
+      final isOnline = DateTime.now().difference(member.lastUpdate).inMilliseconds < _offlineThresholdMs;
+      // Zorg dat we 'isSpeaking' muten als iemand offline gaat
+      return member.copyWith(isOnline: isOnline, isSpeaking: isOnline ? member.isSpeaking : false);
     }).toList();
-
     if (!_listEquals(updatedMembers, state.members)) {
       state = state.copyWith(members: updatedMembers);
     }
@@ -412,29 +597,60 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   void _onSquadMembersUpdate(List<models.SquadMember> modelMembers) {
     final cId = currentUserId ?? '';
-    final displayMembers = modelMembers
-        .map((m) => SquadMemberDisplay.fromModel(m, cId, _offlineThresholdMs))
-        .toList();
+    final currentMembersMap = {for (var m in state.members) m.odmemberId: m};
+
+    final displayMembers = modelMembers.map((m) {
+      final existing = currentMembersMap[m.userId];
+      final pos = existing != null ? existing.position : LatLng(m.latitude, m.longitude);
+      final lastUpdate = existing != null ? existing.lastUpdate : m.updatedAt;
+      final isOnline = DateTime.now().difference(lastUpdate).inMilliseconds < _offlineThresholdMs;
+      final isSpeaking = existing != null ? existing.isSpeaking : false; // Behoud de spreek status
+
+      return SquadMemberDisplay(
+        id: m.id,
+        odmemberId: m.userId,
+        nickname: m.nickname,
+        avatarUrl: null,
+        position: pos,
+        lastUpdate: lastUpdate,
+        isOnline: isOnline,
+        isCurrentUser: m.userId == cId,
+        isSpeaking: isSpeaking,
+      );
+    }).toList();
 
     state = state.copyWith(members: displayMembers);
   }
 
   int get _offlineThresholdMs {
-    final frequency = _settingsService.trackingFrequency;
-    final multiplier = _settingsService.offlineMultiplier;
-    return frequency * multiplier * 1000;
+    return _settingsService.trackingFrequency * _settingsService.offlineMultiplier * 1000;
   }
 
   void leaveSquad() {
+    _analytics.logEvent('squad_left', parameters: {'squad_id': state.squadId});
+
     _positionUpdateTimer?.cancel();
     _onlineCheckTimer?.cancel();
+    _dbAnalyticsTimer?.cancel();
     _realtimeSubscription?.cancel();
     _locationService.stopTracking();
 
-    if (state.squadId != null && currentUserId != null) {
-      _squadRepository.leaveSquad(state.squadId!, currentUserId!);
-    }
+    for (final pc in _peers.values) { pc.close(); }
+    _peers.clear();
+    _dataChannels.clear();
+    _remoteStreams.clear();
+    _localStream?.dispose();
+    _localStream = null;
+    _signalingChannel?.unsubscribe();
+    _signalingChannel = null;
 
+    if (state.squadId != null && currentUserId != null) {
+      try {
+        _squadRepository.leaveSquad(state.squadId!, currentUserId!);
+      } catch (e) {
+        // negeer
+      }
+    }
     _squadRepository.unsubscribeFromSquad();
 
     state = const SquadProviderState();
@@ -446,10 +662,11 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   bool _listEquals(List<SquadMemberDisplay> a, List<SquadMemberDisplay> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {
-      if (a[i].id != b[i].id ||
-          a[i].position.latitude != b[i].position.latitude ||
-          a[i].position.longitude != b[i].position.longitude ||
-          a[i].isOnline != b[i].isOnline) {
+      if (a[i].id != b[i].id || 
+          a[i].position.latitude != b[i].position.latitude || 
+          a[i].position.longitude != b[i].position.longitude || 
+          a[i].isOnline != b[i].isOnline ||
+          a[i].isSpeaking != b[i].isSpeaking) { // FIX: Vergelijk ook de spraak status
         return false;
       }
     }
@@ -458,10 +675,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   @override
   void dispose() {
-    _positionUpdateTimer?.cancel();
-    _onlineCheckTimer?.cancel();
-    _realtimeSubscription?.cancel();
-    _locationService.stopTracking();
+    leaveSquad();
     super.dispose();
   }
 }

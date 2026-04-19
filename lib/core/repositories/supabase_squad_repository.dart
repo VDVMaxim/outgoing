@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'dart:math';
-import 'package:flutter/foundation.dart'; // DIT IS DE MISSENDE IMPORT VOOR debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_clubapp/core/models/squad.dart';
@@ -12,27 +11,23 @@ class SupabaseSquadRepository implements SquadRepository {
   RealtimeChannel? _squadChannel;
   final _squadMembersController = StreamController<List<SquadMember>>.broadcast();
 
-  String _generateRandomPin() {
-    final random = Random();
-    return (100000 + random.nextInt(900000)).toString();
-  }
-
   String get _currentUserId {
     return _supabase.auth.currentUser?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
   }
 
   @override
-  Future<Squad> createSquad() async {
-    final pin = _generateRandomPin();
-    final response = await _supabase
-        .from('squads')
-        .insert({
-          'pin': pin,
-          'created_by': _currentUserId,
-        })
-        .select()
-        .single();
-    return Squad.fromJson(response);
+  Future<Map<String, dynamic>> createSquadWithMember(String nickname, LatLng position) async {
+    final response = await _supabase.rpc('create_squad', params: {
+      'p_user_id': _currentUserId,
+      'p_nickname': nickname,
+      'p_lat': position.latitude,
+      'p_lng': position.longitude,
+    });
+    
+    return {
+      'squad': Squad.fromJson(response['squad']),
+      'member': SquadMember.fromJson(response['member']),
+    };
   }
 
   @override
@@ -89,7 +84,6 @@ class SupabaseSquadRepository implements SquadRepository {
     _squadChannel?.unsubscribe();
     
     _squadChannel = _supabase.channel('public:squad_members:squad_id=eq.$squadId');
-    
     _squadChannel!.onPostgresChanges(
       event: PostgresChangeEvent.all,
       schema: 'public',
@@ -103,7 +97,6 @@ class SupabaseSquadRepository implements SquadRepository {
         _fetchSquadMembers(squadId);
       },
     ).subscribe();
-
     _fetchSquadMembers(squadId);
 
     return _squadMembersController.stream;
@@ -115,7 +108,6 @@ class SupabaseSquadRepository implements SquadRepository {
           .from('squad_members')
           .select()
           .eq('squad_id', squadId);
-      
       final members = (response as List).map((json) => SquadMember.fromJson(json)).toList();
       _squadMembersController.add(members);
     } catch (e) {

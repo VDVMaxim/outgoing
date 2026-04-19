@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // TOEGEVOEGD VOOR HAPTICS
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/main.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart'; // Gefixt
+import 'package:flutter_clubapp/core/providers/service_providers.dart'; 
 import 'package:flutter_clubapp/core/config/app_config.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 import 'package:flutter_clubapp/core/widgets/vp_display.dart';
@@ -44,7 +45,7 @@ class SettingsScreen extends ConsumerWidget {
                 : Colors.white.withValues(alpha: 0.9),
             elevation: 0,
             title: Text(
-               l10n.settingsTitle,
+              l10n.settingsTitle,
               style: TextStyle(
                 color: isDark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
@@ -164,6 +165,28 @@ class SettingsScreen extends ConsumerWidget {
                           themeNotifier.value = val
                               ? ThemeMode.dark
                               : ThemeMode.light;
+                        },
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 56, endIndent: 16),
+                    // FIX: NIEUWE HAPTISCHE FEEDBACK TOGGLE
+                    ListTile(
+                      leading: const Icon(
+                        Icons.vibration,
+                        color: Colors.orangeAccent,
+                      ),
+                      title: Text(
+                        'Haptische Feedback',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      trailing: ShadSwitch(
+                        value: ref.watch(settingsServiceProvider).hapticsEnabled,
+                        onChanged: (val) {
+                          ref.read(settingsServiceProvider).setHapticsEnabled(val);
+                          // Geef direct een trillinkje als feedback dat het aan staat!
+                          if (val) HapticFeedback.mediumImpact();
                         },
                       ),
                     ),

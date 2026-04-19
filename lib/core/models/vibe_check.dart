@@ -1,6 +1,6 @@
 class VibeCheck {
   final String id;
-  final String placeId;
+  final String venueId;
   final String crowdLevel;
   final int energy;
   final String? userId;
@@ -8,7 +8,7 @@ class VibeCheck {
 
   const VibeCheck({
     required this.id,
-    required this.placeId,
+    required this.venueId,
     required this.crowdLevel,
     required this.energy,
     this.userId,
@@ -18,7 +18,7 @@ class VibeCheck {
   factory VibeCheck.fromJson(Map<String, dynamic> json) {
     return VibeCheck(
       id: json['id'] as String,
-      placeId: json['place_id'] as String,
+      venueId: json['venue_id'] as String,
       crowdLevel: json['crowd_level'] as String,
       energy: json['energy'] as int,
       userId: json['user_id'] as String?,
@@ -29,7 +29,7 @@ class VibeCheck {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'place_id': placeId,
+      'venue_id': venueId,
       'crowd_level': crowdLevel,
       'energy': energy,
       'user_id': userId,
@@ -39,7 +39,7 @@ class VibeCheck {
 
   VibeCheck copyWith({
     String? id,
-    String? placeId,
+    String? venueId,
     String? crowdLevel,
     int? energy,
     String? userId,
@@ -47,7 +47,7 @@ class VibeCheck {
   }) {
     return VibeCheck(
       id: id ?? this.id,
-      placeId: placeId ?? this.placeId,
+      venueId: venueId ?? this.venueId,
       crowdLevel: crowdLevel ?? this.crowdLevel,
       energy: energy ?? this.energy,
       userId: userId ?? this.userId,

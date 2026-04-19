@@ -1,4 +1,7 @@
-lib\main.dart:
+.\lib\fouten.txt:
+[Fout bij lezen: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte]
+
+.\lib\main.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -8,9 +11,9 @@ import 'package:flutter_clubapp/core/constants/env.dart';
 import 'features/onboarding/screens/splash_screen.dart';
 import 'core/config/supabase_config.dart';
 import 'core/config/supabase_client.dart';
+import 'core/providers/service_providers.dart';
 import 'core/services/user_profile_service.dart';
 import 'core/services/settings_service.dart';
-import 'core/services/location_service.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 final ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
@@ -41,12 +44,20 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _initializeSupabase();
   
-  // Initialiseer de services (vervangt lazy loading issues)
   await UserProfileService.getInstance();
-  await SettingsService.getInstance();
-  // LocationService heeft geen async init nodig
+  
+  // 1. Wacht tot de settings service volledig is ingeladen en sla hem op in een variabele
+  final ingeladenSettingsService = await SettingsService.getInstance();
 
-  runApp(const ProviderScope(child: ClubApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        // 2. Injecteer de ingeladen service direct in de provider!
+        settingsServiceProvider.overrideWithValue(ingeladenSettingsService),
+      ],
+      child: const ClubApp(),
+    ),
+  );
 }
 
 class ClubApp extends StatelessWidget {
@@ -112,245 +123,10 @@ class ClubApp extends StatelessWidget {
   }
 }
 
+.\lib\build\.last_build_id:
+5cd85789d3dc5a767acee27062755a16
 
-lib\core\mock_data.dart:
-import 'package:latlong2/latlong.dart';
-import 'models.dart';
-
-// POI Centers
-final LatLng overpoortCenter = const LatLng(51.0385, 3.7255);
-final LatLng oudeMarktCenter = const LatLng(50.8784, 4.7001); // Leuven Oude Markt
-final LatLng eilandjeCenter = const LatLng(51.2307, 4.4074); // Antwerpen Eilandje
-final LatLng brusselCentrum = const LatLng(50.8466, 4.3528); // Brussel Centrum
-final LatLng hasseltCentrum = const LatLng(50.9303, 5.3378); // Hasselt Centrum
-
-final Map<String, LatLng> poiCenters = {
-  'Overpoort': overpoortCenter,
-  'Oude Markt, Leuven': oudeMarktCenter,
-  'Eilandje, Antwerpen': eilandjeCenter,
-  'Brussel Centrum': brusselCentrum,
-  'Hasselt Centrum': hasseltCentrum,
-};
-
-final List<Place> mockPlaces = [
-  // GENT - OVERPOORT
-  // CLUBS
-  Place(
-    id: 'c1',
-    name: 'De Salamander',
-    address: 'Overpoortstraat 11, 9000 Gent',
-    location: const LatLng(51.0387, 3.7252),
-    type: LocationType.club,
-    poi: 'Overpoort',
-    genre: 'Party/Techno',
-    status: ClubStatus.event,
-    eventName: 'Kringfeest VTK',
-    organizer: 'Vlaamse Technische Kring',
-    promo: 'Gratis Vat om 23:00',
-    tags: ['Kringen', 'Vat', 'Gratis Inkom', 'Chillzone'],
-    facilities: ['Gratis Water', 'Lounge'],
-    isVereniging: true,
-    startTime: DateTime.now().subtract(const Duration(minutes: 30)),
-    crowdLevel: 'Sfeervol',
-    waitTime: 'Geen rij',
-    lastVibeUpdate: DateTime.now().subtract(const Duration(minutes: 12)),
-  ),
-  Place(
-    id: 'c2',
-    name: 'Twitch',
-    address: 'Overpoortstraat 9, 9000 Gent',
-    location: const LatLng(51.0382, 3.7258),
-    type: LocationType.club,
-    poi: 'Overpoort',
-    genre: 'R&B / Urban',
-    status: ClubStatus.open,
-    eventName: 'Urban Night by VGK',
-    organizer: 'Vlaamse Geneeskundige Kring',
-    isFlashPromoActive: true,
-    promo: 'FLASH: 1+1 Gratis Shotjes',
-    tags: ['Flash Promo', 'R&B'],
-    isVereniging: true,
-    startTime: DateTime.now().add(const Duration(hours: 1)),
-    crowdLevel: 'Druk',
-    waitTime: '10 min rij',
-    lastVibeUpdate: DateTime.now().subtract(const Duration(minutes: 5)),
-  ),
-  Place(
-    id: 'c3',
-    name: 'Yucca',
-    address: 'Overpoortstraat 15, 9000 Gent',
-    location: const LatLng(51.0384, 3.7251),
-    type: LocationType.club,
-    poi: 'Overpoort',
-    genre: 'Commercial',
-    status: ClubStatus.open,
-    eventName: 'Studentenavond',
-    tags: ['Studenten', 'Commercial'],
-    facilities: ['Buitenterras', 'Vestiaire'],
-    crowdLevel: 'Rustig',
-    waitTime: 'Geen rij',
-    lastVibeUpdate: DateTime.now().subtract(const Duration(minutes: 25)),
-  ),
-  Place(
-    id: 'c4',
-    name: 'Canard Bizar',
-    address: 'Overpoortstraat 4, 9000 Gent',
-    location: const LatLng(51.0389, 3.7256),
-    type: LocationType.club,
-    poi: 'Overpoort',
-    genre: 'All-round',
-    status: ClubStatus.closed,
-    tags: ['All-round', 'Cocktails'],
-  ),
-
-  // LEUVEN - OUDE MARKT
-  Place(
-    id: 'l1',
-    name: 'Café Belge',
-    address: 'Oude Markt 35, 3000 Leuven',
-    location: const LatLng(50.8783, 4.7003),
-    type: LocationType.club,
-    poi: 'Oude Markt, Leuven',
-    genre: 'Student/Party',
-    status: ClubStatus.open,
-    tags: ['Studenten', 'Pintjes'],
-    facilities: ['Gratis Water', 'Zithoek'],
-    crowdLevel: 'Sfeervol',
-    waitTime: 'Geen rij',
-    lastVibeUpdate: DateTime.now().subtract(const Duration(minutes: 8)),
-  ),
-  Place(
-    id: 'l2',
-    name: 'De Prof',
-    address: 'Naamsestraat 34, 3000 Leuven',
-    location: const LatLng(50.8778, 4.7011),
-    type: LocationType.club,
-    poi: 'Oude Markt, Leuven',
-    genre: 'Dance',
-    status: ClubStatus.event,
-    eventName: 'Fakbar Night',
-    tags: ['Kringen', 'Promotie'],
-    crowdLevel: 'Druk',
-    waitTime: '5 min',
-    lastVibeUpdate: DateTime.now().subtract(const Duration(minutes: 2)),
-  ),
-
-  // ANTWERPEN - EILANDJE
-  Place(
-    id: 'a1',
-    name: 'Lima',
-    address: 'Rijnkaai 2, 2000 Antwerpen',
-    location: const LatLng(51.2312, 4.4068),
-    type: LocationType.club,
-    poi: 'Eilandje, Antwerpen',
-    genre: 'VIP / Urban',
-    status: ClubStatus.open,
-    tags: ['VIP', 'Cocktails'],
-    facilities: ['Zithoek', 'Vestiaire'],
-    crowdLevel: 'Rustig',
-  ),
-  Place(
-    id: 'a2',
-    name: 'Ampere',
-    address: 'Simonsstraat 21, 2018 Antwerpen',
-    location: const LatLng(51.2132, 4.4184),
-    type: LocationType.club,
-    poi: 'Antwerpen Centrum',
-    genre: 'Techno',
-    status: ClubStatus.event,
-    eventName: 'KNTXT',
-    tags: ['Techno', 'Underground'],
-    facilities: ['Kluisjes', 'Gratis Water'],
-    crowdLevel: 'Zeer Druk',
-  ),
-
-  // BRUSSEL
-  Place(
-    id: 'b1',
-    name: 'Fuse',
-    address: 'Blaesstraat 208, 1000 Brussel',
-    location: const LatLng(50.8344, 4.3465),
-    type: LocationType.club,
-    poi: 'Brussel Centrum',
-    genre: 'Techno',
-    status: ClubStatus.open,
-    tags: ['Legendary', 'Techno'],
-    facilities: ['Kluisjes', 'Rookruimte'],
-    crowdLevel: 'Druk',
-    waitTime: '15 min',
-  ),
-  Place(
-    id: 'b2',
-    name: 'Zodiak',
-    address: 'Kaasmarkt 10, 1000 Brussel',
-    location: const LatLng(50.8465, 4.3541),
-    type: LocationType.club,
-    poi: 'Brussel Centrum',
-    genre: 'Electronic',
-    status: ClubStatus.open,
-    tags: ['Electronic', 'House'],
-    crowdLevel: 'Sfeervol',
-  ),
-  Place(
-    id: 'b3',
-    name: 'Spirito',
-    address: 'Stassartstraat 18, 1050 Elsene',
-    location: const LatLng(50.8358, 4.3601),
-    type: LocationType.club,
-    poi: 'Brussel Centrum',
-    genre: 'VIP/House',
-    status: ClubStatus.event,
-    eventName: 'Exclusive Night',
-    tags: ['VIP', 'Dresscode'],
-    facilities: ['VIP Area', 'Zithoek'],
-    crowdLevel: 'Druk',
-  ),
-
-  // HASSELT
-  Place(
-    id: 'h1',
-    name: 'Versuz',
-    address: 'Gouverneur Verwilghensingel 70, 3500 Hasselt',
-    location: const LatLng(50.9329, 5.3533),
-    type: LocationType.club,
-    poi: 'Hasselt Centrum',
-    genre: 'Dance/Commercial',
-    status: ClubStatus.event,
-    eventName: 'Saturnight',
-    promo: 'Gratis inkom voor 00:00',
-    tags: ['Mega Club', 'Dance'],
-    facilities: ['Kluisjes', 'VIP Area', 'Buitenterras', 'Chillzone'],
-    crowdLevel: 'Druk',
-    waitTime: '10 min',
-  ),
-
-  // FOOD (NIGHT HACKS)
-  Place(
-    id: 'f1',
-    name: 'De Gouden Saté (Julientje)',
-    address: 'Overpoortstraat 51, 9000 Gent',
-    location: const LatLng(51.0375, 3.7259),
-    type: LocationType.food,
-    tags: ['Frituur', 'Iconisch', 'Late Night Snack'],
-    status: ClubStatus.open,
-    crowdLevel: 'Lange rij',
-    waitTime: '15 min',
-    lastVibeUpdate: DateTime.now().subtract(const Duration(minutes: 2)),
-  ),
-  Place(
-    id: 'f2',
-    name: 'Nachtwinkel Overpoort',
-    address: 'Overpoortstraat 22, 9000 Gent',
-    location: const LatLng(51.0380, 3.7255),
-    type: LocationType.food,
-    tags: ['Nachtwinkel', 'Drank', 'Snacks'],
-    status: ClubStatus.open,
-    crowdLevel: 'Vlotte bediening',
-  ),
-];
-
-
-lib\core\models.dart:
+.\lib\core\models.dart:
 export 'models/place.dart';
 export 'models/vibe_check.dart';
 export 'models/vibe_profile.dart';
@@ -358,7 +134,7 @@ export 'models/squad.dart';
 export 'models/squad_member.dart';
 
 
-lib\core\config\app_config.dart:
+.\lib\core\config\app_config.dart:
 class FaqItem {
   final String question;
   final String answer;
@@ -457,7 +233,7 @@ class AppConfig {
 }
 
 
-lib\core\config\supabase_client.dart:
+.\lib\core\config\supabase_client.dart:
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_config.dart';
 
@@ -497,7 +273,7 @@ class SupabaseClientProvider {
 }
 
 
-lib\core\config\supabase_config.dart:
+.\lib\core\config\supabase_config.dart:
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SupabaseConfig {
@@ -541,7 +317,7 @@ class SupabaseConfig {
 }
 
 
-lib\core\constants\app_constants.dart:
+.\lib\core\constants\app_constants.dart:
 // lib/core/constants/app_constants.dart
 import 'package:latlong2/latlong.dart';
 
@@ -559,7 +335,7 @@ abstract class AppConstants {
   static const int defaultOfflineMultiplier = 4;
 }
 
-lib\core\constants\env.dart:
+.\lib\core\constants\env.dart:
 import 'package:envied/envied.dart';
 
 part 'env.g.dart';
@@ -574,7 +350,7 @@ abstract class Env {
 }
 
 
-lib\core\constants\env.g.dart:
+.\lib\core\constants\env.g.dart:
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'env.dart';
@@ -1109,7 +885,7 @@ final class _Env {
 }
 
 
-lib\core\models\badge.dart:
+.\lib\core\models\badge.dart:
 import 'package:uuid/uuid.dart';
 
 enum BadgeType {
@@ -1384,7 +1160,7 @@ class BadgeVault {
 }
 
 
-lib\core\models\place.dart:
+.\lib\core\models\place.dart:
 import 'package:latlong2/latlong.dart';
 
 enum LocationType { club, food, emergency }
@@ -1559,7 +1335,7 @@ class Place {
 }
 
 
-lib\core\models\squad.dart:
+.\lib\core\models\squad.dart:
 class Squad {
   final String id;
   final String pin;
@@ -1593,7 +1369,7 @@ class Squad {
 }
 
 
-lib\core\models\squad_challenge.dart:
+.\lib\core\models\squad_challenge.dart:
 import 'package:uuid/uuid.dart';
 
 enum SquadChallengeType { pubCrawl, noManLeftBehind, trendsetters }
@@ -1836,7 +1612,7 @@ class ActiveChallenges {
 }
 
 
-lib\core\models\squad_member.dart:
+.\lib\core\models\squad_member.dart:
 class SquadMember {
   final String id;
   final String squadId;
@@ -1902,7 +1678,7 @@ class SquadMember {
 }
 
 
-lib\core\models\vibe_action.dart:
+.\lib\core\models\vibe_action.dart:
 import 'package:uuid/uuid.dart';
 
 enum VibeActionType { checkIn, vibeUpdate, squadInvite, earlyBird, explorer }
@@ -1910,48 +1686,32 @@ enum VibeActionType { checkIn, vibeUpdate, squadInvite, earlyBird, explorer }
 extension VibeActionTypeExtension on VibeActionType {
   String get displayName {
     switch (this) {
-      case VibeActionType.checkIn:
-        return 'Check-in';
-      case VibeActionType.vibeUpdate:
-        return 'Vibe Update';
-      case VibeActionType.squadInvite:
-        return 'Squad Invite';
-      case VibeActionType.earlyBird:
-        return 'Early Bird';
-      case VibeActionType.explorer:
-        return 'Explorer';
+      case VibeActionType.checkIn: return 'Check-in';
+      case VibeActionType.vibeUpdate: return 'Vibe Update';
+      case VibeActionType.squadInvite: return 'Squad Invite';
+      case VibeActionType.earlyBird: return 'Early Bird';
+      case VibeActionType.explorer: return 'Explorer';
     }
   }
 
   String get dbValue {
     switch (this) {
-      case VibeActionType.checkIn:
-        return 'check_in';
-      case VibeActionType.vibeUpdate:
-        return 'vibe_update';
-      case VibeActionType.squadInvite:
-        return 'squad_invite';
-      case VibeActionType.earlyBird:
-        return 'early_bird';
-      case VibeActionType.explorer:
-        return 'explorer';
+      case VibeActionType.checkIn: return 'check_in';
+      case VibeActionType.vibeUpdate: return 'vibe_update';
+      case VibeActionType.squadInvite: return 'squad_invite';
+      case VibeActionType.earlyBird: return 'early_bird';
+      case VibeActionType.explorer: return 'explorer';
     }
   }
 
   static VibeActionType fromDbValue(String value) {
     switch (value) {
-      case 'check_in':
-        return VibeActionType.checkIn;
-      case 'vibe_update':
-        return VibeActionType.vibeUpdate;
-      case 'squad_invite':
-        return VibeActionType.squadInvite;
-      case 'early_bird':
-        return VibeActionType.earlyBird;
-      case 'explorer':
-        return VibeActionType.explorer;
-      default:
-        return VibeActionType.checkIn;
+      case 'check_in': return VibeActionType.checkIn;
+      case 'vibe_update': return VibeActionType.vibeUpdate;
+      case 'squad_invite': return VibeActionType.squadInvite;
+      case 'early_bird': return VibeActionType.earlyBird;
+      case 'explorer': return VibeActionType.explorer;
+      default: return VibeActionType.checkIn;
     }
   }
 }
@@ -1960,7 +1720,7 @@ class VibeAction {
   final String id;
   final String odUserId;
   final VibeActionType actionType;
-  final String? placeId;
+  final String? venueId;
   final int vpEarned;
   final DateTime createdAt;
 
@@ -1968,7 +1728,7 @@ class VibeAction {
     required this.id,
     required this.odUserId,
     required this.actionType,
-    this.placeId,
+    this.venueId,
     required this.vpEarned,
     required this.createdAt,
   });
@@ -1980,7 +1740,7 @@ class VibeAction {
       actionType: VibeActionTypeExtension.fromDbValue(
         json['action_type'] as String,
       ),
-      placeId: json['place_id'] as String?,
+      venueId: json['venue_id'] as String?,
       vpEarned: json['vp_earned'] as int,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -1991,18 +1751,17 @@ class VibeAction {
       'id': id,
       'user_id': odUserId,
       'action_type': actionType.dbValue,
-      'place_id': placeId,
+      'venue_id': venueId,
       'vp_earned': vpEarned,
       'created_at': createdAt.toIso8601String(),
     };
   }
 }
 
-
-lib\core\models\vibe_check.dart:
+.\lib\core\models\vibe_check.dart:
 class VibeCheck {
   final String id;
-  final String placeId;
+  final String venueId;
   final String crowdLevel;
   final int energy;
   final String? userId;
@@ -2010,7 +1769,7 @@ class VibeCheck {
 
   const VibeCheck({
     required this.id,
-    required this.placeId,
+    required this.venueId,
     required this.crowdLevel,
     required this.energy,
     this.userId,
@@ -2020,7 +1779,7 @@ class VibeCheck {
   factory VibeCheck.fromJson(Map<String, dynamic> json) {
     return VibeCheck(
       id: json['id'] as String,
-      placeId: json['place_id'] as String,
+      venueId: json['venue_id'] as String,
       crowdLevel: json['crowd_level'] as String,
       energy: json['energy'] as int,
       userId: json['user_id'] as String?,
@@ -2031,7 +1790,7 @@ class VibeCheck {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'place_id': placeId,
+      'venue_id': venueId,
       'crowd_level': crowdLevel,
       'energy': energy,
       'user_id': userId,
@@ -2041,7 +1800,7 @@ class VibeCheck {
 
   VibeCheck copyWith({
     String? id,
-    String? placeId,
+    String? venueId,
     String? crowdLevel,
     int? energy,
     String? userId,
@@ -2049,7 +1808,7 @@ class VibeCheck {
   }) {
     return VibeCheck(
       id: id ?? this.id,
-      placeId: placeId ?? this.placeId,
+      venueId: venueId ?? this.venueId,
       crowdLevel: crowdLevel ?? this.crowdLevel,
       energy: energy ?? this.energy,
       userId: userId ?? this.userId,
@@ -2058,8 +1817,7 @@ class VibeCheck {
   }
 }
 
-
-lib\core\models\vibe_profile.dart:
+.\lib\core\models\vibe_profile.dart:
 import 'package:uuid/uuid.dart';
 
 class VibeProfile {
@@ -2229,7 +1987,7 @@ class LevelInfo {
 }
 
 
-lib\core\providers\auth_provider.dart:
+.\lib\core\providers\auth_provider.dart:
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum AuthResultStatus { success, error, emailAlreadyInUse, invalidCredentials }
@@ -2333,7 +2091,7 @@ class AuthService {
   }
 }
 
-lib\core\providers\favorites_provider.dart:
+.\lib\core\providers\favorites_provider.dart:
 import 'package:flutter/foundation.dart';
 
 class FavoritesProvider extends ValueNotifier<Set<String>> {
@@ -2355,21 +2113,14 @@ class FavoritesProvider extends ValueNotifier<Set<String>> {
 }
 
 
-lib\core\providers\service_providers.dart:
+.\lib\core\providers\service_providers.dart:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/user_profile_service.dart';
-import '../../features/squad/providers/squad_provider.dart';
-import 'lib/features/auth/screens/login_screen.dart';
-import 'lib/features/auth/screens/register_screen.dart';
-import 'lib/features/clubs/widgets/club_bottom_sheet.dart';
-import 'lib/features/home/screens/home_screen.dart';
-import 'lib/features/settings/screens/settings_screen.dart';
-import 'lib/core/providers/vibe_provider.dart;
-import 'repository_providers.dart';
+import '../services/analytics_service.dart';
 
 final userProfileServiceProvider = Provider<UserProfileService>((ref) {
   return UserProfileService.instance;
@@ -2380,14 +2131,17 @@ final locationServiceProvider = Provider<LocationService>((ref) {
 });
 
 final settingsServiceProvider = Provider<SettingsService>((ref) {
-  return SettingsService.getInstance() as SettingsService; 
+  throw UnimplementedError('settingsServiceProvider moet in main.dart worden overschreven');
+});
+
+final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
+  return AnalyticsService(ref.read(userProfileServiceProvider));
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(Supabase.instance.client);
 });
 
-// De nieuwe AuthProvider die de oude ValueNotifier vervangt
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(ref);
 });
@@ -2440,7 +2194,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _updateFromProfile(profile);
 
     Supabase.instance.client.auth.onAuthStateChange.listen((event) async {
-       // Sync op achtergrond
        final p = _ref.read(userProfileServiceProvider);
        await p.loadProfileFromSupabase();
       _updateFromProfile(p);
@@ -2459,15 +2212,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> signIn({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+
     final result = await _ref.read(authServiceProvider).signIn(email: email, password: password);
 
     if (result.status == AuthResultStatus.success) {
       final profile = _ref.read(userProfileServiceProvider);
       await profile.loadProfileFromSupabase();
       _updateFromProfile(profile);
+      _ref.read(analyticsServiceProvider).logEvent('login_success');
       return true;
     } else {
       state = state.copyWith(isLoading: false, errorMessage: result.errorMessage);
+      _ref.read(analyticsServiceProvider).logEvent('login_error', parameters: {'error': result.errorMessage});
       return false;
     }
   }
@@ -2481,6 +2237,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String nickname,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+
     final result = await _ref.read(authServiceProvider).signUp(
       email: email,
       password: password,
@@ -2494,9 +2251,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final profile = _ref.read(userProfileServiceProvider);
       await profile.loadProfileFromSupabase();
       _updateFromProfile(profile);
+      _ref.read(analyticsServiceProvider).logEvent('signup_success');
       return true;
     } else {
       state = state.copyWith(isLoading: false, errorMessage: result.errorMessage);
+      _ref.read(analyticsServiceProvider).logEvent('signup_error', parameters: {'error': result.errorMessage});
       return false;
     }
   }
@@ -2506,14 +2265,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-lib\core\providers\vibe_provider.dart:
+.\lib\core\providers\vibe_provider.dart:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vibe_profile.dart';
 import '../models/vibe_action.dart';
 import '../models/badge.dart';
 import '../repositories/vibe_repository.dart';
-import 'service_providers.dart'; // Toegevoegd
+import 'service_providers.dart'; 
 
 class VibeState {
   final VibeProfile? profile;
@@ -2552,9 +2311,8 @@ class VibeState {
 
 class VibeNotifier extends StateNotifier<VibeState> {
   final VibeRepository _repository;
-  final Ref _ref;
 
-  VibeNotifier(this._ref)
+  VibeNotifier()
       : _repository = VibeRepository(),
         super(const VibeState());
 
@@ -2663,10 +2421,9 @@ class VibeNotifier extends StateNotifier<VibeState> {
 }
 
 final vibeProvider = StateNotifierProvider<VibeNotifier, VibeState>((ref) {
-  return VibeNotifier(ref);
+  return VibeNotifier();
 });
 
-// We maken hier een nieuwe auth check aan die gebaseerd is op de userProfileService
 final isAuthenticatedProvider = Provider<bool>((ref) {
   return ref.watch(userProfileServiceProvider).isAuthenticated;
 });
@@ -2752,7 +2509,7 @@ class VibeDisplayData {
   });
 }
 
-lib\core\repositories\club_repository.dart:
+.\lib\core\repositories\club_repository.dart:
 import '../models.dart';
 
 abstract class ClubRepository {
@@ -2761,59 +2518,26 @@ abstract class ClubRepository {
 }
 
 
-lib\core\repositories\mock_club_repository.dart:
-import '../mock_data.dart';
-import '../models.dart';
-import 'interfaces/club_repository.dart';
-
-class MockClubRepository implements ClubRepository {
-  @override
-  Future<List<Place>> getPlaces() async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    return mockPlaces;
-  }
-
-  @override
-  Future<Place?> getPlaceById(String id) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    try {
-      return mockPlaces.firstWhere((place) => place.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-}
-
-
-lib\core\repositories\repositories.dart:
+.\lib\core\repositories\repositories.dart:
 export 'interfaces/repository_interfaces.dart';
-export 'mock_club_repository.dart';
 export 'supabase_club_repository.dart';
 export 'supabase_vibe_repository.dart';
 export 'supabase_squad_repository.dart';
 export 'repository_provider.dart'
     show
-        clubRepository,
-        vibeRepository,
-        squadRepository,
-        DataBackend,
-        kClubDataBackend,
-        kClubDataBackendFallback,
-        initializeRepositories;
+        clubRepositoryProvider,
+        vibeRepositoryProvider,
+        squadRepositoryProvider;
 
-
-lib\core\repositories\repository_provider.dart:
-// lib/core/providers/repository_providers.dart
+.\lib\core\repositories\repository_provider.dart:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../repositories/interfaces/club_repository.dart';
-import '../repositories/interfaces/squad_repository.dart';
-import '../repositories/interfaces/vibe_repository.dart';
-import '../repositories/supabase_club_repository.dart';
-import '../repositories/supabase_squad_repository.dart';
-import '../repositories/supabase_vibe_repository.dart';
+import 'interfaces/club_repository.dart';
+import 'interfaces/squad_repository.dart';
+import 'interfaces/vibe_repository.dart';
+import 'supabase_club_repository.dart';
+import 'supabase_squad_repository.dart';
+import 'supabase_vibe_repository.dart';
 
-// Hier injecteren we de Supabase implementaties. 
-// Als je later wilt testen met Mock data, hoef je dit alleen hier aan te passen.
 final clubRepositoryProvider = Provider<ClubRepository>((ref) {
   return SupabaseClubRepository();
 });
@@ -2826,7 +2550,7 @@ final vibeRepositoryProvider = Provider<VibeRepository>((ref) {
   return SupabaseVibeRepository();
 });
 
-lib\core\repositories\supabase_club_repository.dart:
+.\lib\core\repositories\supabase_club_repository.dart:
 import '../config/supabase_client.dart';
 import '../models/place.dart';
 import 'interfaces/club_repository.dart';
@@ -2835,22 +2559,19 @@ class SupabaseClubRepository implements ClubRepository {
   @override
   Future<List<Place>> getPlaces() async {
     final client = SupabaseClientProvider.client;
+    final placesResponse = await client.from('venues').select();
 
-    final placesResponse = await client.from('places').select();
-
-    // Fetch tags with join to get tag names
     final tagsWithNames = await client
-        .from('place_tags')
-        .select('place_id, tags:tag_id(name)');
+        .from('venue_tags')
+        .select('venue_id, tags:tag_id(name)');
 
-    // Fetch facilities with join to get facility names
     final facilitiesWithNames = await client
-        .from('place_facilities')
-        .select('place_id, facilities:facility_id(name)');
+        .from('venue_facilities')
+        .select('venue_id, facilities:facility_id(name)');
 
     final tagsByPlace = <String, List<String>>{};
     for (final tag in tagsWithNames) {
-      final placeId = tag['place_id'] as String;
+      final placeId = tag['venue_id'] as String;
       final tagData = tag['tags'];
       if (tagData != null && tagData['name'] != null) {
         tagsByPlace
@@ -2861,7 +2582,7 @@ class SupabaseClubRepository implements ClubRepository {
 
     final facilitiesByPlace = <String, List<String>>{};
     for (final facility in facilitiesWithNames) {
-      final placeId = facility['place_id'] as String;
+      final placeId = facility['venue_id'] as String;
       final facilityData = facility['facilities'];
       if (facilityData != null && facilityData['name'] != null) {
         facilitiesByPlace
@@ -2882,32 +2603,30 @@ class SupabaseClubRepository implements ClubRepository {
   @override
   Future<Place?> getPlaceById(String id) async {
     final client = SupabaseClientProvider.client;
-
     final placeResponse = await client
-        .from('places')
+        .from('venues')
         .select()
         .eq('id', id)
         .maybeSingle();
 
     if (placeResponse == null) return null;
 
-    // Fetch tags with join
     final tagsResponse = await client
-        .from('place_tags')
+        .from('venue_tags')
         .select('tags:tag_id(name)')
-        .eq('place_id', id);
+        .eq('venue_id', id);
 
-    // Fetch facilities with join
     final facilitiesResponse = await client
-        .from('place_facilities')
+        .from('venue_facilities')
         .select('facilities:facility_id(name)')
-        .eq('place_id', id);
+        .eq('venue_id', id);
 
     final enrichedJson = Map<String, dynamic>.from(placeResponse);
     enrichedJson['tags'] = (tagsResponse as List)
         .map((t) => (t['tags'] as Map<String, dynamic>?)?['name'] as String?)
         .whereType<String>()
         .toList();
+
     enrichedJson['facilities'] = (facilitiesResponse as List)
         .map(
           (f) => (f['facilities'] as Map<String, dynamic>?)?['name'] as String?,
@@ -2919,102 +2638,70 @@ class SupabaseClubRepository implements ClubRepository {
   }
 }
 
-
-lib\core\repositories\supabase_squad_repository.dart:
+.\lib\core\repositories\supabase_squad_repository.dart:
 import 'dart:async';
-import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../config/supabase_client.dart';
-import '../models/squad.dart';
-import '../models/squad_member.dart';
-import 'interfaces/squad_repository.dart';
+import 'package:flutter_clubapp/core/models/squad.dart';
+import 'package:flutter_clubapp/core/models/squad_member.dart';
+import 'package:flutter_clubapp/core/repositories/interfaces/squad_repository.dart';
 
 class SupabaseSquadRepository implements SquadRepository {
-  RealtimeChannel? _channel;
-  final _memberStreamController =
-      StreamController<List<SquadMember>>.broadcast();
+  final SupabaseClient _supabase = Supabase.instance.client;
+  RealtimeChannel? _squadChannel;
+  final _squadMembersController = StreamController<List<SquadMember>>.broadcast();
 
-  String _generatePin() {
-    final random = Random();
-    return (100000 + random.nextInt(900000)).toString();
-  }
-
-  String _generateUserId() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-    final random = Random().nextInt(999999).toString().padLeft(6, '0');
-    return '$timestamp$random';
+  String get _currentUserId {
+    return _supabase.auth.currentUser?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
   }
 
   @override
-  Future<Squad> createSquad() async {
-    final client = SupabaseClientProvider.client;
-    final userId = _generateUserId();
-    final pin = _generatePin();
+  Future<Map<String, dynamic>> createSquadWithMember(String nickname, LatLng position) async {
+    final response = await _supabase.rpc('create_squad', params: {
+      'p_user_id': _currentUserId,
+      'p_nickname': nickname,
+      'p_lat': position.latitude,
+      'p_lng': position.longitude,
+    });
+    
+    return {
+      'squad': Squad.fromJson(response['squad']),
+      'member': SquadMember.fromJson(response['member']),
+    };
+  }
 
-    final response = await client
-        .from('squads')
-        .insert({'pin': pin, 'created_by': userId})
+  @override
+  Future<SquadMember> joinSquad(String squadId, String nickname, LatLng position) async {
+    final response = await _supabase
+        .from('squad_members')
+        .insert({
+          'squad_id': squadId,
+          'user_id': _currentUserId,
+          'nickname': nickname,
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
         .select()
         .single();
-
-    return Squad.fromJson(response);
+    return SquadMember.fromJson(response);
   }
 
   @override
   Future<Squad?> getSquadByPin(String pin) async {
-    final client = SupabaseClientProvider.client;
-
-    final response = await client
+    final response = await _supabase
         .from('squads')
         .select()
         .eq('pin', pin)
         .maybeSingle();
-
     if (response == null) return null;
     return Squad.fromJson(response);
   }
 
   @override
-  Future<SquadMember> joinSquad(
-    String squadId,
-    String nickname,
-    LatLng position,
-  ) async {
-    final client = SupabaseClientProvider.client;
-    final userId = _generateUserId();
-
-    final response = await client
-        .from('squad_members')
-        .insert({
-          'squad_id': squadId,
-          'user_id': userId,
-          'nickname': nickname,
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-        })
-        .select()
-        .single();
-
-    return SquadMember.fromJson(response);
-  }
-
-  @override
-  Future<void> leaveSquad(String squadId, String userId) async {
-    final client = SupabaseClientProvider.client;
-
-    await client
-        .from('squad_members')
-        .delete()
-        .eq('squad_id', squadId)
-        .eq('user_id', userId);
-  }
-
-  @override
   Future<void> updateMemberPosition(String memberId, LatLng position) async {
-    final client = SupabaseClientProvider.client;
-
-    await client
+    await _supabase
         .from('squad_members')
         .update({
           'latitude': position.latitude,
@@ -3025,59 +2712,58 @@ class SupabaseSquadRepository implements SquadRepository {
   }
 
   @override
-  Stream<List<SquadMember>> subscribeToSquad(String squadId) {
-    _channel?.unsubscribe();
-    _memberStreamController.add(<SquadMember>[]);
-
-    _channel = SupabaseClientProvider.client
-        .channel('squad_members_$squadId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'squad_members',
-          callback: (payload) => _onSquadMemberChange(squadId),
-        );
-
-    _channel!.subscribe();
-
-    _loadSquadMembers(squadId);
-
-    return _memberStreamController.stream;
-  }
-
-  Future<void> _loadSquadMembers(String squadId) async {
-    final client = SupabaseClientProvider.client;
-
-    final response = await client
+  Future<void> leaveSquad(String squadId, String userId) async {
+      await _supabase
         .from('squad_members')
-        .select()
-        .eq('squad_id', squadId);
-
-    final members = (response as List)
-        .map((json) => SquadMember.fromJson(json as Map<String, dynamic>))
-        .toList();
-
-    _memberStreamController.add(members);
+        .delete()
+        .eq('squad_id', squadId)
+        .eq('user_id', userId);
   }
 
-  Future<void> _onSquadMemberChange(String squadId) async {
-    await _loadSquadMembers(squadId);
+  @override
+  Stream<List<SquadMember>> subscribeToSquad(String squadId) {
+    _squadChannel?.unsubscribe();
+    
+    _squadChannel = _supabase.channel('public:squad_members:squad_id=eq.$squadId');
+    _squadChannel!.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'squad_members',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'squad_id',
+        value: squadId,
+      ),
+      callback: (payload) {
+        _fetchSquadMembers(squadId);
+      },
+    ).subscribe();
+    _fetchSquadMembers(squadId);
+
+    return _squadMembersController.stream;
+  }
+
+  Future<void> _fetchSquadMembers(String squadId) async {
+    try {
+      final response = await _supabase
+          .from('squad_members')
+          .select()
+          .eq('squad_id', squadId);
+      final members = (response as List).map((json) => SquadMember.fromJson(json)).toList();
+      _squadMembersController.add(members);
+    } catch (e) {
+      debugPrint('Error fetching squad members: $e');
+    }
   }
 
   @override
   void unsubscribeFromSquad() {
-    _channel?.unsubscribe();
-    _channel = null;
-  }
-
-  void dispose() {
-    unsubscribeFromSquad();
-    _memberStreamController.close();
+    _squadChannel?.unsubscribe();
+    _squadChannel = null;
   }
 }
 
-
-lib\core\repositories\supabase_vibe_repository.dart:
+.\lib\core\repositories\supabase_vibe_repository.dart:
 import '../config/supabase_client.dart';
 import '../models/vibe_check.dart';
 import 'interfaces/vibe_repository.dart';
@@ -3090,9 +2776,8 @@ class SupabaseVibeRepository implements VibeRepository {
     required int energy,
   }) async {
     final client = SupabaseClientProvider.client;
-
     await client.from('vibe_checks').insert({
-      'place_id': placeId,
+      'venue_id': placeId,
       'crowd_level': crowdLevel,
       'energy': energy,
     });
@@ -3104,11 +2789,10 @@ class SupabaseVibeRepository implements VibeRepository {
     int limit = 10,
   }) async {
     final client = SupabaseClientProvider.client;
-
     final response = await client
         .from('vibe_checks')
         .select()
-        .eq('place_id', placeId)
+        .eq('venue_id', placeId)
         .order('created_at', ascending: false)
         .limit(limit);
 
@@ -3118,8 +2802,7 @@ class SupabaseVibeRepository implements VibeRepository {
   }
 }
 
-
-lib\core\repositories\vibe_repository.dart:
+.\lib\core\repositories\vibe_repository.dart:
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/vibe_profile.dart';
@@ -3135,7 +2818,6 @@ class VibeRepository {
         .select()
         .eq('user_id', odUserId)
         .maybeSingle();
-
     if (response == null) return null;
     return VibeProfile.fromJson(response);
   }
@@ -3153,7 +2835,6 @@ class VibeRepository {
       'weekend_streak': 0,
       'visited_places': [],
     });
-
     return newProfile;
   }
 
@@ -3164,7 +2845,6 @@ class VibeRepository {
     List<String> visitedPlaces = const [],
   }) async {
     final profile = await getOrCreateProfile(odUserId);
-
     final now = DateTime.now();
     final isEarlyBird = VibePointsService.isEarlyBird();
     final isNewPlace = placeId != null && !visitedPlaces.contains(placeId);
@@ -3199,7 +2879,7 @@ class VibeRepository {
       'id': const Uuid().v4(),
       'user_id': odUserId,
       'action_type': actionType.dbValue,
-      'place_id': placeId,
+      'venue_id': placeId,
       'vp_earned': newVp,
       'created_at': now.toIso8601String(),
     });
@@ -3215,10 +2895,8 @@ class VibeRepository {
   Future<VibeProfile> updateStreak(String odUserId) async {
     final profile = await getOrCreateProfile(odUserId);
     final now = DateTime.now();
-
-    final shouldReset = VibePointsService.shouldUpdateStreak(
-      profile.lastCheckIn,
-    );
+    final shouldReset = VibePointsService.shouldUpdateStreak(profile.lastCheckIn);
+    
     int newStreak = shouldReset ? 1 : profile.weekendStreak;
 
     if (!shouldReset && profile.lastCheckIn != null) {
@@ -3235,21 +2913,17 @@ class VibeRepository {
           'updated_at': now.toIso8601String(),
         })
         .eq('user_id', odUserId);
-
+        
     return profile.copyWith(weekendStreak: newStreak);
   }
 
-  Future<List<VibeAction>> getRecentActions(
-    String odUserId, {
-    int limit = 10,
-  }) async {
+  Future<List<VibeAction>> getRecentActions(String odUserId, {int limit = 10}) async {
     final response = await _supabase
         .from('vibe_actions')
         .select()
         .eq('user_id', odUserId)
         .order('created_at', ascending: false)
         .limit(limit);
-
     return response.map((json) => VibeAction.fromJson(json)).toList();
   }
 
@@ -3259,7 +2933,6 @@ class VibeRepository {
         .select()
         .order('total_vp', ascending: false)
         .limit(limit);
-
     return response.map((json) => VibeProfile.fromJson(json)).toList();
   }
 
@@ -3271,14 +2944,13 @@ class VibeRepository {
         .from('vibe_profiles')
         .select('user_id')
         .order('total_vp', ascending: false);
-
+        
     final index = response.indexWhere((p) => p['user_id'] == odUserId);
     return index >= 0 ? index + 1 : null;
   }
 }
 
-
-lib\core\repositories\interfaces\club_repository.dart:
+.\lib\core\repositories\interfaces\club_repository.dart:
 import '../../models/place.dart';
 
 abstract class ClubRepository {
@@ -3287,19 +2959,19 @@ abstract class ClubRepository {
 }
 
 
-lib\core\repositories\interfaces\repository_interfaces.dart:
+.\lib\core\repositories\interfaces\repository_interfaces.dart:
 export 'club_repository.dart';
 export 'vibe_repository.dart';
 export 'squad_repository.dart';
 
 
-lib\core\repositories\interfaces\squad_repository.dart:
+.\lib\core\repositories\interfaces\squad_repository.dart:
 import 'package:latlong2/latlong.dart';
 import '../../models/squad.dart';
 import '../../models/squad_member.dart';
 
 abstract class SquadRepository {
-  Future<Squad> createSquad();
+  Future<Map<String, dynamic>> createSquadWithMember(String nickname, LatLng position);
   Future<Squad?> getSquadByPin(String pin);
   Future<SquadMember> joinSquad(
     String squadId,
@@ -3312,8 +2984,7 @@ abstract class SquadRepository {
   void unsubscribeFromSquad();
 }
 
-
-lib\core\repositories\interfaces\vibe_repository.dart:
+.\lib\core\repositories\interfaces\vibe_repository.dart:
 import '../../models/vibe_check.dart';
 
 abstract class VibeRepository {
@@ -3329,10 +3000,43 @@ abstract class VibeRepository {
 }
 
 
-lib\core\services\app_startup.dart:
+.\lib\core\services\analytics_service.dart:
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_clubapp/core/services/user_profile_service.dart';
+
+class AnalyticsService {
+  final SupabaseClient _supabase = Supabase.instance.client;
+  final UserProfileService _userProfileService;
+
+  AnalyticsService(this._userProfileService);
+
+  /// Log een analytisch event naar de Supabase `app_events` tabel
+  Future<void> logEvent(String eventName, {Map<String, dynamic>? parameters}) async {
+    try {
+      final userId = _userProfileService.userId;
+
+      await _supabase.from('app_events').insert({
+        'user_id': userId,
+        'event_name': eventName,
+        'event_data': parameters ?? {},
+      });
+      
+      if (kDebugMode) {
+        debugPrint('📈 Analytics Event: $eventName | $parameters');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Analytics Error ($eventName): $e');
+      }
+    }
+  }
+}
+
+.\lib\core\services\app_startup.dart:
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/repository_providers.dart';
+import '../repositories/repository_provider.dart';
 
 enum AppStartupFailureKind { timeout, unknown }
 
@@ -3352,7 +3056,6 @@ class AppStartup {
   AppStartup._();
   static const Duration _placesTimeout = Duration(seconds: 15);
 
-  // We geven nu de ProviderContainer (of de Ref) mee
   static Future<AppStartupResult> verify(ProviderContainer container) async {
     try {
       final repo = container.read(clubRepositoryProvider);
@@ -3366,7 +3069,7 @@ class AppStartup {
   }
 }
 
-lib\core\services\auth_service.dart:
+.\lib\core\services\auth_service.dart:
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum AuthResultStatus { success, error, emailAlreadyInUse, invalidCredentials }
@@ -3379,11 +3082,9 @@ class AuthResult {
 }
 
 class AuthService {
-  static final AuthService _instance = AuthService._internal();
-  factory AuthService() => _instance;
-  AuthService._internal();
-
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+  
+  AuthService(this._supabase);
 
   bool get isAuthenticated => _supabase.auth.currentUser != null;
   String? get userId => _supabase.auth.currentUser?.id;
@@ -3401,7 +3102,6 @@ class AuthService {
         email: email,
         password: password,
       );
-
       if (response.user != null) {
         await _supabase.from('profiles').insert({
           'user_id': response.user!.id,
@@ -3411,10 +3111,8 @@ class AuthService {
           'birthday': birthday.toIso8601String().split('T')[0],
           'nickname': nickname,
         });
-
         return AuthResult(status: AuthResultStatus.success);
       }
-
       return AuthResult(
         status: AuthResultStatus.error,
         errorMessage: 'Unknown error occurred',
@@ -3426,53 +3124,32 @@ class AuthService {
           errorMessage: 'Dit email adres is al in gebruik',
         );
       }
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.message,
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.message);
     } catch (e) {
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.toString(),
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
     }
   }
 
-  Future<AuthResult> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<AuthResult> signIn({required String email, required String password}) async {
     try {
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
-
       if (response.user != null) {
         return AuthResult(status: AuthResultStatus.success);
       }
-
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: 'Unknown error occurred',
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: 'Unknown error occurred');
     } on AuthException catch (e) {
-      if (e.message.contains('Invalid login') ||
-          e.message.contains('Invalid credentials')) {
+      if (e.message.contains('Invalid login') || e.message.contains('Invalid credentials')) {
         return AuthResult(
           status: AuthResultStatus.invalidCredentials,
           errorMessage: 'Email of wachtwoord is incorrect',
         );
       }
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.message,
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.message);
     } catch (e) {
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.toString(),
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
     }
   }
 
@@ -3484,22 +3161,13 @@ class AuthService {
     try {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
-        return AuthResult(
-          status: AuthResultStatus.error,
-          errorMessage: 'Not logged in',
-        );
+        return AuthResult(status: AuthResultStatus.error, errorMessage: 'Not logged in');
       }
-
       await _supabase.from('profiles').delete().eq('user_id', userId);
-
       await _supabase.auth.admin.deleteUser(userId);
-
       return AuthResult(status: AuthResultStatus.success);
     } catch (e) {
-      return AuthResult(
-        status: AuthResultStatus.error,
-        errorMessage: e.toString(),
-      );
+      return AuthResult(status: AuthResultStatus.error, errorMessage: e.toString());
     }
   }
 
@@ -3512,7 +3180,6 @@ class AuthService {
         .select('nickname')
         .eq('user_id', userId)
         .maybeSingle();
-
     return profile?['nickname'];
   }
 
@@ -3525,13 +3192,11 @@ class AuthService {
         .select()
         .eq('user_id', userId)
         .maybeSingle();
-
     return profile;
   }
 }
 
-
-lib\core\services\haptic_service.dart:
+.\lib\core\services\haptic_service.dart:
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -3547,7 +3212,7 @@ class HapticService {
 }
 
 
-lib\core\services\location_service.dart:
+.\lib\core\services\location_service.dart:
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
@@ -3684,57 +3349,54 @@ class LocationService {
 }
 
 
-lib\core\services\settings_service.dart:
+.\lib\core\services\settings_service.dart:
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
 
-class SettingsService {
-  static SettingsService? _instance;
-  static SharedPreferences? _prefs;
+class SettingsService extends ChangeNotifier {
+  final SharedPreferences _prefs;
 
-  static const String _keyTrackingFrequency = 'tracking_frequency';
-  static const String _keyOfflineMultiplier = 'offline_multiplier';
+  SettingsService._(this._prefs);
 
-  static const int defaultTrackingFrequency = 5;
-  static const int defaultOfflineMultiplier = 4;
+  static late SettingsService _instance;
+  static SettingsService get instance => _instance;
 
-  SettingsService._();
-
-  static Future<SettingsService> getInstance() async {
-    if (_instance == null) {
-      _prefs = await SharedPreferences.getInstance();
-      _instance = SettingsService._();
-    }
-    return _instance!;
+  static Future<SettingsService> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _instance = SettingsService._(prefs);
+    return _instance;
   }
 
-  int get trackingFrequency {
-    return _prefs?.getInt(_keyTrackingFrequency) ?? defaultTrackingFrequency;
+  bool get hapticsEnabled => _prefs.getBool('hapticsEnabled') ?? true;
+
+  Future<void> setHapticsEnabled(bool value) async {
+    await _prefs.setBool('hapticsEnabled', value);
+    notifyListeners(); 
   }
 
-  set trackingFrequency(int value) {
-    _prefs?.setInt(_keyTrackingFrequency, value);
+  int get trackingFrequency => _prefs.getInt('trackingFrequency') ?? 2;
+
+  Future<void> setTrackingFrequency(int value) async {
+    await _prefs.setInt('trackingFrequency', value);
+    notifyListeners();
   }
 
-  int get offlineMultiplier {
-    return _prefs?.getInt(_keyOfflineMultiplier) ?? defaultOfflineMultiplier;
-  }
+  int get offlineMultiplier => _prefs.getInt('offlineMultiplier') ?? 5;
 
-  set offlineMultiplier(int value) {
-    _prefs?.setInt(_keyOfflineMultiplier, value);
+  Future<void> setOfflineMultiplier(int value) async {
+    await _prefs.setInt('offlineMultiplier', value);
+    notifyListeners();
   }
-
-  int get offlineThresholdSeconds {
-    return trackingFrequency * offlineMultiplier;
-  }
-
-  String generateRandomNickname() {
-    return NicknameGenerator.generate();
+  
+  bool get isDarkMode => _prefs.getBool('isDarkMode') ?? true;
+  
+  Future<void> setDarkMode(bool value) async {
+    await _prefs.setBool('isDarkMode', value);
+    notifyListeners();
   }
 }
 
-
-lib\core\services\user_profile_service.dart:
+.\lib\core\services\user_profile_service.dart:
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
@@ -3959,8 +3621,7 @@ class UserProfileService {
 }
 
 
-lib\core\services\vibe_points_service.dart:
-import 'package:flutter/foundation.dart';
+.\lib\core\services\vibe_points_service.dart:
 import '../models/vibe_action.dart';
 
 class VibePointsService {
@@ -4128,7 +3789,7 @@ class LevelInfo {
 }
 
 
-lib\core\theme\app_colors.dart:
+.\lib\core\theme\app_colors.dart:
 import 'package:flutter/material.dart';
 
 abstract class AppColors {
@@ -4145,7 +3806,7 @@ abstract class AppColors {
 }
 
 
-lib\core\theme\app_theme.dart:
+.\lib\core\theme\app_theme.dart:
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
@@ -4184,7 +3845,7 @@ abstract class AppTheme {
 }
 
 
-lib\core\utils\nickname_generator.dart:
+.\lib\core\utils\nickname_generator.dart:
 import 'dart:math';
 
 class NicknameGenerator {
@@ -4242,7 +3903,7 @@ class NicknameGenerator {
 }
 
 
-lib\core\widgets\animated_background.dart:
+.\lib\core\widgets\animated_background.dart:
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -4378,7 +4039,7 @@ class _GradientCircle extends StatelessWidget {
 }
 
 
-lib\core\widgets\app_text_field.dart:
+.\lib\core\widgets\app_text_field.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -4471,7 +4132,7 @@ class AppTextField extends StatelessWidget {
 }
 
 
-lib\core\widgets\badge_vault.dart:
+.\lib\core\widgets\badge_vault.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/core/models/badge.dart' as app_badge;
@@ -4748,7 +4409,7 @@ class _BadgeItemWidget extends StatelessWidget {
 }
 
 
-lib\core\widgets\level_indicator.dart:
+.\lib\core\widgets\level_indicator.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/vibe_provider.dart';
@@ -4986,7 +4647,7 @@ class StreakIndicator extends ConsumerWidget {
 }
 
 
-lib\core\widgets\nickname_picker.dart:
+.\lib\core\widgets\nickname_picker.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -5114,7 +4775,7 @@ class _NicknamePickerState extends State<NicknamePicker> {
 }
 
 
-lib\core\widgets\nickname_picker_with_button.dart:
+.\lib\core\widgets\nickname_picker_with_button.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker.dart';
@@ -5150,7 +4811,7 @@ class NicknamePickerWithButton extends StatelessWidget {
 }
 
 
-lib\core\widgets\permission_rationale_sheet.dart:
+.\lib\core\widgets\permission_rationale_sheet.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -5204,7 +4865,7 @@ class PermissionRationaleSheet extends StatefulWidget {
 }
 
 class _PermissionRationaleSheetState extends State<PermissionRationaleSheet> {
-  bool _isLoading = false;
+  final bool _isLoading = false; // Is nu 'final' zoals de compiler adviseerde
 
   @override
   Widget build(BuildContext context) {
@@ -5282,8 +4943,7 @@ class _PermissionRationaleSheetState extends State<PermissionRationaleSheet> {
   }
 }
 
-
-lib\core\widgets\user_avatar.dart:
+.\lib\core\widgets\user_avatar.dart:
 import 'package:flutter/material.dart';
 import 'dart:math';
 
@@ -5682,7 +5342,7 @@ class PulseAvatarState extends State<PulseAvatar>
 }
 
 
-lib\core\widgets\vp_display.dart:
+.\lib\core\widgets\vp_display.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/vibe_provider.dart';
@@ -5796,15 +5456,14 @@ class VpDisplayCompact extends ConsumerWidget {
 }
 
 
-lib\features\activities\screens\activities_screen.dart:
+.\lib\features\activities\screens\activities_screen.dart:
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/repositories/repositories.dart';
+import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/favorites_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/repository_providers.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../../main.dart';
 
@@ -5815,17 +5474,16 @@ class ActivitiesScreen extends ConsumerStatefulWidget {
   ConsumerState<ActivitiesScreen> createState() => _ActivitiesScreenState();
 }
 
-class _ActivitiesScreenState extends State<ActivitiesScreen> {
+class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
   String _searchQuery = '';
   bool _showFavoritesOnly = false;
   final TextEditingController _searchController = TextEditingController();
   late Future<List<Place>> _placesFuture;
 
-@override
+  @override
   void initState() {
     super.initState();
-    // Gebruik nu ref.read om de repository op te halen
-    _placesFuture = ref.read(clubRepositoryProvider).getPlaces(); 
+    _placesFuture = ref.read(clubRepositoryProvider).getPlaces();
   }
 
   @override
@@ -5924,7 +5582,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               }
 
               final allPlaces = snapshot.data ?? [];
-
               return ValueListenableBuilder<Set<String>>(
                 valueListenable: FavoritesProvider.instance,
                 builder: (context, favorites, _) {
@@ -5958,7 +5615,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     if (b.startTime == null) return -1;
                     return a.startTime!.compareTo(b.startTime!);
                   });
-
                   if (events.isEmpty) {
                     return Center(
                       child: Text(
@@ -6064,7 +5720,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                     ),
                                   ],
                                 ),
-                              ],
+                               ],
                               if (place.startTime != null) ...[
                                 const SizedBox(height: 2),
                                 Row(
@@ -6087,13 +5743,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                             ],
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 12.0),
+                             padding: const EdgeInsets.only(top: 12.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (place.promo != null) ...[
                                   Text(
-                                    place.promo!,
+                                     place.promo!,
                                     style: TextStyle(
                                       color: place.isFlashPromoActive
                                           ? Colors.purpleAccent
@@ -6118,8 +5774,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          place.crowdLevel ??
-                                              l10n.activitiesUnknownCrowd,
+                                          place.crowdLevel ?? l10n.activitiesUnknownCrowd,
                                           style: TextStyle(
                                             color: isDark
                                                 ? Colors.white54
@@ -6156,11 +5811,10 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   }
 }
 
-
-lib\features\auth\screens\login_screen.dart:
+.\lib\features\auth\screens\login_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/widgets/app_text_field.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
@@ -6229,14 +5883,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_validate()) return;
-
     final result = await ref
         .read(authProvider.notifier)
         .signIn(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-
     if (!mounted) return;
 
     if (result) {
@@ -6392,11 +6044,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-
-lib\features\auth\screens\register_screen.dart:
+.\lib\features\auth\screens\register_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/widgets/app_text_field.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker.dart';
 import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
@@ -6428,7 +6079,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
   String? _firstNameError;
   String? _lastNameError;
   String? _birthdayError;
@@ -6756,104 +6406,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildPersonalInfoPage(bool isDark, AppLocalizations l10n) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.accountFormPersonalInfo,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.accountFormPersonalInfoDesc,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.white70 : Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 32),
-          AppTextField(
-            controller: _firstNameController,
-            placeholder: l10n.accountFormFirstName,
-            errorText: _firstNameError,
-            onChanged: (_) {
-              if (_firstNameError != null) {
-                setState(() => _firstNameError = null);
-              }
-            },
-          ),
-          const SizedBox(height: 20),
-          AppTextField(
-            controller: _lastNameController,
-            placeholder: l10n.accountFormLastName,
-            errorText: _lastNameError,
-            onChanged: (_) {
-              if (_lastNameError != null) {
-                setState(() => _lastNameError = null);
-              }
-            },
-          ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.accountFormBirthday,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _selectBirthday,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.black.withValues(alpha: 0.05),
-                border: Border.all(
-                  color: _birthdayError != null
-                      ? Colors.red
-                      : (isDark ? Colors.white24 : Colors.black12),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    _birthday != null
-                        ? '${_birthday!.day}/${_birthday!.month}/${_birthday!.year}'
-                        : l10n.accountFormBirthdaySelect,
-                    style: TextStyle(
-                      color: _birthday != null
-                          ? (isDark ? Colors.white : Colors.black)
-                          : Colors.grey,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.calendar_today, color: Colors.grey[600], size: 20),
-                ],
-              ),
-            ),
-          ),
-          if (_birthdayError != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _birthdayError!,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildFirstNamePage(bool isDark, AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -6886,7 +6438,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             errorText: _firstNameError,
             autofocus: true,
             onChanged: (_) {
-              if (_firstNameError != null) {
+               if (_firstNameError != null) {
                 setState(() => _firstNameError = null);
               }
             },
@@ -6928,7 +6480,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             errorText: _lastNameError,
             autofocus: true,
             onChanged: (_) {
-              if (_lastNameError != null) {
+               if (_lastNameError != null) {
                 setState(() => _lastNameError = null);
               }
             },
@@ -7003,7 +6555,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             const SizedBox(height: 8),
             Text(
               _birthdayError!,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
+               style: const TextStyle(color: Colors.red, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],
@@ -7132,7 +6684,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             },
             onChanged: (_) {
               if (_confirmPasswordError != null) {
-                setState(() => _confirmPasswordError = null);
+                 setState(() => _confirmPasswordError = null);
               }
             },
           ),
@@ -7142,8 +6694,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 }
 
-
-lib\features\auth\screens\success_screen.dart:
+.\lib\features\auth\screens\success_screen.dart:
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
@@ -7317,7 +6868,7 @@ class _AuthSuccessScreenState extends State<AuthSuccessScreen>
 }
 
 
-lib\features\clubs\widgets\club_bottom_sheet.dart:
+.\lib\features\clubs\widgets\club_bottom_sheet.dart:
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -7325,7 +6876,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart'; // Gefixt
 import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
 import 'vibe_check_dialog.dart';
 
@@ -7339,21 +6890,23 @@ class ClubBottomSheet extends ConsumerWidget {
     final Uri url = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${place.location.latitude},${place.location.longitude}',
     );
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication))
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       debugPrint('Kan Maps niet openen');
+    }
   }
 
   Future<void> _launchEmergency() async {
     final Uri url = Uri.parse('tel:112');
-    if (!await launchUrl(url)) debugPrint('Kan 112 niet bellen');
+    if (!await launchUrl(url)) {
+      debugPrint('Kan 112 niet bellen');
+    }
   }
 
   Future<void> _launchTaxi() async {
-    final Uri url = Uri.parse(
-      'https://m.uber.com/ul/',
-    ); // General Uber deeplink
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication))
+    final Uri url = Uri.parse('https://m.uber.com/ul/');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       debugPrint('Kan taxi app niet openen');
+    }
   }
 
   void _openVibeCheck(BuildContext context) {
@@ -7371,7 +6924,6 @@ class ClubBottomSheet extends ConsumerWidget {
 
     const Distance distance = Distance();
     final double dist = distance(userLocation!, place.location);
-
     if (dist > 50) {
       ShadSonner.of(context).show(
         ShadToast.raw(
@@ -7406,7 +6958,6 @@ class ClubBottomSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
             Center(
               child: Container(
                 width: 40,
@@ -7446,7 +6997,6 @@ class ClubBottomSheet extends ConsumerWidget {
 
             const SizedBox(height: 12),
 
-            // Tags & Facilities
             if (place.tags.isNotEmpty || place.facilities.isNotEmpty)
               Wrap(
                 spacing: 8,
@@ -7494,7 +7044,7 @@ class ClubBottomSheet extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            f,
+                             f,
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.greenAccent,
@@ -7509,7 +7059,6 @@ class ClubBottomSheet extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // Vibe / Status
             if (place.type == LocationType.club && place.isOpen) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -7525,7 +7074,7 @@ class ClubBottomSheet extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Vibe: ${place.crowdLevel ?? "Ongekend"}'),
+                           Text('Vibe: ${place.crowdLevel ?? "Ongekend"}'),
                           if (place.lastVibeUpdate != null)
                             Text(
                               '${DateTime.now().difference(place.lastVibeUpdate!).inMinutes} mins geleden bevestigd',
@@ -7536,7 +7085,7 @@ class ClubBottomSheet extends ConsumerWidget {
                             ),
                         ],
                       ),
-                    ),
+                     ),
                     ShadButton(
                       size: ShadButtonSize.sm,
                       onPressed: () => _openVibeCheck(context),
@@ -7548,7 +7097,6 @@ class ClubBottomSheet extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
 
-            // Promos
             if (place.promo != null)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -7560,7 +7108,7 @@ class ClubBottomSheet extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                     Icon(
                       Icons.local_fire_department,
                       color: place.isFlashPromoActive
                           ? Colors.purpleAccent
@@ -7584,20 +7132,18 @@ class ClubBottomSheet extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // Check-in for authenticated users
             if (isAuthenticated) ...[
               _CheckInButton(place: place),
               const SizedBox(height: 16),
             ],
 
-            // Actions
             Row(
               children: [
                 Expanded(
                   child: ShadButton.secondary(
                     onPressed: _launchMaps,
                     child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.directions),
                         SizedBox(width: 8),
@@ -7612,7 +7158,7 @@ class ClubBottomSheet extends ConsumerWidget {
                     backgroundColor: Colors.red[900],
                     onPressed: _launchEmergency,
                     child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.warning, color: Colors.white),
                         SizedBox(width: 8),
@@ -7621,12 +7167,12 @@ class ClubBottomSheet extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                 const SizedBox(width: 12),
                 Expanded(
                   child: ShadButton.secondary(
                     onPressed: _launchTaxi,
                     child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.local_taxi),
                         SizedBox(width: 8),
@@ -7642,26 +7188,15 @@ class ClubBottomSheet extends ConsumerWidget {
       ),
     );
   }
-
-  Future<void> _handleCheckIn(WidgetRef ref) async {
-    final vibeNotifier = ref.read(vibeProvider.notifier);
-    final success = await vibeNotifier.checkIn(place.id);
-
-    if (success) {
-      // Could show a success toast here
-    }
-  }
 }
 
 class _CheckInButton extends ConsumerWidget {
   final Place place;
-
   const _CheckInButton({required this.place});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -7671,7 +7206,7 @@ class _CheckInButton extends ConsumerWidget {
               ? [
                   Colors.purple.withValues(alpha: 0.3),
                   Colors.blue.withValues(alpha: 0.3),
-                ]
+                 ]
               : [
                   Colors.purple.withValues(alpha: 0.1),
                   Colors.blue.withValues(alpha: 0.1),
@@ -7691,10 +7226,10 @@ class _CheckInButton extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Row(
+                content: const Row(
                   children: [
-                    const Icon(Icons.bolt, color: Colors.amber),
-                    const SizedBox(width: 8),
+                    Icon(Icons.bolt, color: Colors.amber),
+                    SizedBox(width: 8),
                     Text('+10 VP! Check-in bevestigd'),
                   ],
                 ),
@@ -7720,13 +7255,13 @@ class _CheckInButton extends ConsumerWidget {
   }
 }
 
-
-lib\features\clubs\widgets\vibe_check_dialog.dart:
+.\lib\features\clubs\widgets\vibe_check_dialog.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 
 class VibeCheckDialog extends ConsumerStatefulWidget {
   final Place place;
@@ -7749,8 +7284,13 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
   ];
 
   void _submit() async {
-    // Add VP for vibe update
     await ref.read(vibeProvider.notifier).updateVibe(widget.place.id);
+    
+    // Log het analytics event
+    ref.read(analyticsServiceProvider).logEvent('vibe_check_submitted', parameters: {
+      'venue_id': widget.place.id,
+      'vibe': _selectedVibe,
+    });
 
     if (mounted) {
       Navigator.pop(context, _selectedVibe);
@@ -7829,16 +7369,14 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
   }
 }
 
-
-lib\features\home\screens\home_screen.dart:
+.\lib\features\home\screens\home_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/repositories/repositories.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
-import 'package:flutter_clubapp/core/providers/repository_providers.dart';
+import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/widgets/badge_vault.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../../main.dart';
@@ -7937,7 +7475,7 @@ Widget _buildVibeSection(WidgetRef ref, bool isDark, Color textColor) {
           ],
         ),
         const SizedBox(height: 16),
-        SizedBox(
+        const SizedBox(
           height: 80,
           child: BadgeVaultWidget(compact: true, showLocked: false),
         ),
@@ -7951,10 +7489,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   late PageController _pageController;
   int _currentPage = 0;
 
-@override
+  @override
   void initState() {
     super.initState();
-    _placesFuture = ref.read(clubRepositoryProvider).getPlaces(); // Aangepast!
+    _placesFuture = ref.read(clubRepositoryProvider).getPlaces();
     _pageController = PageController();
   }
 
@@ -7999,7 +7537,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               }
 
               final allPlaces = snapshot.data ?? [];
-
               final featured = allPlaces
                   .where((p) => p.status == ClubStatus.event || p.promo != null)
                   .take(5)
@@ -8091,14 +7628,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   animation: _pageController,
                                   builder: (context, child) {
                                     double value = 1.0;
-                                    if (_pageController
-                                        .position
-                                        .haveDimensions) {
+                                    if (_pageController.position.haveDimensions) {
                                       value = _pageController.page! - index;
-                                      value = (1 - (value.abs() * 0.3)).clamp(
-                                        0.0,
-                                        1.0,
-                                      );
+                                      value = (1 - (value.abs() * 0.3)).clamp(0.0, 1.0);
                                     }
                                     return Center(
                                       child: Transform.scale(
@@ -8295,7 +7827,7 @@ class _HighlightCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                place.eventName ?? place.genre ?? 'Event',
+                 place.eventName ?? place.genre ?? 'Event',
                 style: const TextStyle(color: Colors.blueAccent, fontSize: 14),
               ),
               const Spacer(),
@@ -8348,24 +7880,26 @@ class _HighlightCard extends StatelessWidget {
   }
 }
 
-
-lib\features\map\screens\map_screen.dart:
+.\lib\features\map\screens\map_screen.dart:
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Toegevoegd
+import 'package:flutter/services.dart'; // VOOR DE HAPTICS
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/mock_data.dart';
-import 'package:flutter_clubapp/core/repositories/repositories.dart';
-import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
-import 'package:flutter_clubapp/core/providers/repository_providers.dart';
+import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/main.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
 import '../../squad/providers/squad_provider.dart';
 
-class MapScreen extends ConsumerStatefulWidget { // Aangepast
+class MapScreen extends ConsumerStatefulWidget {
   final LatLng? userLocation;
   const MapScreen({super.key, this.userLocation});
 
@@ -8375,38 +7909,45 @@ class MapScreen extends ConsumerStatefulWidget { // Aangepast
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final MapController _mapController = MapController();
-  final List<Place> _allPlaces = [];
-  final bool _isLoading = true;
+  List<Place> _allPlaces = [];
+  bool _isLoading = true;
 
   final Set<String> _selectedFilters = {};
-  bool get _foodModeActive => _selectedFilters.contains('__food__');
-  final String _searchQuery = '';
-  final double _currentZoom = 8.0;
+  String _searchQuery = '';
 
-  bool _pulseTrigger = false;
+  double _currentZoom = 14.0;
+  LatLng? _liveUserLocation;
+  StreamSubscription<Position>? _locationSubscription;
+  StreamSubscription<CompassEvent>? _compassSubscription;
+  
+  bool _isFollowingUser = false; 
+  bool _isCompassMode = false;
 
   @override
   void initState() {
     super.initState();
+    _liveUserLocation = widget.userLocation;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(analyticsServiceProvider).logEvent('opened_map');
+    });
+
     _loadPlaces();
     _setupSquadPulse();
+    _startLocationTracking();
+    _startCompassTracking();
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    _compassSubscription?.cancel();
+    super.dispose();
   }
 
   void _setupSquadPulse() {
-    // We gebruiken ref.read in initState om de callback in te stellen
     ref.read(squadProvider.notifier).setPositionPulseCallback(() {
-      if (mounted) {
-        setState(() {
-          _pulseTrigger = false;
-        });
-        Future.delayed(const Duration(milliseconds: 16), () {
-          if (mounted) {
-            setState(() {
-              _pulseTrigger = true;
-            });
-          }
-        });
-      }
+      if (mounted) setState(() {}); 
     });
   }
 
@@ -8420,43 +7961,344 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  // ... (behoud _loadPlaces, filters en dialog functies) ...
+  Future<void> _startLocationTracking() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    _locationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
+    ).listen((Position position) {
+      if (mounted) {
+        final newLocation = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _liveUserLocation = newLocation;
+        });
+        
+        if (_isFollowingUser) {
+          _mapController.move(newLocation, _currentZoom);
+        }
+      }
+    });
+  }
+
+  void _startCompassTracking() {
+    _compassSubscription = FlutterCompass.events?.listen((CompassEvent event) {
+      if (mounted && _isCompassMode && event.heading != null) {
+        final double mapRotation = 360 - event.heading!;
+        _mapController.rotate(mapRotation);
+      }
+    });
+  }
+
+  void _onMyLocationTapped() {
+    if (_liveUserLocation == null) return;
+    
+    ref.read(analyticsServiceProvider).logEvent('map_recenter_clicked');
+
+    setState(() {
+      if (!_isFollowingUser && !_isCompassMode) {
+        _isFollowingUser = true;
+        _mapController.move(_liveUserLocation!, 15.0);
+        _mapController.rotate(0);
+      } else if (_isFollowingUser && !_isCompassMode) {
+        _isCompassMode = true;
+      } else if (!_isFollowingUser && _isCompassMode) {
+        _isFollowingUser = true;
+        _mapController.move(_liveUserLocation!, 15.0);
+      } else {
+        _isCompassMode = false;
+        _isFollowingUser = false;
+        _mapController.rotate(0);
+      }
+    });
+  }
+
+  List<Place> get _filteredPlaces {
+    return _allPlaces.where((place) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          place.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (place.eventName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+
+      bool matchesFilter = true;
+      if (_selectedFilters.isNotEmpty) {
+        if (_selectedFilters.contains('club') && !place.type.toString().contains('club')) {
+          matchesFilter = false;
+        }
+        if (_selectedFilters.contains('event') && !place.status.toString().contains('event')) {
+          matchesFilter = false;
+        }
+        if (_selectedFilters.contains('__food__') && !place.type.toString().contains('food')) {
+          matchesFilter = false;
+        }
+      }
+
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  void _openDetails(BuildContext context, Place place) {
+    ref.read(analyticsServiceProvider).logEvent('viewed_venue_details', parameters: {'venue_name': place.name});
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ClubBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
+    );
+  }
+
+  void _showFilterSheet(BuildContext context, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF18181B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setSheetState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[600],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Filters',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildSheetFilterChip('__food__', 'Food & Drinks', isDark, setSheetState),
+                      _buildSheetFilterChip('club', 'Clubs', isDark, setSheetState),
+                      _buildSheetFilterChip('event', 'Events', isDark, setSheetState),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ShadButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Toepassen'),
+                    ),
+                  )
+                ],
+              );
+            }
+          ),
+        );
+      }
+    );
+  }
+
+  Widget _buildSheetFilterChip(String filterKey, String label, bool isDark, StateSetter setSheetState) {
+    final isSelected = _selectedFilters.contains(filterKey);
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        setSheetState(() {
+          if (selected) {
+            _selectedFilters.add(filterKey);
+          } else {
+            _selectedFilters.remove(filterKey);
+          }
+        });
+        setState(() {}); 
+      },
+      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+      selectedColor: Colors.blueAccent.withValues(alpha: 0.2),
+      checkmarkColor: Colors.blueAccent,
+      labelStyle: TextStyle(
+        color: isSelected 
+            ? Colors.blueAccent 
+            : (isDark ? Colors.white70 : Colors.black87),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected ? Colors.blueAccent : Colors.transparent,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF09090B)
-            : Colors.white,
+        backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    final squadState = ref.watch(squadProvider); // De vervanger van ListenableBuilder
+    final squadState = ref.watch(squadProvider);
+    final settings = ref.watch(settingsServiceProvider);
 
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
-        // ... (behoud theme logica) ...
-        
+        final currentIsDark = currentMode == ThemeMode.dark ||
+            (currentMode == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+                
         return Scaffold(
           body: Stack(
             children: [
-              FlutterMap( // ListenableBuilder is hier weggehaald!
+              FlutterMap(
                 mapController: _mapController,
-                // ...
+                options: MapOptions(
+                  initialCenter: _liveUserLocation ?? widget.userLocation ?? const LatLng(51.0543, 3.7174),
+                  initialZoom: _currentZoom,
+                  onPositionChanged: (position, hasGesture) {
+                    if (hasGesture && _isFollowingUser) {
+                      setState(() {
+                        _isFollowingUser = false;
+                      });
+                    }
+                    if (position.zoom != _currentZoom) {
+                      setState(() => _currentZoom = position.zoom);
+                    }
+                  },
+                ),
                 children: [
-                  TileLayer( /* ... */ ),
-                  MarkerLayer(markers: _buildMarkers(squadState)), // Geef de state door
+                  TileLayer(
+                    urlTemplate: currentIsDark 
+                      ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.jouwnaam.flutter_clubapp', 
+                  ),
+                  MarkerLayer(markers: _buildMarkers(squadState, currentIsDark)),
                 ],
               ),
-              // ... (rest van de UI) ...
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: currentIsDark 
+                            ? const Color(0xFF18181B).withValues(alpha: 0.9) 
+                            : Colors.white.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        cursorColor: currentIsDark ? Colors.white : Colors.black,
+                        style: TextStyle(color: currentIsDark ? Colors.white : Colors.black),
+                        decoration: InputDecoration(
+                          hintText: l10n.activitiesSearchHint,
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              Icons.tune, 
+                              color: _selectedFilters.isNotEmpty 
+                                  ? Colors.blueAccent 
+                                  : (currentIsDark ? Colors.white70 : Colors.black87),
+                            ),
+                            onPressed: () => _showFilterSheet(context, currentIsDark),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                        onChanged: (val) => setState(() => _searchQuery = val),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ]
           ),
           floatingActionButton: Column(
-            // ...
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (squadState.isInSquad) ...[
+                GestureDetector(
+                  // FIX: HAPTICS OP DE KNOP!
+                  onTapDown: (_) {
+                    if (settings.hapticsEnabled) HapticFeedback.mediumImpact();
+                    ref.read(squadProvider.notifier).setMute(false);
+                  },
+                  onTapUp: (_) {
+                    if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                    ref.read(squadProvider.notifier).setMute(true);
+                  },
+                  onTapCancel: () {
+                    if (!squadState.isMuted) {
+                      if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                      ref.read(squadProvider.notifier).setMute(true);
+                    }
+                  },
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16), 
+                      color: squadState.isMuted ? Colors.redAccent : Colors.green,
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
+                      ],
+                    ),
+                    child: Icon(
+                      squadState.isMuted ? Icons.mic_off : Icons.mic,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_liveUserLocation != null) ...[
+                FloatingActionButton(
+                  heroTag: 'my_location_fab',
+                  onPressed: _onMyLocationTapped,
+                  backgroundColor: _isCompassMode 
+                      ? Colors.blueAccent 
+                      : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                  child: Icon(
+                    _isCompassMode ? Icons.explore : (_isFollowingUser ? Icons.my_location : Icons.location_searching), 
+                    color: _isCompassMode ? Colors.white : (currentIsDark ? Colors.white : Colors.black)
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               FloatingActionButton(
                 heroTag: 'squad_fab',
                 onPressed: () {
@@ -8464,8 +8306,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 },
                 backgroundColor: squadState.isInSquad
                     ? Colors.blueAccent
-                    : (isDark ? const Color(0xFF18181B) : Colors.white),
-                // ...
+                    : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                child: Icon(
+                  Icons.groups,
+                  color: squadState.isInSquad
+                      ? Colors.white
+                      : (currentIsDark ? Colors.white : Colors.black),
+                ),
               ),
             ]
           )
@@ -8474,33 +8321,233 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  List<Marker> _buildMarkers(SquadProviderState squadState) { // Aangepast
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context)!;
+  List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
     final markers = <Marker>[];
+    final activePlaces = _filteredPlaces;
 
-    // ... (behoud club markers) ...
+    if (_currentZoom < 14.5) {
+      final poiGroups = <String, List<Place>>{};
+      for (final p in activePlaces) {
+        final poi = p.poi ?? 'Andere';
+        poiGroups.putIfAbsent(poi, () => []).add(p);
+      }
+
+      for (final entry in poiGroups.entries) {
+        final poiName = entry.key;
+        final places = entry.value;
+
+        double sumLat = 0, sumLng = 0;
+        for (var p in places) {
+          sumLat += p.location.latitude;
+          sumLng += p.location.longitude;
+        }
+        final centerPoint = LatLng(sumLat / places.length, sumLng / places.length);
+        markers.add(
+          Marker(
+            point: centerPoint,
+            width: 140, 
+            height: 48,
+            rotate: true, 
+            child: GestureDetector(
+              onTap: () {
+                _mapController.move(centerPoint, 15.5);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.blueAccent, width: 2),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 3))
+                  ]
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      poiName, 
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      )
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.blueAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${places.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          )
+        );
+      }
+    } 
+    else {
+      final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
+      final double baseSize = 54.0 * scale;
+      final double iconSize = 26.0 * scale;
+      for (final place in activePlaces) {
+        final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
+        final isEvent = place.status.toString().contains('event');
+
+        final IconData pinIcon = isFood 
+            ? Icons.fastfood_rounded 
+            : (isEvent ? Icons.local_fire_department : Icons.nightlife);
+        final Color pinColor = isFood 
+            ? Colors.orange 
+            : (isEvent ? Colors.purpleAccent : Colors.blueAccent);
+        markers.add(
+          Marker(
+            point: place.location,
+            width: baseSize, 
+            height: baseSize,
+            rotate: true, 
+            child: GestureDetector(
+              onTap: () => _openDetails(context, place),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: pinColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5 * scale),
+                  boxShadow: [
+                    BoxShadow(
+                      color: pinColor.withValues(alpha: 0.5),
+                      blurRadius: 8 * scale,
+                      offset: Offset(0, 3 * scale),
+                    )
+                  ]
+                ),
+                child: Icon(
+                  pinIcon, 
+                  color: Colors.white, 
+                  size: iconSize,
+                ),
+              ),
+            ),
+          )
+        );
+      }
+    }
 
     if (squadState.isInSquad) {
       for (final member in squadState.members) {
         markers.add(
           Marker(
             point: member.position,
-            width: 50,
-            height: 50,
-            child: GestureDetector(
-               // ...
-               child: member.isCurrentUser // ...
-            )
+            width: 160,
+            height: 48,
+            rotate: true, 
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: member.isOnline ? Colors.green : Colors.grey, 
+                    width: 2
+                  ),
+                  // FIX: GLOW EFFECT ALS IEMAND PRAAT
+                  boxShadow: [
+                    if (member.isSpeaking)
+                      BoxShadow(
+                        color: Colors.greenAccent.withValues(alpha: 0.8),
+                        blurRadius: 15,
+                        spreadRadius: 6,
+                      )
+                    else
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      )
+                  ]
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: member.isOnline ? Colors.green : Colors.grey, 
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          member.nickname.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white, 
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 16
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        member.nickname,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           )
         );
       }
     }
+
+    if (_liveUserLocation != null && !squadState.isInSquad) {
+      markers.add(
+        Marker(
+          point: _liveUserLocation!,
+          width: 24,
+          height: 24,
+          rotate: true,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.blueAccent,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blueAccent.withValues(alpha: 0.5),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                )
+              ]
+            ),
+          ),
+        )
+      );
+    }
+
     return markers;
   }
 }
 
-lib\features\navigation\screens\main_navigation.dart:
+.\lib\features\navigation\screens\main_navigation.dart:
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -8604,7 +8651,7 @@ class _MainNavigationState extends State<MainNavigation> {
 }
 
 
-lib\features\onboarding\screens\creating_screen.dart:
+.\lib\features\onboarding\screens\creating_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/features/onboarding/screens/success_screen.dart';
@@ -8695,7 +8742,7 @@ class _CreatingScreenState extends State<CreatingScreen> {
 }
 
 
-lib\features\onboarding\screens\onboarding_carousel.dart:
+.\lib\features\onboarding\screens\onboarding_carousel.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -8870,7 +8917,7 @@ class _OnboardingCarouselState extends State<OnboardingCarousel> {
 }
 
 
-lib\features\onboarding\screens\onboarding_intro_screen.dart:
+.\lib\features\onboarding\screens\onboarding_intro_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
@@ -8925,7 +8972,7 @@ class OnboardingIntroScreen extends StatelessWidget {
 }
 
 
-lib\features\onboarding\screens\onboarding_screen.dart:
+.\lib\features\onboarding\screens\onboarding_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/features/onboarding/screens/onboarding_setup.dart';
 
@@ -8941,7 +8988,7 @@ class OnboardingScreen extends StatelessWidget {
 }
 
 
-lib\features\onboarding\screens\onboarding_setup.dart:
+.\lib\features\onboarding\screens\onboarding_setup.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -9063,7 +9110,6 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading while initializing
     if (!_isInitialized) {
       return const AnimatedBlurBackground(
         child: Scaffold(
@@ -9073,8 +9119,6 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
       );
     }
 
-    // Only skip nickname if user is authenticated AND has nickname
-    // Anonymous users should ALWAYS see the nickname step
     final bool skipNickname = _isAuthenticated && _hasNickname;
 
     final steps = skipNickname
@@ -9206,6 +9250,7 @@ class _LocationWizardStep implements OnboardingStep {
   final Function(bool) setLoading;
   final VoidCallback finishOnboarding;
   final VoidCallback onSkip;
+
   static bool _hasShownSheetGlobal = false;
 
   _LocationWizardStep({
@@ -9249,7 +9294,6 @@ class _LocationWizardStep implements OnboardingStep {
       },
       onSecondary: onSkip,
     );
-
     onSkip();
   }
 
@@ -9262,111 +9306,6 @@ class _LocationWizardStep implements OnboardingStep {
   @override
   void setOnNextCallback(VoidCallback? callback) {
     onNextPressed = callback;
-  }
-}
-
-class _LocationContent extends StatelessWidget {
-  final bool isLoading;
-  final Function(bool) setLoading;
-  final VoidCallback finishOnboarding;
-  final VoidCallback onSkip;
-
-  const _LocationContent({
-    required this.isLoading,
-    required this.setLoading,
-    required this.finishOnboarding,
-    required this.onSkip,
-  });
-
-  Future<void> _requestLocation(BuildContext context) async {
-    setLoading(true);
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    setLoading(false);
-    finishOnboarding();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context)!;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.location_on,
-              size: 80,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 48),
-          Text(
-            l10n.onboardingLocationTitle,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.onboardingLocationDesc,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ShadButton(
-              onPressed: isLoading ? null : () => _requestLocation(context),
-              child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.black)
-                  : Text(
-                      l10n.onboardingLocationAllow,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ShadButton.ghost(
-              onPressed: isLoading ? null : onSkip,
-              child: Text(
-                l10n.onboardingLocationSkip,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -9487,8 +9426,7 @@ class _CompleteContent extends StatelessWidget {
   }
 }
 
-
-lib\features\onboarding\screens\option_screen.dart:
+.\lib\features\onboarding\screens\option_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
@@ -9706,7 +9644,7 @@ class _OptionCard extends StatelessWidget {
 }
 
 
-lib\features\onboarding\screens\splash_screen.dart:
+.\lib\features\onboarding\screens\splash_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -9976,7 +9914,7 @@ class _Mark extends StatelessWidget {
 }
 
 
-lib\features\onboarding\screens\success_screen.dart:
+.\lib\features\onboarding\screens\success_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
@@ -10130,7 +10068,7 @@ class _SuccessScreenState extends State<SuccessScreen>
 }
 
 
-lib\features\onboarding\widgets\animated_field_check.dart:
+.\lib\features\onboarding\widgets\animated_field_check.dart:
 import 'package:flutter/material.dart';
 
 class AnimatedFieldCheck extends StatefulWidget {
@@ -10200,7 +10138,7 @@ class _AnimatedFieldCheckState extends State<AnimatedFieldCheck>
 }
 
 
-lib\features\onboarding\widgets\complete_step.dart:
+.\lib\features\onboarding\widgets\complete_step.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -10303,7 +10241,7 @@ class CompleteStep implements OnboardingStep {
 }
 
 
-lib\features\onboarding\widgets\location_step.dart:
+.\lib\features\onboarding\widgets\location_step.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10446,7 +10384,7 @@ class LocationStep implements OnboardingStep {
 }
 
 
-lib\features\onboarding\widgets\nickname_step.dart:
+.\lib\features\onboarding\widgets\nickname_step.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker_with_button.dart';
 import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.dart';
@@ -10484,7 +10422,7 @@ class NicknameStep implements OnboardingStep {
 }
 
 
-lib\features\onboarding\widgets\onboarding_progress.dart:
+.\lib\features\onboarding\widgets\onboarding_progress.dart:
 import 'package:flutter/material.dart';
 
 class OnboardingProgress extends StatelessWidget {
@@ -10599,7 +10537,7 @@ class _Connector extends StatelessWidget {
 }
 
 
-lib\features\onboarding\widgets\onboarding_wizard.dart:
+.\lib\features\onboarding\widgets\onboarding_wizard.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -10872,7 +10810,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
 }
 
 
-lib\features\onboarding\widgets\step_indicator.dart:
+.\lib\features\onboarding\widgets\step_indicator.dart:
 import 'package:flutter/material.dart';
 
 class StepIndicator extends StatelessWidget {
@@ -10981,7 +10919,7 @@ class _StepDot extends StatelessWidget {
 }
 
 
-lib\features\onboarding\widgets\intro\base_intro_step.dart:
+.\lib\features\onboarding\widgets\intro\base_intro_step.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.dart';
 
@@ -11052,7 +10990,7 @@ abstract class IntroStep implements OnboardingStep {
 }
 
 
-lib\features\onboarding\widgets\intro\comfort_safety_step.dart:
+.\lib\features\onboarding\widgets\intro\comfort_safety_step.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'base_intro_step.dart';
@@ -11075,7 +11013,7 @@ class ComfortSafetyStep extends IntroStep {
 }
 
 
-lib\features\onboarding\widgets\intro\squad_mode_step.dart:
+.\lib\features\onboarding\widgets\intro\squad_mode_step.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'base_intro_step.dart';
@@ -11098,7 +11036,7 @@ class SquadModeStep extends IntroStep {
 }
 
 
-lib\features\onboarding\widgets\intro\voice_matters_step.dart:
+.\lib\features\onboarding\widgets\intro\voice_matters_step.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'base_intro_step.dart';
@@ -11121,7 +11059,7 @@ class VoiceMattersStep extends IntroStep {
 }
 
 
-lib\features\onboarding\widgets\intro\welcome_step.dart:
+.\lib\features\onboarding\widgets\intro\welcome_step.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'base_intro_step.dart';
@@ -11144,14 +11082,14 @@ class WelcomeStep extends IntroStep {
 }
 
 
-lib\features\settings\screens\account_settings_screen.dart:
+.\lib\features\settings\screens\account_settings_screen.dart:
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Toegevoegd
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart'; // Toegevoegd
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
-class AccountSettingsScreen extends ConsumerWidget { // Aangepast
+class AccountSettingsScreen extends ConsumerWidget {
   const AccountSettingsScreen({super.key});
 
   @override
@@ -11160,15 +11098,40 @@ class AccountSettingsScreen extends ConsumerWidget { // Aangepast
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      // ... UI blijft exact hetzelfde
+      backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          l10n.settingsAccount,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
           _SettingsListTile(
             isDark: isDark,
             icon: Icons.logout,
             iconColor: Colors.orange,
             title: l10n.settingsLogout,
-            onTap: () => _showLogoutDialog(context, isDark, l10n, ref), // Geef ref door
+            onTap: () => _showLogoutDialog(context, isDark, l10n, ref),
           ),
-      // ...
+          const SizedBox(height: 12),
+          _SettingsListTile(
+            isDark: isDark,
+            icon: Icons.delete_forever,
+            iconColor: Colors.red,
+            title: l10n.settingsDeleteAccount,
+            onTap: () => _showDeleteDialog(context, isDark, l10n, ref),
+          ),
+        ],
+      ),
     );
   }
 
@@ -11176,7 +11139,7 @@ class AccountSettingsScreen extends ConsumerWidget { // Aangepast
     BuildContext context,
     bool isDark,
     AppLocalizations l10n,
-    WidgetRef ref, // Toegevoegd
+    WidgetRef ref,
   ) async {
     final profile = ref.read(userProfileServiceProvider);
     final authService = ref.read(authServiceProvider);
@@ -11186,9 +11149,13 @@ class AccountSettingsScreen extends ConsumerWidget { // Aangepast
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
-        // ...
+        backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
+        title: Text(l10n.settingsLogoutConfirm, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         actions: [
-          // ...
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text(l10n.settingsCancel),
+          ),
           ShadButton(
             onPressed: () async {
               Navigator.pop(c);
@@ -11205,7 +11172,41 @@ class AccountSettingsScreen extends ConsumerWidget { // Aangepast
     );
   }
 
-  // Doe hetzelfde voor _showDeleteDialog: geef `ref` door en gebruik de authServiceProvider.
+  Future<void> _showDeleteDialog(
+    BuildContext context,
+    bool isDark,
+    AppLocalizations l10n,
+    WidgetRef ref,
+  ) async {
+    final authService = ref.read(authServiceProvider);
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
+        title: Text(l10n.settingsDeleteAccountConfirm, style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+        content: Text(l10n.settingsDeleteAccountWarning, style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text(l10n.settingsCancel),
+          ),
+          ShadButton.destructive(
+            onPressed: () async {
+              Navigator.pop(c);
+              await authService.deleteAccount();
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            },
+            child: Text(l10n.settingsDelete),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SettingsListTile extends StatelessWidget {
@@ -11243,7 +11244,7 @@ class _SettingsListTile extends StatelessWidget {
   }
 }
 
-lib\features\settings\screens\faq_screen.dart:
+.\lib\features\settings\screens\faq_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/core/config/app_config.dart';
 
@@ -11367,7 +11368,7 @@ class _FaqItemCardState extends State<_FaqItemCard> {
 }
 
 
-lib\features\settings\screens\language_screen.dart:
+.\lib\features\settings\screens\language_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/main.dart';
@@ -11492,7 +11493,7 @@ class _LanguageOption extends StatelessWidget {
 }
 
 
-lib\features\settings\screens\push_notifications_screen.dart:
+.\lib\features\settings\screens\push_notifications_screen.dart:
 import 'package:flutter/material.dart';
 
 class PushNotificationsScreen extends StatefulWidget {
@@ -11833,7 +11834,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
 }
 
 
-lib\features\settings\screens\settings_screen.dart:
+.\lib\features\settings\screens\settings_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11841,12 +11842,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/main.dart';
-import 'package:flutter_clubapp/core/providers/auth_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart'; // Gefixt
 import 'package:flutter_clubapp/core/config/app_config.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 import 'package:flutter_clubapp/core/widgets/vp_display.dart';
 import 'package:flutter_clubapp/core/widgets/level_indicator.dart';
-import 'package:flutter_clubapp/core/widgets/badge_vault.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/features/auth/screens/login_screen.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
@@ -11881,7 +11881,7 @@ class SettingsScreen extends ConsumerWidget {
                 : Colors.white.withValues(alpha: 0.9),
             elevation: 0,
             title: Text(
-              l10n.settingsTitle,
+               l10n.settingsTitle,
               style: TextStyle(
                 color: isDark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
@@ -11906,26 +11906,22 @@ class SettingsScreen extends ConsumerWidget {
 
               const SizedBox(height: 24),
 
-              // Gamification Section - Only show for authenticated users
               if (authState.isAuthenticated) ...[
                 _buildSectionHeader('Vibe Points & Badges'),
                 _buildCard(
                   isDark,
                   Column(
                     children: [
-                      // VP Display
-                      const Padding(
+                       const Padding(
                         padding: EdgeInsets.all(12),
                         child: VpDisplay(showStreak: true, showRank: true),
                       ),
                       const Divider(),
-                      // Level Indicator
                       const Padding(
                         padding: EdgeInsets.all(12),
                         child: LevelIndicator(),
                       ),
                       const Divider(),
-                      // Badge Vault
                       ListTile(
                         leading: const Icon(
                           Icons.military_tech,
@@ -12200,7 +12196,6 @@ class SettingsScreen extends ConsumerWidget {
         'subject': Uri.encodeComponent('Bug Report / Feedback - Club App'),
       },
     );
-
     try {
       final canLaunch = await canLaunchUrl(emailUri);
       if (canLaunch) {
@@ -12453,29 +12448,41 @@ class _SettingsListTile extends StatelessWidget {
   }
 }
 
-
-lib\features\settings\screens\web_view_screen.dart:
+.\lib\features\settings\screens\web_view_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class WebViewScreen extends StatelessWidget {
+class WebViewScreen extends StatefulWidget {
   final String title;
   final String url;
 
   const WebViewScreen({super.key, required this.title, required this.url});
 
-  Future<void> _launchUrl(BuildContext context) async {
-    final uri = Uri.parse(url);
+  @override
+  State<WebViewScreen> createState() => _WebViewScreenState();
+}
+
+class _WebViewScreenState extends State<WebViewScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    _launchExternalUrl();
+  }
+
+  Future<void> _launchExternalUrl() async {
+    final uri = Uri.parse(widget.url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not open link')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open link'))
+        );
       }
     }
-    if (context.mounted) {
+    
+    if (mounted) {
       Navigator.pop(context);
     }
   }
@@ -12494,7 +12501,7 @@ class WebViewScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          title,
+          widget.title,
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black,
             fontWeight: FontWeight.bold,
@@ -12509,14 +12516,14 @@ class WebViewScreen extends StatelessWidget {
             Icon(Icons.open_in_new, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 24),
             Text(
-              'Opening $title...',
+              'Opening ${widget.title}...',
               style: TextStyle(
                 fontSize: 16,
                 color: isDark ? Colors.white70 : Colors.black54,
               ),
             ),
             const SizedBox(height: 24),
-            CircularProgressIndicator(color: Colors.blueAccent),
+            const CircularProgressIndicator(color: Colors.blueAccent),
           ],
         ),
       ),
@@ -12524,23 +12531,27 @@ class WebViewScreen extends StatelessWidget {
   }
 }
 
-
-lib\features\squad\providers\squad_provider.dart:
+.\lib\features\squad\providers\squad_provider.dart:
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter_clubapp/core/models/squad.dart';
 import 'package:flutter_clubapp/core/models/squad_member.dart' as models;
-import 'package:flutter_clubapp/core/providers/repository_providers.dart';
+import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/repositories/interfaces/squad_repository.dart';
 import 'package:flutter_clubapp/core/services/settings_service.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/core/services/location_service.dart';
+import 'package:flutter_clubapp/core/services/analytics_service.dart';
 
-const double _positionUpdateThresholdMeters = 5.0;
-const int _positionUpdateFallbackSeconds = 30;
+const double _positionUpdateThresholdMeters = 2.0;
+const int _positionUpdateFallbackSeconds = 10;
 
 enum SquadConnectionStatus { disconnected, connecting, connected, error }
 
@@ -12551,6 +12562,7 @@ class SquadProviderState {
   final String? memberId;
   final List<SquadMemberDisplay> members;
   final String? errorMessage;
+  final bool isMuted;
 
   const SquadProviderState({
     this.status = SquadConnectionStatus.disconnected,
@@ -12559,6 +12571,7 @@ class SquadProviderState {
     this.memberId,
     this.members = const [],
     this.errorMessage,
+    this.isMuted = true,
   });
 
   bool get isInSquad => status == SquadConnectionStatus.connected;
@@ -12570,6 +12583,7 @@ class SquadProviderState {
     String? memberId,
     List<SquadMemberDisplay>? members,
     String? errorMessage,
+    bool? isMuted,
   }) {
     return SquadProviderState(
       status: status ?? this.status,
@@ -12578,6 +12592,7 @@ class SquadProviderState {
       memberId: memberId ?? this.memberId,
       members: members ?? this.members,
       errorMessage: errorMessage,
+      isMuted: isMuted ?? this.isMuted,
     );
   }
 }
@@ -12591,6 +12606,7 @@ class SquadMemberDisplay {
   final DateTime lastUpdate;
   final bool isOnline;
   final bool isCurrentUser;
+  final bool isSpeaking; // FIX: Nieuwe variabele voor de glow effecten
 
   const SquadMemberDisplay({
     required this.id,
@@ -12601,6 +12617,7 @@ class SquadMemberDisplay {
     required this.lastUpdate,
     required this.isOnline,
     required this.isCurrentUser,
+    this.isSpeaking = false,
   });
 
   factory SquadMemberDisplay.fromModel(
@@ -12621,6 +12638,7 @@ class SquadMemberDisplay {
       lastUpdate: lastUpdate,
       isOnline: isOnline,
       isCurrentUser: model.userId == currentUserId,
+      isSpeaking: false,
     );
   }
 
@@ -12628,6 +12646,7 @@ class SquadMemberDisplay {
     LatLng? position,
     DateTime? lastUpdate,
     bool? isOnline,
+    bool? isSpeaking,
   }) {
     return SquadMemberDisplay(
       id: id,
@@ -12638,29 +12657,36 @@ class SquadMemberDisplay {
       lastUpdate: lastUpdate ?? this.lastUpdate,
       isOnline: isOnline ?? this.isOnline,
       isCurrentUser: isCurrentUser,
+      isSpeaking: isSpeaking ?? this.isSpeaking,
     );
   }
 }
 
-// Hier is de magie: we erven nu van StateNotifier
 class SquadNotifier extends StateNotifier<SquadProviderState> {
   final Ref _ref;
 
   Timer? _positionUpdateTimer;
   Timer? _onlineCheckTimer;
+  Timer? _dbAnalyticsTimer;
   StreamSubscription<List<models.SquadMember>>? _realtimeSubscription;
 
   VoidCallback? _onPositionPulse;
   LatLng? _lastSentPosition;
   DateTime? _lastSentTime;
 
+  final Map<String, RTCPeerConnection> _peers = {};
+  final Map<String, RTCDataChannel> _dataChannels = {};
+  final Map<String, MediaStream> _remoteStreams = {};
+  MediaStream? _localStream;
+  RealtimeChannel? _signalingChannel;
+
   SquadNotifier(this._ref) : super(const SquadProviderState());
 
-  // Voeg de exacte types toe aan de getters:
   SettingsService get _settingsService => _ref.read(settingsServiceProvider);
   UserProfileService get _userProfileService => _ref.read(userProfileServiceProvider);
   LocationService get _locationService => _ref.read(locationServiceProvider);
   SquadRepository get _squadRepository => _ref.read(squadRepositoryProvider);
+  AnalyticsService get _analytics => _ref.read(analyticsServiceProvider);
 
   String? get currentUserId => _userProfileService.userId;
 
@@ -12682,118 +12708,95 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   Future<SquadProviderState> createSquad() async {
     if (!_userProfileService.hasNickname) {
-      state = state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: 'Please set a nickname first',
-      );
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Je moet eerst een nickname instellen.');
       return state;
     }
 
-    final hasLocation = await checkLocationPermission();
-    if (!hasLocation) {
-      final granted = await requestLocationPermission();
-      if (!granted) {
-        state = state.copyWith(
-          status: SquadConnectionStatus.error,
-          errorMessage: 'Location permission is required for squad mode',
-        );
-        return state;
-      }
+    if (!await checkLocationPermission() && !await requestLocationPermission()) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Locatietoegang is geweigerd.');
+      return state;
     }
 
     state = state.copyWith(status: SquadConnectionStatus.connecting);
 
+    LatLng userPosition;
     try {
-      final squad = await _squadRepository.createSquad();
-
-      LatLng userPosition;
-      try {
-        final position = await _locationService.getCurrentPosition();
-        if (position != null) {
-          userPosition = LatLng(position.latitude, position.longitude);
-        } else {
-          userPosition = const LatLng(51.0543, 3.7174); // Gent fallback
-        }
-      } catch (e) {
-        userPosition = const LatLng(51.0543, 3.7174);
+      final position = await _locationService.getCurrentPosition();
+      if (position != null) {
+        userPosition = LatLng(position.latitude, position.longitude);
+      } else {
+        throw Exception('Locatie kon niet worden bepaald.');
       }
+    } catch (e) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Kan je locatie niet bepalen. Controleer of je GPS aan staat.');
+      return state;
+    }
 
-      final member = await _squadRepository.joinSquad(
-        squad.id,
+    try {
+      final data = await _squadRepository.createSquadWithMember(
         _userProfileService.nickname ?? 'Anonymous',
         userPosition,
       );
+      
+      final squad = data['squad'] as Squad;
+      final member = data['member'] as models.SquadMember;
 
       state = state.copyWith(
         status: SquadConnectionStatus.connected,
         squadId: squad.id,
         squadPin: squad.pin,
         memberId: member.id,
-        members: [
-          SquadMemberDisplay.fromModel(
-            member,
-            currentUserId ?? '',
-            _offlineThresholdMs,
-          ),
-        ],
+        members: [SquadMemberDisplay.fromModel(member, currentUserId ?? '', _offlineThresholdMs)],
       );
 
       _startTracking();
       _startOnlineCheck();
+      _startDbAnalyticsTimer();
+      await _initWebRTC();
 
-      _realtimeSubscription = _squadRepository
-          .subscribeToSquad(squad.id)
-          .listen(_onSquadMembersUpdate);
+      _realtimeSubscription = _squadRepository.subscribeToSquad(squad.id).listen(_onSquadMembersUpdate);
 
+      _analytics.logEvent('squad_created', parameters: {'squad_id': squad.id});
       HapticFeedback.mediumImpact();
       return state;
     } catch (e) {
-      String userMessage = 'Failed to create squad';
-      if (e.toString().contains('timeout') || e.toString().contains('connection')) {
-        userMessage = 'Connection error. Please check your internet.';
-      } else {
-        userMessage = 'Something went wrong. Please try again.';
-      }
-
-      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: userMessage);
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Er is iets misgegaan bij het aanmaken van de squad.');
       return state;
     }
   }
 
   Future<SquadProviderState> joinSquad(String pin) async {
     if (!_userProfileService.hasNickname) {
-      state = state.copyWith(
-        status: SquadConnectionStatus.error,
-        errorMessage: 'Please set a nickname first',
-      );
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Je moet eerst een nickname instellen.');
       return state;
     }
 
-    final hasLocation = await checkLocationPermission();
-    if (!hasLocation) {
-      final granted = await requestLocationPermission();
-      if (!granted) {
-        state = state.copyWith(
-          status: SquadConnectionStatus.error,
-          errorMessage: 'Location permission is required for squad mode',
-        );
-        return state;
-      }
+    if (!await checkLocationPermission() && !await requestLocationPermission()) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Locatietoegang is geweigerd.');
+      return state;
     }
 
     state = state.copyWith(status: SquadConnectionStatus.connecting);
 
+    LatLng userPosition;
+    try {
+      final position = await _locationService.getCurrentPosition();
+      if (position != null) {
+        userPosition = LatLng(position.latitude, position.longitude);
+      } else {
+        throw Exception('Locatie kon niet worden bepaald.');
+      }
+    } catch (e) {
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Kan je locatie niet bepalen.');
+      return state;
+    }
+
     try {
       final squad = await _squadRepository.getSquadByPin(pin);
       if (squad == null) {
-        state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Invalid squad PIN');
+        state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Ongeldige squad PIN.');
         return state;
       }
-
-      final position = await _locationService.getCurrentPosition();
-      final userPosition = position != null
-          ? LatLng(position.latitude, position.longitude)
-          : const LatLng(51.0543, 3.7174);
 
       final member = await _squadRepository.joinSquad(
         squad.id,
@@ -12806,53 +12809,274 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         squadId: squad.id,
         squadPin: squad.pin,
         memberId: member.id,
-        members: [
-          SquadMemberDisplay.fromModel(
-            member,
-            currentUserId ?? '',
-            _offlineThresholdMs,
-          ),
-        ],
+        members: [SquadMemberDisplay.fromModel(member, currentUserId ?? '', _offlineThresholdMs)],
       );
 
       _startTracking();
       _startOnlineCheck();
+      _startDbAnalyticsTimer();
+      await _initWebRTC();
 
-      _realtimeSubscription = _squadRepository
-          .subscribeToSquad(squad.id)
-          .listen(_onSquadMembersUpdate);
+      _realtimeSubscription = _squadRepository.subscribeToSquad(squad.id).listen(_onSquadMembersUpdate);
 
+      _analytics.logEvent('squad_joined', parameters: {'squad_id': squad.id});
       HapticFeedback.mediumImpact();
       return state;
     } catch (e) {
-      String userMessage = 'Failed to join squad';
-      if (e.toString().contains('timeout') || e.toString().contains('connection')) {
-        userMessage = 'Connection error. Please check your internet.';
-      } else {
-        userMessage = 'Something went wrong. Please try again.';
-      }
-
-      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: userMessage);
+      state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Er is iets misgegaan bij het joinen van de squad.');
       return state;
     }
   }
 
+  Future<void> _initWebRTC() async {
+    try {
+      _localStream = await navigator.mediaDevices.getUserMedia({
+        'audio': true,
+        'video': false,
+      });
+      _localStream?.getAudioTracks().forEach((track) {
+        track.enabled = !state.isMuted;
+      });
+      
+      Helper.setSpeakerphoneOn(true);
+    } catch (e) {
+      debugPrint('❌ Microfoon permissie geweigerd of niet beschikbaar: $e');
+    }
+
+    _signalingChannel = Supabase.instance.client.channel('squad_signaling_${state.squadId}');
+    _signalingChannel!.onBroadcast(
+      event: 'signaling',
+      callback: _handleSignalingMessage,
+    );
+
+    _signalingChannel!.subscribe((status, [error]) {
+      if (status == RealtimeSubscribeStatus.subscribed) {
+        _broadcastSignaling({'signalType': 'peer-join', 'userId': currentUserId});
+      }
+    });
+  }
+
+  void _handleSignalingMessage(Map<String, dynamic> rawData) async {
+    final signalType = rawData['signalType'];
+    final userId = rawData['userId'];
+    final targetUserId = rawData['targetUserId'];
+
+    if (signalType == null || userId == null) return;
+    if (userId == currentUserId) return;
+    if (targetUserId != null && targetUserId != currentUserId) return;
+
+    try {
+      switch (signalType) {
+        case 'peer-join':
+          await _createPeerConnection(userId, isInitiator: true);
+          break;
+        case 'offer':
+          await _createPeerConnection(userId, isInitiator: false);
+          await _peers[userId]!.setRemoteDescription(RTCSessionDescription(rawData['sdp'], 'offer'));
+          final answer = await _peers[userId]!.createAnswer();
+          await _peers[userId]!.setLocalDescription(answer);
+          _broadcastSignaling({
+            'signalType': 'answer',
+            'userId': currentUserId,
+            'targetUserId': userId,
+            'sdp': answer.sdp,
+          });
+          break;
+        case 'answer':
+          if (_peers.containsKey(userId)) {
+            await _peers[userId]!.setRemoteDescription(RTCSessionDescription(rawData['sdp'], 'answer'));
+          }
+          break;
+        case 'ice-candidate':
+          if (_peers.containsKey(userId)) {
+            await _peers[userId]!.addCandidate(RTCIceCandidate(
+              rawData['candidate'],
+              rawData['sdpMid'],
+              rawData['sdpMLineIndex'],
+            ));
+          }
+          break;
+      }
+    } catch (e) {
+      debugPrint('❌ Fout tijdens _handleSignalingMessage verwerking: $e');
+    }
+  }
+
+  Future<void> _createPeerConnection(String peerId, {required bool isInitiator}) async {
+    if (_peers.containsKey(peerId)) return;
+
+    try {
+      final pc = await createPeerConnection({
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'},
+          {'urls': 'stun:stun1.l.google.com:19302'},
+          {
+            'urls': 'turn:openrelay.metered.ca:80',
+            'username': 'openrelayproject',
+            'credential': 'openrelayproject'
+          },
+          {
+            'urls': 'turn:openrelay.metered.ca:443',
+            'username': 'openrelayproject',
+            'credential': 'openrelayproject'
+          },
+        ]
+      });
+
+      _peers[peerId] = pc;
+
+      if (_localStream != null) {
+        _localStream!.getTracks().forEach((track) {
+          pc.addTrack(track, _localStream!);
+        });
+      }
+
+      pc.onTrack = (event) {
+        if (event.track.kind == 'audio' && event.streams.isNotEmpty) {
+          _remoteStreams[peerId] = event.streams.first;
+        }
+      };
+
+      pc.onIceConnectionState = (connState) {
+        if (connState == RTCIceConnectionState.RTCIceConnectionStateConnected) {
+          Helper.setSpeakerphoneOn(true);
+        }
+      };
+
+      pc.onIceCandidate = (candidate) {
+        _broadcastSignaling({
+          'signalType': 'ice-candidate',
+          'userId': currentUserId,
+          'targetUserId': peerId,
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        });
+      };
+
+      if (isInitiator) {
+        final init = RTCDataChannelInit()..ordered = false..maxRetransmits = 0;
+        final dc = await pc.createDataChannel('data', init);
+        _setupDataChannel(peerId, dc);
+
+        final offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        _broadcastSignaling({
+          'signalType': 'offer',
+          'userId': currentUserId,
+          'targetUserId': peerId,
+          'sdp': offer.sdp,
+        });
+      } else {
+        pc.onDataChannel = (dc) {
+          _setupDataChannel(peerId, dc);
+        };
+      }
+    } catch (e) {
+      debugPrint('❌ Fout tijdens _createPeerConnection: $e');
+    }
+  }
+
+  void _setupDataChannel(String peerId, RTCDataChannel dc) {
+    _dataChannels[peerId] = dc;
+    dc.onMessage = (message) {
+      try {
+        final data = jsonDecode(message.text);
+        final msgType = data['type'];
+        final sender = data['userId'] as String;
+
+        // FIX: Lees of we locatie ('pos') of spraak ('ptt') ontvangen
+        if (msgType == 'pos') {
+          final lat = data['lat'] as double;
+          final lng = data['lng'] as double;
+          _updateMemberStateFromWebRTC(sender, position: LatLng(lat, lng));
+        } else if (msgType == 'ptt') {
+          final isSpeaking = data['isSpeaking'] as bool;
+          _updateMemberStateFromWebRTC(sender, isSpeaking: isSpeaking);
+        }
+      } catch (_) {}
+    };
+  }
+
+  void _broadcastSignaling(Map<String, dynamic> payload) {
+    _signalingChannel?.sendBroadcastMessage(
+      event: 'signaling',
+      payload: payload,
+    );
+  }
+
+  void setMute(bool mute) {
+    if (state.isMuted == mute) return; 
+    
+    state = state.copyWith(isMuted: mute);
+    _localStream?.getAudioTracks().forEach((track) {
+      track.enabled = !mute;
+    });
+
+    // FIX: Update onszelf zodat onze marker ook gloeit
+    _updateMemberStateFromWebRTC(currentUserId!, isSpeaking: !mute);
+    
+    // FIX: Stuur direct P2P data naar de anderen dat we (stoppen met) praten
+    final pttMsg = jsonEncode({
+      'type': 'ptt',
+      'userId': currentUserId,
+      'isSpeaking': !mute,
+    });
+
+    for (final dc in _dataChannels.values) {
+      if (dc.state == RTCDataChannelState.RTCDataChannelOpen) {
+        dc.send(RTCDataChannelMessage(pttMsg));
+      }
+    }
+    
+    _analytics.logEvent('squad_ptt', parameters: {'talking': !mute});
+  }
+
+  // FIX: Herbruikbare update functie voor locatie EN spreken
+  void _updateMemberStateFromWebRTC(String userId, {LatLng? position, bool? isSpeaking}) {
+    final updatedMembers = state.members.map((m) {
+      if (m.odmemberId == userId) {
+        return m.copyWith(
+          position: position ?? m.position,
+          isSpeaking: isSpeaking ?? m.isSpeaking,
+          lastUpdate: DateTime.now(),
+          isOnline: true,
+        );
+      }
+      return m;
+    }).toList();
+    
+    state = state.copyWith(members: updatedMembers);
+    _onPositionPulse?.call();
+  }
+
   void _startTracking() {
     _positionUpdateTimer?.cancel();
-    final frequencySeconds = _settingsService.trackingFrequency;
     _positionUpdateTimer = Timer.periodic(
-      Duration(seconds: frequencySeconds),
+      const Duration(seconds: 2),
       (_) => _updateMyPosition(),
     );
   }
 
   void _startOnlineCheck() {
     _onlineCheckTimer?.cancel();
-    final frequencySeconds = _settingsService.trackingFrequency;
     _onlineCheckTimer = Timer.periodic(
-      Duration(seconds: frequencySeconds),
+      const Duration(seconds: 5),
       (_) => _checkOnlineStatus(),
     );
+  }
+
+  void _startDbAnalyticsTimer() {
+    _dbAnalyticsTimer?.cancel();
+    _dbAnalyticsTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      if (state.memberId != null && _lastSentPosition != null) {
+        try {
+          await _squadRepository.updateMemberPosition(state.memberId!, _lastSentPosition!);
+        } catch (e) {
+          // negeer
+        }
+      }
+    });
   }
 
   Future<void> _updateMyPosition() async {
@@ -12862,56 +13086,44 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       final position = await _locationService.getCurrentPosition();
       if (position != null) {
         final currentPosition = LatLng(position.latitude, position.longitude);
-
         if (_shouldSendPositionUpdate(currentPosition)) {
-          await _squadRepository.updateMemberPosition(
-            state.memberId!,
-            currentPosition,
-          );
+          
+          final posMsg = jsonEncode({
+            'type': 'pos', // FIX: Specificeer dat dit locatie data is
+            'lat': currentPosition.latitude,
+            'lng': currentPosition.longitude,
+            'userId': currentUserId,
+          });
 
+          for (final dc in _dataChannels.values) {
+            if (dc.state == RTCDataChannelState.RTCDataChannelOpen) {
+              dc.send(RTCDataChannelMessage(posMsg));
+            }
+          }
+
+          _updateMemberStateFromWebRTC(currentUserId!, position: currentPosition);
           _lastSentPosition = currentPosition;
           _lastSentTime = DateTime.now();
-          _onPositionPulse?.call();
         }
       }
-    } catch (e) {
-      // Silently fail position updates
-    }
+    } catch (_) {}
   }
 
   bool _shouldSendPositionUpdate(LatLng currentPosition) {
-    if (_lastSentPosition == null || _lastSentTime == null) {
-      return true;
-    }
-
-    final distance = const Distance().as(
-      LengthUnit.Meter,
-      _lastSentPosition!,
-      currentPosition,
-    );
-
-    if (distance >= _positionUpdateThresholdMeters) {
-      return true;
-    }
-
-    final timeSinceLastUpdate = DateTime.now().difference(_lastSentTime!);
-    if (timeSinceLastUpdate.inSeconds >= _positionUpdateFallbackSeconds) {
-      return true;
-    }
-
+    if (_lastSentPosition == null || _lastSentTime == null) return true;
+    final distance = const Distance().as(LengthUnit.Meter, _lastSentPosition!, currentPosition);
+    if (distance >= _positionUpdateThresholdMeters) return true;
+    if (DateTime.now().difference(_lastSentTime!).inSeconds >= _positionUpdateFallbackSeconds) return true;
     return false;
   }
 
   void _checkOnlineStatus() {
     if (state.members.isEmpty) return;
-
     final updatedMembers = state.members.map((member) {
-      final now = DateTime.now();
-      final timeSinceUpdate = now.difference(member.lastUpdate).inMilliseconds;
-      final isOnline = timeSinceUpdate < _offlineThresholdMs;
-      return member.copyWith(isOnline: isOnline);
+      final isOnline = DateTime.now().difference(member.lastUpdate).inMilliseconds < _offlineThresholdMs;
+      // Zorg dat we 'isSpeaking' muten als iemand offline gaat
+      return member.copyWith(isOnline: isOnline, isSpeaking: isOnline ? member.isSpeaking : false);
     }).toList();
-
     if (!_listEquals(updatedMembers, state.members)) {
       state = state.copyWith(members: updatedMembers);
     }
@@ -12919,29 +13131,60 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   void _onSquadMembersUpdate(List<models.SquadMember> modelMembers) {
     final cId = currentUserId ?? '';
-    final displayMembers = modelMembers
-        .map((m) => SquadMemberDisplay.fromModel(m, cId, _offlineThresholdMs))
-        .toList();
+    final currentMembersMap = {for (var m in state.members) m.odmemberId: m};
+
+    final displayMembers = modelMembers.map((m) {
+      final existing = currentMembersMap[m.userId];
+      final pos = existing != null ? existing.position : LatLng(m.latitude, m.longitude);
+      final lastUpdate = existing != null ? existing.lastUpdate : m.updatedAt;
+      final isOnline = DateTime.now().difference(lastUpdate).inMilliseconds < _offlineThresholdMs;
+      final isSpeaking = existing != null ? existing.isSpeaking : false; // Behoud de spreek status
+
+      return SquadMemberDisplay(
+        id: m.id,
+        odmemberId: m.userId,
+        nickname: m.nickname,
+        avatarUrl: null,
+        position: pos,
+        lastUpdate: lastUpdate,
+        isOnline: isOnline,
+        isCurrentUser: m.userId == cId,
+        isSpeaking: isSpeaking,
+      );
+    }).toList();
 
     state = state.copyWith(members: displayMembers);
   }
 
   int get _offlineThresholdMs {
-    final frequency = _settingsService.trackingFrequency;
-    final multiplier = _settingsService.offlineMultiplier;
-    return frequency * multiplier * 1000;
+    return _settingsService.trackingFrequency * _settingsService.offlineMultiplier * 1000;
   }
 
   void leaveSquad() {
+    _analytics.logEvent('squad_left', parameters: {'squad_id': state.squadId});
+
     _positionUpdateTimer?.cancel();
     _onlineCheckTimer?.cancel();
+    _dbAnalyticsTimer?.cancel();
     _realtimeSubscription?.cancel();
     _locationService.stopTracking();
 
-    if (state.squadId != null && currentUserId != null) {
-      _squadRepository.leaveSquad(state.squadId!, currentUserId!);
-    }
+    for (final pc in _peers.values) { pc.close(); }
+    _peers.clear();
+    _dataChannels.clear();
+    _remoteStreams.clear();
+    _localStream?.dispose();
+    _localStream = null;
+    _signalingChannel?.unsubscribe();
+    _signalingChannel = null;
 
+    if (state.squadId != null && currentUserId != null) {
+      try {
+        _squadRepository.leaveSquad(state.squadId!, currentUserId!);
+      } catch (e) {
+        // negeer
+      }
+    }
     _squadRepository.unsubscribeFromSquad();
 
     state = const SquadProviderState();
@@ -12953,10 +13196,11 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   bool _listEquals(List<SquadMemberDisplay> a, List<SquadMemberDisplay> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {
-      if (a[i].id != b[i].id ||
-          a[i].position.latitude != b[i].position.latitude ||
-          a[i].position.longitude != b[i].position.longitude ||
-          a[i].isOnline != b[i].isOnline) {
+      if (a[i].id != b[i].id || 
+          a[i].position.latitude != b[i].position.latitude || 
+          a[i].position.longitude != b[i].position.longitude || 
+          a[i].isOnline != b[i].isOnline ||
+          a[i].isSpeaking != b[i].isSpeaking) { // FIX: Vergelijk ook de spraak status
         return false;
       }
     }
@@ -12965,20 +13209,16 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   @override
   void dispose() {
-    _positionUpdateTimer?.cancel();
-    _onlineCheckTimer?.cancel();
-    _realtimeSubscription?.cancel();
-    _locationService.stopTracking();
+    leaveSquad();
     super.dispose();
   }
 }
 
-// Expose the provider globally voor je UI
 final squadProvider = StateNotifierProvider<SquadNotifier, SquadProviderState>((ref) {
   return SquadNotifier(ref);
 });
 
-lib\features\squad\screens\squad_screen.dart:
+.\lib\features\squad\screens\squad_screen.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -13364,7 +13604,7 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
   }
 }
 
-lib\features\squad\widgets\squad_bottom_sheet.dart:
+.\lib\features\squad\widgets\squad_bottom_sheet.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -13417,14 +13657,13 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     final userProfile = ref.read(userProfileServiceProvider);
 
     if (!userProfile.hasNickname) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.squadNicknameFirst),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.squadNicknameFirst),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
@@ -13434,47 +13673,49 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     if (!hasPermission) {
       final granted = await squadNotifier.requestLocationPermission();
       if (!granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.squadLocationRequiredToast),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.squadLocationRequiredToast),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
+    
     final result = await squadNotifier.createSquad();
+    
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (mounted) {
-      if (result.status == SquadConnectionStatus.error) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(l10n.squadError),
-            content: Text(result.errorMessage ?? l10n.squadFailedToCreate),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      } else if (result.status == SquadConnectionStatus.connected) {
-        // Blijf in bottom sheet na succes, de UI update automatisch
-      }
+    if (result.status == SquadConnectionStatus.error) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.squadError),
+          content: Text(result.errorMessage ?? l10n.squadFailedToCreate),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
-  Future<void> _handleJoinSquad(BuildContext context, AppLocalizations l10n) async {
+  Future<void> _handleJoinSquad() async {
+    final l10n = AppLocalizations.of(context)!;
     final pin = _pinController.text.trim();
 
     if (pin.length != 6) {
+      if (!mounted) return;
       ShadSonner.of(context).show(
         ShadToast.raw(
           variant: ShadToastVariant.destructive,
@@ -13487,14 +13728,13 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     final userProfile = ref.read(userProfileServiceProvider);
 
     if (!userProfile.hasNickname) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.squadNicknameFirst),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.squadNicknameFirst),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
@@ -13504,33 +13744,35 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     if (!hasPermission) {
       final granted = await squadNotifier.requestLocationPermission();
       if (!granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.squadLocationRequiredToast),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.squadLocationRequiredToast),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
     }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
+    
     final result = await squadNotifier.joinSquad(pin);
+    
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (mounted) {
-      if (result.status == SquadConnectionStatus.error) {
-        ShadSonner.of(context).show(
-          ShadToast.raw(
-            variant: ShadToastVariant.destructive,
-            description: Text(result.errorMessage ?? l10n.squadFailedToJoin),
-          ),
-        );
-      } else if (result.status == SquadConnectionStatus.connected) {
-        _pinController.clear();
-      }
+    if (result.status == SquadConnectionStatus.error) {
+      if (!mounted) return;
+      ShadSonner.of(context).show(
+        ShadToast.raw(
+          variant: ShadToastVariant.destructive,
+          description: Text(result.errorMessage ?? l10n.squadFailedToJoin),
+        ),
+      );
+    } else if (result.status == SquadConnectionStatus.connected) {
+      _pinController.clear();
     }
   }
 
@@ -13588,9 +13830,9 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
                   ),
                 ),
                 if (inSquad)
-                  _buildActiveView(context, isDark, l10n, squadState)
+                  _buildActiveView(isDark, l10n, squadState)
                 else
-                  _buildJoinCreateView(context, isDark, l10n),
+                  _buildJoinCreateView(isDark, l10n),
               ],
             ),
           ),
@@ -13604,7 +13846,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     );
   }
 
-  Widget _buildActiveView(BuildContext context, bool isDark, AppLocalizations l10n, SquadProviderState state) {
+  Widget _buildActiveView(bool isDark, AppLocalizations l10n, SquadProviderState state) {
     final members = state.members;
     final textColor = isDark ? Colors.white : Colors.black;
 
@@ -13650,8 +13892,9 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
                   ),
                   const SizedBox(height: 12),
                   TextButton.icon(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: state.squadPin ?? ''));
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: state.squadPin ?? ''));
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l10n.squadPinCopied), duration: const Duration(seconds: 1)),
                       );
@@ -13706,7 +13949,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     );
   }
 
-  Widget _buildJoinCreateView(BuildContext context, bool isDark, AppLocalizations l10n) {
+  Widget _buildJoinCreateView(bool isDark, AppLocalizations l10n) {
     return Expanded(
       child: Column(
         children: [
@@ -13724,8 +13967,8 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildCreateTab(context, isDark, l10n),
-                _buildJoinTab(context, isDark, l10n),
+                _buildCreateTab(isDark, l10n),
+                _buildJoinTab(isDark, l10n),
               ],
             ),
           ),
@@ -13734,7 +13977,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     );
   }
 
-  Widget _buildCreateTab(BuildContext context, bool isDark, AppLocalizations l10n) {
+  Widget _buildCreateTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -13786,7 +14029,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     );
   }
 
-  Widget _buildJoinTab(BuildContext context, bool isDark, AppLocalizations l10n) {
+  Widget _buildJoinTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -13819,7 +14062,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
                             if (pin.length == 6) {
                               setState(() => _scanning = false);
                               _pinController.text = pin;
-                              _handleJoinSquad(context, l10n);
+                              _handleJoinSquad();
                               return;
                             }
                           }
@@ -13866,7 +14109,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
             width: double.infinity,
             height: 52,
             child: ShadButton.secondary(
-              onPressed: _isLoading ? null : () => _handleJoinSquad(context, l10n),
+              onPressed: _isLoading ? null : () => _handleJoinSquad(),
               child: Text(l10n.squadJoin),
             ),
           ),
@@ -13876,7 +14119,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
   }
 }
 
-lib\features\vibe_system\presentation\screens\vibe_screens.dart:
+.\lib\features\vibe_system\presentation\screens\vibe_screens.dart:
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import 'package:flutter_clubapp/core/widgets/badge_vault.dart';
@@ -14387,7 +14630,7 @@ class ChallengesScreen extends StatelessWidget {
 }
 
 
-lib\l10n\app_en.arb:
+.\lib\l10n\app_en.arb:
 {
   "@@locale": "en",
   "appName": "Club App",
@@ -14637,7 +14880,7 @@ lib\l10n\app_en.arb:
 }
 
 
-lib\l10n\app_fr.arb:
+.\lib\l10n\app_fr.arb:
 {
   "@@locale": "fr",
   "appName": "Club App",
@@ -14887,7 +15130,7 @@ lib\l10n\app_fr.arb:
 }
 
 
-lib\l10n\app_localizations.dart:
+.\lib\l10n\app_localizations.dart:
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -16144,7 +16387,7 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
 }
 
 
-lib\l10n\app_localizations_en.dart:
+.\lib\l10n\app_localizations_en.dart:
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
@@ -16754,7 +16997,7 @@ class AppLocalizationsEn extends AppLocalizations {
 }
 
 
-lib\l10n\app_localizations_fr.dart:
+.\lib\l10n\app_localizations_fr.dart:
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
@@ -17374,7 +17617,7 @@ class AppLocalizationsFr extends AppLocalizations {
 }
 
 
-lib\l10n\app_localizations_nl.dart:
+.\lib\l10n\app_localizations_nl.dart:
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
@@ -17986,7 +18229,7 @@ class AppLocalizationsNl extends AppLocalizations {
 }
 
 
-lib\l10n\app_nl.arb:
+.\lib\l10n\app_nl.arb:
 {
   "@@locale": "nl",
   "appName": "Club App",

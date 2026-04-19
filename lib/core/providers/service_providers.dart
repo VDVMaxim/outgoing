@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/user_profile_service.dart';
+import '../services/analytics_service.dart';
 
 final userProfileServiceProvider = Provider<UserProfileService>((ref) {
   return UserProfileService.instance;
@@ -15,6 +16,10 @@ final locationServiceProvider = Provider<LocationService>((ref) {
 
 final settingsServiceProvider = Provider<SettingsService>((ref) {
   throw UnimplementedError('settingsServiceProvider moet in main.dart worden overschreven');
+});
+
+final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
+  return AnalyticsService(ref.read(userProfileServiceProvider));
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -91,15 +96,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> signIn({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+
     final result = await _ref.read(authServiceProvider).signIn(email: email, password: password);
 
     if (result.status == AuthResultStatus.success) {
       final profile = _ref.read(userProfileServiceProvider);
       await profile.loadProfileFromSupabase();
       _updateFromProfile(profile);
+      _ref.read(analyticsServiceProvider).logEvent('login_success');
       return true;
     } else {
       state = state.copyWith(isLoading: false, errorMessage: result.errorMessage);
+      _ref.read(analyticsServiceProvider).logEvent('login_error', parameters: {'error': result.errorMessage});
       return false;
     }
   }
@@ -113,6 +121,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String nickname,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+
     final result = await _ref.read(authServiceProvider).signUp(
       email: email,
       password: password,
@@ -126,9 +135,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final profile = _ref.read(userProfileServiceProvider);
       await profile.loadProfileFromSupabase();
       _updateFromProfile(profile);
+      _ref.read(analyticsServiceProvider).logEvent('signup_success');
       return true;
     } else {
       state = state.copyWith(isLoading: false, errorMessage: result.errorMessage);
+      _ref.read(analyticsServiceProvider).logEvent('signup_error', parameters: {'error': result.errorMessage});
       return false;
     }
   }

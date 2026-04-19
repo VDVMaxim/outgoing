@@ -10,9 +10,8 @@ class SupabaseVibeRepository implements VibeRepository {
     required int energy,
   }) async {
     final client = SupabaseClientProvider.client;
-
     await client.from('vibe_checks').insert({
-      'place_id': placeId,
+      'venue_id': placeId,
       'crowd_level': crowdLevel,
       'energy': energy,
     });
@@ -24,11 +23,10 @@ class SupabaseVibeRepository implements VibeRepository {
     int limit = 10,
   }) async {
     final client = SupabaseClientProvider.client;
-
     final response = await client
         .from('vibe_checks')
         .select()
-        .eq('place_id', placeId)
+        .eq('venue_id', placeId)
         .order('created_at', ascending: false)
         .limit(limit);
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // VOOR DE HAPTICS
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/main.dart';
 import '../../clubs/widgets/club_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
@@ -27,23 +29,26 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   List<Place> _allPlaces = [];
   bool _isLoading = true;
 
-  // Filter & Search state
   final Set<String> _selectedFilters = {};
   String _searchQuery = '';
 
-  // Map, Location & Compass State
   double _currentZoom = 14.0;
   LatLng? _liveUserLocation;
   StreamSubscription<Position>? _locationSubscription;
   StreamSubscription<CompassEvent>? _compassSubscription;
   
-  bool _isFollowingUser = false; // Zorgt voor centreren op je positie
-  bool _isCompassMode = false;   // Zorgt voor de rotatie van de kaart
+  bool _isFollowingUser = false; 
+  bool _isCompassMode = false;
 
   @override
   void initState() {
     super.initState();
     _liveUserLocation = widget.userLocation;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(analyticsServiceProvider).logEvent('opened_map');
+    });
+
     _loadPlaces();
     _setupSquadPulse();
     _startLocationTracking();
@@ -76,10 +81,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _startLocationTracking() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
-
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-      return; 
+      return;
     }
 
     _locationSubscription = Geolocator.getPositionStream(
@@ -91,7 +95,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           _liveUserLocation = newLocation;
         });
         
-        // Alleen de kaart forceren te centreren als we aan het 'volgen' zijn [cite: 1354, 1364]
         if (_isFollowingUser) {
           _mapController.move(newLocation, _currentZoom);
         }
@@ -110,22 +113,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   void _onMyLocationTapped() {
     if (_liveUserLocation == null) return;
+    
+    ref.read(analyticsServiceProvider).logEvent('map_recenter_clicked');
 
     setState(() {
       if (!_isFollowingUser && !_isCompassMode) {
-        // Status 1: Begin met volgen, geen kompas
         _isFollowingUser = true;
         _mapController.move(_liveUserLocation!, 15.0);
         _mapController.rotate(0);
       } else if (_isFollowingUser && !_isCompassMode) {
-        // Status 2: Zet kompas aan (volgen staat al aan)
         _isCompassMode = true;
       } else if (!_isFollowingUser && _isCompassMode) {
-        // Status 2.5: Gebruiker had gepanned tijdens kompas modus, we centreren weer
         _isFollowingUser = true;
         _mapController.move(_liveUserLocation!, 15.0);
       } else {
-        // Status 3: Zet alles weer uit
         _isCompassMode = false;
         _isFollowingUser = false;
         _mapController.rotate(0);
@@ -157,6 +158,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _openDetails(BuildContext context, Place place) {
+    ref.read(analyticsServiceProvider).logEvent('viewed_venue_details', parameters: {'venue_name': place.name});
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -274,6 +277,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
 
     final squadState = ref.watch(squadProvider);
+    final settings = ref.watch(settingsServiceProvider);
 
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
@@ -291,8 +295,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   initialCenter: _liveUserLocation ?? widget.userLocation ?? const LatLng(51.0543, 3.7174),
                   initialZoom: _currentZoom,
                   onPositionChanged: (position, hasGesture) {
-                    // FIX: Als de gebruiker sleept, zetten we ALLEEN _isFollowingUser uit.
-                    // Zo blijft _isCompassMode aanstaan en blijft de kaart roteren met je telefoon!
                     if (hasGesture && _isFollowingUser) {
                       setState(() {
                         _isFollowingUser = false;
@@ -364,10 +366,45 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           floatingActionButton: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (squadState.isInSquad) ...[
+                GestureDetector(
+                  // FIX: HAPTICS OP DE KNOP!
+                  onTapDown: (_) {
+                    if (settings.hapticsEnabled) HapticFeedback.mediumImpact();
+                    ref.read(squadProvider.notifier).setMute(false);
+                  },
+                  onTapUp: (_) {
+                    if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                    ref.read(squadProvider.notifier).setMute(true);
+                  },
+                  onTapCancel: () {
+                    if (!squadState.isMuted) {
+                      if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                      ref.read(squadProvider.notifier).setMute(true);
+                    }
+                  },
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16), 
+                      color: squadState.isMuted ? Colors.redAccent : Colors.green,
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
+                      ],
+                    ),
+                    child: Icon(
+                      squadState.isMuted ? Icons.mic_off : Icons.mic,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (_liveUserLocation != null) ...[
                 FloatingActionButton(
                   heroTag: 'my_location_fab',
-                  mini: true,
                   onPressed: _onMyLocationTapped,
                   backgroundColor: _isCompassMode 
                       ? Colors.blueAccent 
@@ -407,7 +444,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     if (_currentZoom < 14.5) {
       final poiGroups = <String, List<Place>>{};
-      
       for (final p in activePlaces) {
         final poi = p.poi ?? 'Andere';
         poiGroups.putIfAbsent(poi, () => []).add(p);
@@ -423,7 +459,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           sumLng += p.location.longitude;
         }
         final centerPoint = LatLng(sumLat / places.length, sumLng / places.length);
-
         markers.add(
           Marker(
             point: centerPoint,
@@ -480,7 +515,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
       final double baseSize = 54.0 * scale;
       final double iconSize = 26.0 * scale;
-
       for (final place in activePlaces) {
         final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
         final isEvent = place.status.toString().contains('event');
@@ -488,11 +522,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final IconData pinIcon = isFood 
             ? Icons.fastfood_rounded 
             : (isEvent ? Icons.local_fire_department : Icons.nightlife);
-            
         final Color pinColor = isFood 
             ? Colors.orange 
             : (isEvent ? Colors.purpleAccent : Colors.blueAccent);
-
         markers.add(
           Marker(
             point: place.location,
@@ -544,12 +576,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     color: member.isOnline ? Colors.green : Colors.grey, 
                     width: 2
                   ),
+                  // FIX: GLOW EFFECT ALS IEMAND PRAAT
                   boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    )
+                    if (member.isSpeaking)
+                      BoxShadow(
+                        color: Colors.greenAccent.withValues(alpha: 0.8),
+                        blurRadius: 15,
+                        spreadRadius: 6,
+                      )
+                    else
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      )
                   ]
                 ),
                 child: Row(

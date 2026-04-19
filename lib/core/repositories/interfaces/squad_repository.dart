@@ -3,7 +3,7 @@ import '../../models/squad.dart';
 import '../../models/squad_member.dart';
 
 abstract class SquadRepository {
-  Future<Squad> createSquad();
+  Future<Map<String, dynamic>> createSquadWithMember(String nickname, LatLng position);
   Future<Squad?> getSquadByPin(String pin);
   Future<SquadMember> joinSquad(
     String squadId,
