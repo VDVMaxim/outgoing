@@ -46,13 +46,12 @@ void main() async {
   
   await UserProfileService.getInstance();
   
-  // 1. Wacht tot de settings service volledig is ingeladen en sla hem op in een variabele
-  final ingeladenSettingsService = await SettingsService.getInstance();
+  // FIX: Veranderd van getInstance() naar init()
+  final ingeladenSettingsService = await SettingsService.init(); 
 
   runApp(
     ProviderScope(
       overrides: [
-        // 2. Injecteer de ingeladen service direct in de provider!
         settingsServiceProvider.overrideWithValue(ingeladenSettingsService),
       ],
       child: const ClubApp(),
@@ -3215,7 +3214,7 @@ class HapticService {
 .\lib\core\services\location_service.dart:
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 enum LocationPermissionStatus {
   denied,
@@ -3293,7 +3292,6 @@ class LocationService {
 
   Future<bool> _checkAndRequestPermission() async {
     var status = await checkPermission();
-
     if (status == LocationPermissionStatus.unknown ||
         status == LocationPermissionStatus.denied) {
       status = await requestPermission();
@@ -3310,10 +3308,37 @@ class LocationService {
     stopTracking();
     _onPositionUpdate = onPositionUpdate;
 
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
-    );
+    LocationSettings locationSettings;
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // FIX: Dit houdt Android wakker op de achtergrond!
+      locationSettings = AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+        forceLocationManager: true,
+        intervalDuration: const Duration(seconds: 2),
+        // Deze notificatie is VERPLICHT voor achtergrondgebruik op Android
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationText: "Squad Mode is actief op de achtergrond",
+          notificationTitle: "Club App",
+          enableWakeLock: true, // Houdt de CPU wakker voor WebRTC audio!
+        ),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+      locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+        pauseLocationUpdatesAutomatically: false,
+        // Dit houdt iOS wakker
+        activityType: ActivityType.fitness,
+        allowBackgroundLocationUpdates: true, 
+      );
+    } else {
+      locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      );
+    }
 
     _positionSubscription =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
@@ -3347,7 +3372,6 @@ class LocationService {
     return await Geolocator.openLocationSettings();
   }
 }
-
 
 .\lib\core\services\settings_service.dart:
 import 'package:flutter/foundation.dart';
@@ -4955,6 +4979,7 @@ class UserAvatar extends StatefulWidget {
   final bool isOnline;
   final bool showPulse;
   final VoidCallback? onPulseTrigger;
+  final bool isSpeaking; // FIX: Voor de Discord Walkie-Talkie ring
 
   const UserAvatar({
     super.key,
@@ -4965,6 +4990,7 @@ class UserAvatar extends StatefulWidget {
     this.isOnline = true,
     this.showPulse = false,
     this.onPulseTrigger,
+    this.isSpeaking = false,
   });
 
   @override
@@ -4983,12 +5009,10 @@ class _UserAvatarState extends State<UserAvatar> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-
     _pulseAnimation = Tween<double>(
       begin: 0.5,
       end: 1.5,
     ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
-
     _pulseOpacityAnimation = Tween<double>(
       begin: 1.0,
       end: 0.0,
@@ -5032,12 +5056,27 @@ class _UserAvatarState extends State<UserAvatar> with TickerProviderStateMixin {
         children: [
           Stack(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
                 width: widget.size,
                 height: widget.size,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: backgroundColor,
+                  // FIX: Exacte Discord-stijl groene ring!
+                  border: Border.all(
+                    color: widget.isSpeaking ? const Color(0xFF43B581) : Colors.transparent, 
+                    width: 3
+                  ),
+                  boxShadow: widget.isSpeaking
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF43B581).withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      : [],
                   image: widget.imageUrl != null
                       ? DecorationImage(
                           image: NetworkImage(widget.imageUrl!),
@@ -5135,7 +5174,6 @@ class _OnlinePulsingDotState extends State<_OnlinePulsingDot>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     )..repeat(reverse: true);
-
     _animation = Tween<double>(
       begin: 0.7,
       end: 1.0,
@@ -5168,179 +5206,6 @@ class _OnlinePulsingDotState extends State<_OnlinePulsingDot>
     );
   }
 }
-
-class PulseAvatar extends StatefulWidget {
-  final String? imageUrl;
-  final String name;
-  final double size;
-  final bool isOnline;
-  final bool triggerPulse;
-
-  const PulseAvatar({
-    super.key,
-    this.imageUrl,
-    required this.name,
-    this.size = 44,
-    this.isOnline = true,
-    this.triggerPulse = false,
-  });
-
-  @override
-  State<PulseAvatar> createState() => PulseAvatarState();
-}
-
-class PulseAvatarState extends State<PulseAvatar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _pulseOpacityAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    _pulseAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.5,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
-
-    _pulseOpacityAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
-  }
-
-  @override
-  void didUpdateWidget(PulseAvatar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.triggerPulse && !oldWidget.triggerPulse) {
-      triggerPulse();
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  void triggerPulse() {
-    _pulseController.reset();
-    _pulseController.forward();
-  }
-
-  String get initials {
-    if (widget.name.isEmpty) return '?';
-    final parts = widget.name.trim().split(RegExp(r'\s+'));
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return widget.name.substring(0, min(2, widget.name.length)).toUpperCase();
-  }
-
-  Color get backgroundColor {
-    final hash = widget.name.hashCode.abs();
-    final hue = (hash % 360).toDouble();
-    return HSLColor.fromAHSL(1.0, hue, 0.70, 0.45).toColor();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final statusDotSize = widget.size * 0.35;
-    final pulseSize = widget.size * 0.45;
-
-    return SizedBox(
-      width: widget.size,
-      height: widget.size + 20,
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: widget.size,
-                height: widget.size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: backgroundColor,
-                  image: widget.imageUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(widget.imageUrl!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: widget.imageUrl == null
-                    ? Center(
-                        child: Text(
-                          initials,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: widget.size * 0.4,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: statusDotSize,
-                  height: statusDotSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: widget.isOnline
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFFF44336),
-                    border: Border.all(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      width: 2,
-                    ),
-                  ),
-                  child: widget.isOnline
-                      ? _OnlinePulsingDot(size: statusDotSize)
-                      : null,
-                ),
-              ),
-            ],
-          ),
-          Positioned(
-            bottom: 0,
-            child: AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _pulseAnimation.value,
-                  child: Opacity(
-                    opacity: _pulseOpacityAnimation.value,
-                    child: Container(
-                      width: pulseSize,
-                      height: pulseSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF2196F3),
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 
 .\lib\core\widgets\vp_display.dart:
 import 'package:flutter/material.dart';
@@ -8450,26 +8315,29 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             height: 48,
             rotate: true, 
             child: Center(
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF18181B) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
+                  // FIX: Discord Green rand als je praat!
                   border: Border.all(
-                    color: member.isOnline ? Colors.green : Colors.grey, 
-                    width: 2
+                    color: member.isSpeaking 
+                        ? const Color(0xFF43B581) 
+                        : (member.isOnline ? Colors.green : Colors.grey), 
+                    width: member.isSpeaking ? 3 : 2
                   ),
-                  // FIX: GLOW EFFECT ALS IEMAND PRAAT
                   boxShadow: [
                     if (member.isSpeaking)
                       BoxShadow(
-                        color: Colors.greenAccent.withValues(alpha: 0.8),
+                        color: const Color(0xFF43B581).withValues(alpha: 0.6), // <-- Aangepast
                         blurRadius: 15,
                         spreadRadius: 6,
                       )
                     else
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: Colors.black.withValues(alpha: 0.2), // <-- Aangepast
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       )
@@ -11836,13 +11704,14 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
 
 .\lib\features\settings\screens\settings_screen.dart:
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // TOEGEVOEGD VOOR HAPTICS
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/main.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart'; // Gefixt
+import 'package:flutter_clubapp/core/providers/service_providers.dart'; 
 import 'package:flutter_clubapp/core/config/app_config.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 import 'package:flutter_clubapp/core/widgets/vp_display.dart';
@@ -11881,7 +11750,7 @@ class SettingsScreen extends ConsumerWidget {
                 : Colors.white.withValues(alpha: 0.9),
             elevation: 0,
             title: Text(
-               l10n.settingsTitle,
+              l10n.settingsTitle,
               style: TextStyle(
                 color: isDark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
@@ -12001,6 +11870,28 @@ class SettingsScreen extends ConsumerWidget {
                           themeNotifier.value = val
                               ? ThemeMode.dark
                               : ThemeMode.light;
+                        },
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 56, endIndent: 16),
+                    // FIX: NIEUWE HAPTISCHE FEEDBACK TOGGLE
+                    ListTile(
+                      leading: const Icon(
+                        Icons.vibration,
+                        color: Colors.orangeAccent,
+                      ),
+                      title: Text(
+                        'Haptische Feedback',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      trailing: ShadSwitch(
+                        value: ref.watch(settingsServiceProvider).hapticsEnabled,
+                        onChanged: (val) {
+                          ref.read(settingsServiceProvider).setHapticsEnabled(val);
+                          // Geef direct een trillinkje als feedback dat het aan staat!
+                          if (val) HapticFeedback.mediumImpact();
                         },
                       ),
                     ),
@@ -12606,7 +12497,7 @@ class SquadMemberDisplay {
   final DateTime lastUpdate;
   final bool isOnline;
   final bool isCurrentUser;
-  final bool isSpeaking; // FIX: Nieuwe variabele voor de glow effecten
+  final bool isSpeaking;
 
   const SquadMemberDisplay({
     required this.id,
@@ -12680,6 +12571,9 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   MediaStream? _localStream;
   RealtimeChannel? _signalingChannel;
 
+  // FIX: Bewaar het échte database-ID zodat de UI weet wie we zijn!
+  String? _myDbUserId;
+
   SquadNotifier(this._ref) : super(const SquadProviderState());
 
   SettingsService get _settingsService => _ref.read(settingsServiceProvider);
@@ -12687,8 +12581,6 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   LocationService get _locationService => _ref.read(locationServiceProvider);
   SquadRepository get _squadRepository => _ref.read(squadRepositoryProvider);
   AnalyticsService get _analytics => _ref.read(analyticsServiceProvider);
-
-  String? get currentUserId => _userProfileService.userId;
 
   void setPositionPulseCallback(VoidCallback? callback) {
     _onPositionPulse = callback;
@@ -12740,13 +12632,16 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       
       final squad = data['squad'] as Squad;
       final member = data['member'] as models.SquadMember;
+      
+      // FIX: Stel het unieke database ID in!
+      _myDbUserId = member.userId;
 
       state = state.copyWith(
         status: SquadConnectionStatus.connected,
         squadId: squad.id,
         squadPin: squad.pin,
         memberId: member.id,
-        members: [SquadMemberDisplay.fromModel(member, currentUserId ?? '', _offlineThresholdMs)],
+        members: [SquadMemberDisplay.fromModel(member, _myDbUserId!, _offlineThresholdMs)],
       );
 
       _startTracking();
@@ -12804,12 +12699,15 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         userPosition,
       );
 
+      // FIX: Stel het unieke database ID in!
+      _myDbUserId = member.userId;
+
       state = state.copyWith(
         status: SquadConnectionStatus.connected,
         squadId: squad.id,
         squadPin: squad.pin,
         memberId: member.id,
-        members: [SquadMemberDisplay.fromModel(member, currentUserId ?? '', _offlineThresholdMs)],
+        members: [SquadMemberDisplay.fromModel(member, _myDbUserId!, _offlineThresholdMs)],
       );
 
       _startTracking();
@@ -12851,19 +12749,35 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
     _signalingChannel!.subscribe((status, [error]) {
       if (status == RealtimeSubscribeStatus.subscribed) {
-        _broadcastSignaling({'signalType': 'peer-join', 'userId': currentUserId});
+        _broadcastSignaling({'signalType': 'peer-join', 'userId': _myDbUserId});
       }
     });
   }
 
   void _handleSignalingMessage(Map<String, dynamic> rawData) async {
-    final signalType = rawData['signalType'];
-    final userId = rawData['userId'];
-    final targetUserId = rawData['targetUserId'];
+    Map<String, dynamic> data = {};
+    if (rawData.containsKey('payload')) {
+      final innerPayload = rawData['payload'];
+      if (innerPayload is Map) {
+        if (innerPayload.containsKey('payload') && innerPayload['payload'] is Map) {
+          data = innerPayload['payload'] as Map<String, dynamic>;
+        } else {
+          data = innerPayload as Map<String, dynamic>;
+        }
+      } else if (innerPayload is String) {
+        try { data = jsonDecode(innerPayload) as Map<String, dynamic>; } catch (_) {}
+      }
+    } else {
+      data = rawData;
+    }
+
+    final signalType = data['signalType'];
+    final userId = data['userId'];
+    final targetUserId = data['targetUserId'];
 
     if (signalType == null || userId == null) return;
-    if (userId == currentUserId) return;
-    if (targetUserId != null && targetUserId != currentUserId) return;
+    if (userId == _myDbUserId) return;
+    if (targetUserId != null && targetUserId != _myDbUserId) return;
 
     try {
       switch (signalType) {
@@ -12872,27 +12786,27 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
           break;
         case 'offer':
           await _createPeerConnection(userId, isInitiator: false);
-          await _peers[userId]!.setRemoteDescription(RTCSessionDescription(rawData['sdp'], 'offer'));
+          await _peers[userId]!.setRemoteDescription(RTCSessionDescription(data['sdp'], 'offer'));
           final answer = await _peers[userId]!.createAnswer();
           await _peers[userId]!.setLocalDescription(answer);
           _broadcastSignaling({
             'signalType': 'answer',
-            'userId': currentUserId,
+            'userId': _myDbUserId,
             'targetUserId': userId,
             'sdp': answer.sdp,
           });
           break;
         case 'answer':
           if (_peers.containsKey(userId)) {
-            await _peers[userId]!.setRemoteDescription(RTCSessionDescription(rawData['sdp'], 'answer'));
+            await _peers[userId]!.setRemoteDescription(RTCSessionDescription(data['sdp'], 'answer'));
           }
           break;
         case 'ice-candidate':
           if (_peers.containsKey(userId)) {
             await _peers[userId]!.addCandidate(RTCIceCandidate(
-              rawData['candidate'],
-              rawData['sdpMid'],
-              rawData['sdpMLineIndex'],
+              data['candidate'],
+              data['sdpMid'],
+              data['sdpMLineIndex'],
             ));
           }
           break;
@@ -12946,7 +12860,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       pc.onIceCandidate = (candidate) {
         _broadcastSignaling({
           'signalType': 'ice-candidate',
-          'userId': currentUserId,
+          'userId': _myDbUserId,
           'targetUserId': peerId,
           'candidate': candidate.candidate,
           'sdpMid': candidate.sdpMid,
@@ -12963,7 +12877,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         await pc.setLocalDescription(offer);
         _broadcastSignaling({
           'signalType': 'offer',
-          'userId': currentUserId,
+          'userId': _myDbUserId,
           'targetUserId': peerId,
           'sdp': offer.sdp,
         });
@@ -12985,7 +12899,6 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         final msgType = data['type'];
         final sender = data['userId'] as String;
 
-        // FIX: Lees of we locatie ('pos') of spraak ('ptt') ontvangen
         if (msgType == 'pos') {
           final lat = data['lat'] as double;
           final lng = data['lng'] as double;
@@ -13013,13 +12926,13 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       track.enabled = !mute;
     });
 
-    // FIX: Update onszelf zodat onze marker ook gloeit
-    _updateMemberStateFromWebRTC(currentUserId!, isSpeaking: !mute);
+    if (_myDbUserId != null) {
+      _updateMemberStateFromWebRTC(_myDbUserId!, isSpeaking: !mute);
+    }
     
-    // FIX: Stuur direct P2P data naar de anderen dat we (stoppen met) praten
     final pttMsg = jsonEncode({
       'type': 'ptt',
-      'userId': currentUserId,
+      'userId': _myDbUserId,
       'isSpeaking': !mute,
     });
 
@@ -13032,7 +12945,6 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
     _analytics.logEvent('squad_ptt', parameters: {'talking': !mute});
   }
 
-  // FIX: Herbruikbare update functie voor locatie EN spreken
   void _updateMemberStateFromWebRTC(String userId, {LatLng? position, bool? isSpeaking}) {
     final updatedMembers = state.members.map((m) {
       if (m.odmemberId == userId) {
@@ -13089,10 +13001,10 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         if (_shouldSendPositionUpdate(currentPosition)) {
           
           final posMsg = jsonEncode({
-            'type': 'pos', // FIX: Specificeer dat dit locatie data is
+            'type': 'pos',
             'lat': currentPosition.latitude,
             'lng': currentPosition.longitude,
-            'userId': currentUserId,
+            'userId': _myDbUserId,
           });
 
           for (final dc in _dataChannels.values) {
@@ -13101,7 +13013,9 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
             }
           }
 
-          _updateMemberStateFromWebRTC(currentUserId!, position: currentPosition);
+          if (_myDbUserId != null) {
+            _updateMemberStateFromWebRTC(_myDbUserId!, position: currentPosition);
+          }
           _lastSentPosition = currentPosition;
           _lastSentTime = DateTime.now();
         }
@@ -13121,7 +13035,6 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
     if (state.members.isEmpty) return;
     final updatedMembers = state.members.map((member) {
       final isOnline = DateTime.now().difference(member.lastUpdate).inMilliseconds < _offlineThresholdMs;
-      // Zorg dat we 'isSpeaking' muten als iemand offline gaat
       return member.copyWith(isOnline: isOnline, isSpeaking: isOnline ? member.isSpeaking : false);
     }).toList();
     if (!_listEquals(updatedMembers, state.members)) {
@@ -13130,7 +13043,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   }
 
   void _onSquadMembersUpdate(List<models.SquadMember> modelMembers) {
-    final cId = currentUserId ?? '';
+    final cId = _myDbUserId ?? '';
     final currentMembersMap = {for (var m in state.members) m.odmemberId: m};
 
     final displayMembers = modelMembers.map((m) {
@@ -13138,7 +13051,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       final pos = existing != null ? existing.position : LatLng(m.latitude, m.longitude);
       final lastUpdate = existing != null ? existing.lastUpdate : m.updatedAt;
       final isOnline = DateTime.now().difference(lastUpdate).inMilliseconds < _offlineThresholdMs;
-      final isSpeaking = existing != null ? existing.isSpeaking : false; // Behoud de spreek status
+      final isSpeaking = existing != null ? existing.isSpeaking : false;
 
       return SquadMemberDisplay(
         id: m.id,
@@ -13178,15 +13091,16 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
     _signalingChannel?.unsubscribe();
     _signalingChannel = null;
 
-    if (state.squadId != null && currentUserId != null) {
+    if (state.squadId != null && _myDbUserId != null) {
       try {
-        _squadRepository.leaveSquad(state.squadId!, currentUserId!);
+        _squadRepository.leaveSquad(state.squadId!, _myDbUserId!);
       } catch (e) {
-        // negeer
+        debugPrint('⚠️ Kon squad niet verlaten in DB: $e'); // <-- Ingevuld!
       }
     }
     _squadRepository.unsubscribeFromSquad();
 
+    _myDbUserId = null;
     state = const SquadProviderState();
     _onPositionPulse = null;
     _lastSentPosition = null;
@@ -13200,7 +13114,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
           a[i].position.latitude != b[i].position.latitude || 
           a[i].position.longitude != b[i].position.longitude || 
           a[i].isOnline != b[i].isOnline ||
-          a[i].isSpeaking != b[i].isSpeaking) { // FIX: Vergelijk ook de spraak status
+          a[i].isSpeaking != b[i].isSpeaking) { 
         return false;
       }
     }
@@ -13686,7 +13600,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
     if (!mounted) return;
     setState(() => _isLoading = true);
-    
     final result = await squadNotifier.createSquad();
     
     if (!mounted) return;
@@ -13757,7 +13670,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
     if (!mounted) return;
     setState(() => _isLoading = true);
-    
     final result = await squadNotifier.joinSquad(pin);
     
     if (!mounted) return;
@@ -13924,6 +13836,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
                   size: 48,
                   showStatus: true,
                   isOnline: m.isOnline,
+                  isSpeaking: m.isSpeaking, // FIX: Glow-status wordt nu meegegeven!
                 ),
                 title: Text(m.nickname, style: TextStyle(color: textColor)),
                 subtitle: Text(
@@ -13979,6 +13892,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
   Widget _buildCreateTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -14031,6 +13945,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
   Widget _buildJoinTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(

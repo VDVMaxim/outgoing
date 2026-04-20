@@ -79,7 +79,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
     if (!mounted) return;
     setState(() => _isLoading = true);
-    
     final result = await squadNotifier.createSquad();
     
     if (!mounted) return;
@@ -150,7 +149,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
     if (!mounted) return;
     setState(() => _isLoading = true);
-    
     final result = await squadNotifier.joinSquad(pin);
     
     if (!mounted) return;
@@ -317,6 +315,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
                   size: 48,
                   showStatus: true,
                   isOnline: m.isOnline,
+                  isSpeaking: m.isSpeaking, // FIX: Glow-status wordt nu meegegeven!
                 ),
                 title: Text(m.nickname, style: TextStyle(color: textColor)),
                 subtitle: Text(
@@ -372,6 +371,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
   Widget _buildCreateTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -424,6 +424,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
   Widget _buildJoinTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 enum LocationPermissionStatus {
   denied,
@@ -78,7 +78,6 @@ class LocationService {
 
   Future<bool> _checkAndRequestPermission() async {
     var status = await checkPermission();
-
     if (status == LocationPermissionStatus.unknown ||
         status == LocationPermissionStatus.denied) {
       status = await requestPermission();
@@ -95,10 +94,37 @@ class LocationService {
     stopTracking();
     _onPositionUpdate = onPositionUpdate;
 
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
-    );
+    LocationSettings locationSettings;
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // FIX: Dit houdt Android wakker op de achtergrond!
+      locationSettings = AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+        forceLocationManager: true,
+        intervalDuration: const Duration(seconds: 2),
+        // Deze notificatie is VERPLICHT voor achtergrondgebruik op Android
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationText: "Squad Mode is actief op de achtergrond",
+          notificationTitle: "Club App",
+          enableWakeLock: true, // Houdt de CPU wakker voor WebRTC audio!
+        ),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+      locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+        pauseLocationUpdatesAutomatically: false,
+        // Dit houdt iOS wakker
+        activityType: ActivityType.fitness,
+        allowBackgroundLocationUpdates: true, 
+      );
+    } else {
+      locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      );
+    }
 
     _positionSubscription =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(

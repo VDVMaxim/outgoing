@@ -567,26 +567,29 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             height: 48,
             rotate: true, 
             child: Center(
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF18181B) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
+                  // FIX: Discord Green rand als je praat!
                   border: Border.all(
-                    color: member.isOnline ? Colors.green : Colors.grey, 
-                    width: 2
+                    color: member.isSpeaking 
+                        ? const Color(0xFF43B581) 
+                        : (member.isOnline ? Colors.green : Colors.grey), 
+                    width: member.isSpeaking ? 3 : 2
                   ),
-                  // FIX: GLOW EFFECT ALS IEMAND PRAAT
                   boxShadow: [
                     if (member.isSpeaking)
                       BoxShadow(
-                        color: Colors.greenAccent.withValues(alpha: 0.8),
+                        color: const Color(0xFF43B581).withValues(alpha: 0.6), // <-- Aangepast
                         blurRadius: 15,
                         spreadRadius: 6,
                       )
                     else
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: Colors.black.withValues(alpha: 0.2), // <-- Aangepast
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       )
