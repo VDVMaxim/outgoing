@@ -1,3 +1,4 @@
+// lib/core/providers/service_providers.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
@@ -14,7 +15,8 @@ final locationServiceProvider = Provider<LocationService>((ref) {
   return LocationService.instance;
 });
 
-final settingsServiceProvider = Provider<SettingsService>((ref) {
+// Veranderd naar ChangeNotifierProvider om te kunnen luisteren naar haptics/darkmode veranderingen
+final settingsServiceProvider = ChangeNotifierProvider<SettingsService>((ref) {
   throw UnimplementedError('settingsServiceProvider moet in main.dart worden overschreven');
 });
 
@@ -96,7 +98,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> signIn({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-
     final result = await _ref.read(authServiceProvider).signIn(email: email, password: password);
 
     if (result.status == AuthResultStatus.success) {
@@ -121,7 +122,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String nickname,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-
     final result = await _ref.read(authServiceProvider).signUp(
       email: email,
       password: password,

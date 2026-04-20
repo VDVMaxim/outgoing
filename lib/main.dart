@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -41,14 +42,12 @@ void main() async {
   await _initializeSupabase();
   
   await UserProfileService.getInstance();
-  
-  // FIX: Veranderd van getInstance() naar init()
-  final ingeladenSettingsService = await SettingsService.init(); 
+  final ingeladenSettingsService = await SettingsService.init();
 
   runApp(
     ProviderScope(
       overrides: [
-        settingsServiceProvider.overrideWithValue(ingeladenSettingsService),
+        settingsServiceProvider.overrideWith((ref) => ingeladenSettingsService),
       ],
       child: const ClubApp(),
     ),

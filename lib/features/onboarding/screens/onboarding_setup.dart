@@ -1,3 +1,4 @@
+// lib/features/onboarding/screens/onboarding_setup.dart
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -22,13 +23,11 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
   bool _isLoading = false;
   bool _hasRegistrationCompleted = false;
   bool _isInitialized = false;
-  bool _isAuthenticated = false;
   bool _hasNickname = false;
 
   @override
   void initState() {
     super.initState();
-    _LocationWizardStep._hasShownSheetGlobal = false;
     _initializeProfile();
   }
 
@@ -36,7 +35,6 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
     final profile = await UserProfileService.getInstance();
     if (mounted) {
       setState(() {
-        _isAuthenticated = profile.isAuthenticated;
         _hasNickname = profile.hasNickname;
         _isInitialized = true;
 
@@ -78,9 +76,8 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
 
     final profile = await UserProfileService.getInstance();
     profile.hasCompletedOnboarding = true;
-
     if (mounted) {
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushAndRemoveUntil(
         PageRouteBuilder(
           pageBuilder: (context, a1, a2) =>
               MainNavigation(userLocation: userLocation),
@@ -88,6 +85,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
               FadeTransition(opacity: a1, child: child),
           transitionDuration: const Duration(milliseconds: 600),
         ),
+        (route) => false,
       );
     }
   }
@@ -105,7 +103,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
     profile.hasCompletedOnboarding = true;
 
     if (mounted) {
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushAndRemoveUntil(
         PageRouteBuilder(
           pageBuilder: (context, a1, a2) =>
               const MainNavigation(userLocation: null),
@@ -113,6 +111,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
               FadeTransition(opacity: a1, child: child),
           transitionDuration: const Duration(milliseconds: 600),
         ),
+        (route) => false,
       );
     }
   }
@@ -128,7 +127,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
       );
     }
 
-    final bool skipNickname = _isAuthenticated && _hasNickname;
+    final bool skipNickname = _hasNickname;
 
     final steps = skipNickname
         ? [
@@ -236,7 +235,7 @@ class _NicknameContentState extends State<_NicknameContent> {
 
   Future<void> _loadNickname() async {
     final profile = await UserProfileService.getInstance();
-    if (profile.isAuthenticated && profile.hasNickname && mounted) {
+    if (profile.hasNickname && mounted) {
       setState(() {
         widget.controller.text = profile.nickname!;
       });
@@ -260,8 +259,6 @@ class _LocationWizardStep implements OnboardingStep {
   final VoidCallback finishOnboarding;
   final VoidCallback onSkip;
 
-  static bool _hasShownSheetGlobal = false;
-
   _LocationWizardStep({
     required this.isLoading,
     required this.setLoading,
@@ -271,21 +268,91 @@ class _LocationWizardStep implements OnboardingStep {
 
   @override
   Widget build(BuildContext context, VoidCallback onStateRefresh) {
-    if (!_hasShownSheetGlobal) {
-      _hasShownSheetGlobal = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) {
-          _showLocationSheet(context);
-        }
-      });
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
-    return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.location_on,
+              size: 80,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 48),
+          Text(
+            l10n.onboardingLocationTitle,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -1,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.onboardingLocationDesc,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ShadButton(
+              onPressed: isLoading ? null : () => _showLocationSheet(context),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      l10n.onboardingLocationAllow,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ShadButton.ghost(
+              onPressed: isLoading ? null : onSkip,
+              child: Text(
+                l10n.onboardingLocationSkip,
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showLocationSheet(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
-
     await PermissionRationaleSheet.show(
       context: context,
       icon: Icons.location_on,
@@ -303,7 +370,6 @@ class _LocationWizardStep implements OnboardingStep {
       },
       onSecondary: onSkip,
     );
-    onSkip();
   }
 
   @override

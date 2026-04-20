@@ -1,3 +1,4 @@
+// lib/features/onboarding/screens/option_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
@@ -44,11 +45,12 @@ class OptionScreen extends StatelessWidget {
                   description: l10n.optionScreenAnonymousDesc,
                   isDark: isDark,
                   onTap: () {
-                    Navigator.pushReplacement(
+                    Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const OnboardingSetup(),
                       ),
+                      (route) => false,
                     );
                   },
                 ),
@@ -65,11 +67,12 @@ class OptionScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => RegisterScreen(
                           onSuccess: () {
-                            Navigator.pushReplacement(
+                            Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const OnboardingSetup(),
                               ),
+                              (route) => false,
                             );
                           },
                           onCancel: () => Navigator.pop(context),
@@ -86,11 +89,12 @@ class OptionScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => LoginScreen(
                           onSuccess: () {
-                            Navigator.pushReplacement(
+                            Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const OnboardingSetup(),
                               ),
+                              (route) => false,
                             );
                           },
                           onCancel: () => Navigator.pop(context),
@@ -108,7 +112,7 @@ class OptionScreen extends StatelessWidget {
                       children: [
                         TextSpan(
                           text: l10n.accountFormLogin,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.blueAccent,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

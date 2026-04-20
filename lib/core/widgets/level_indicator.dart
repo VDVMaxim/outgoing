@@ -1,6 +1,8 @@
+// lib/core/widgets/level_indicator.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/vibe_provider.dart';
+
 export '../providers/vibe_provider.dart' show VibeDisplayData;
 
 class LevelIndicator extends ConsumerWidget {
@@ -15,11 +17,18 @@ class LevelIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vpData = ref.watch(vpDisplayProvider);
-
-    if (vpData == null) return const SizedBox.shrink();
-
+    final rawVpData = ref.watch(vpDisplayProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final vpData = rawVpData ?? const VibeDisplayData(
+      totalVp: 0,
+      level: 1,
+      levelName: 'Newbie',
+      streak: 0,
+      progress: 0.0,
+      vpForNextLevel: 100,
+    );
+
     final textColor = isDark ? Colors.white : Colors.black87;
     final progressColor = _getLevelColor(vpData.level);
 
@@ -34,39 +43,70 @@ class LevelIndicator extends ConsumerWidget {
         Row(
           children: [
             _buildLevelBadge(vpData.level, progressColor),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  vpData.levelName,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        vpData.levelName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.bolt, color: Colors.amber, size: 14),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${vpData.totalVp} VP',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                if (vpData.vpForNextLevel > 0)
-                  Text(
-                    '${vpData.vpForNextLevel} VP to next level',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white54 : Colors.black54,
+                  const SizedBox(height: 2),
+                  if (vpData.vpForNextLevel > 0)
+                    Text(
+                      '${vpData.vpForNextLevel} VP to next level',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white54 : Colors.black54,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
         if (showProgress && vpData.vpForNextLevel > 0) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: vpData.progress,
               backgroundColor: isDark ? Colors.white12 : Colors.black12,
               valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              minHeight: 6,
+              minHeight: 8,
             ),
           ),
         ],
