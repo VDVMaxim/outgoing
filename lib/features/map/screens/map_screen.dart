@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // VOOR DE HAPTICS
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -26,9 +26,8 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final MapController _mapController = MapController();
-  List<Place> _allPlaces = [];
+  final Map<String, Place> _cachedPlaces = {};
   bool _isLoading = true;
-
   final Set<String> _selectedFilters = {};
   String _searchQuery = '';
 
@@ -36,20 +35,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   LatLng? _liveUserLocation;
   StreamSubscription<Position>? _locationSubscription;
   StreamSubscription<CompassEvent>? _compassSubscription;
-  
-  bool _isFollowingUser = false; 
+  bool _isFollowingUser = false;
   bool _isCompassMode = false;
+  Timer? _debounce;
+  
+  LatLng? _lastFetchCenter;
+  double? _lastFetchZoom;
 
   @override
   void initState() {
     super.initState();
     _liveUserLocation = widget.userLocation;
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(analyticsServiceProvider).logEvent('opened_map');
     });
-
-    _loadPlaces();
     _setupSquadPulse();
     _startLocationTracking();
     _startCompassTracking();
@@ -57,6 +56,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _locationSubscription?.cancel();
     _compassSubscription?.cancel();
     super.dispose();
@@ -64,15 +64,49 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   void _setupSquadPulse() {
     ref.read(squadProvider.notifier).setPositionPulseCallback(() {
-      if (mounted) setState(() {}); 
+      if (mounted) setState(() {});
     });
   }
 
-  Future<void> _loadPlaces() async {
-    final places = await ref.read(clubRepositoryProvider).getPlaces();
+Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
+    final currentCamera = camera ?? _mapController.camera;
+    final currentCenter = currentCamera.center;
+    final currentZoom = currentCamera.zoom;
+
+    if (_lastFetchCenter != null && _lastFetchZoom != null) {
+      final zoomDiff = (currentZoom - _lastFetchZoom!).abs();
+      if (zoomDiff < 1.0) {
+        final distanceScrolled = const Distance().as(LengthUnit.Meter, _lastFetchCenter!, currentCenter);
+        final bounds = currentCamera.visibleBounds;
+        final screenWidthMeters = const Distance().as(LengthUnit.Meter, bounds.southWest, bounds.southEast);
+        
+        if (distanceScrolled < (screenWidthMeters * 0.4)) {
+          return; 
+        }
+      }
+    }
+
+    setState(() => _isLoading = true);
+    
+    final bounds = currentCamera.visibleBounds;
+    final latDelta = bounds.northEast.latitude - bounds.southWest.latitude;
+    final lngDelta = bounds.northEast.longitude - bounds.southWest.longitude;
+
+    final minLat = bounds.southWest.latitude - (latDelta * 0.5);
+    final maxLat = bounds.northEast.latitude + (latDelta * 0.5);
+    final minLng = bounds.southWest.longitude - (lngDelta * 0.5);
+    final maxLng = bounds.northEast.longitude + (lngDelta * 0.5);
+
+    _lastFetchCenter = currentCenter;
+    _lastFetchZoom = currentZoom;
+
+    final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng);
+
     if (mounted) {
       setState(() {
-        _allPlaces = places;
+        for (final p in places) {
+          _cachedPlaces[p.id] = p;
+        }
         _isLoading = false;
       });
     }
@@ -94,7 +128,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         setState(() {
           _liveUserLocation = newLocation;
         });
-        
+
         if (_isFollowingUser) {
           _mapController.move(newLocation, _currentZoom);
         }
@@ -113,9 +147,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   void _onMyLocationTapped() {
     if (_liveUserLocation == null) return;
-    
-    ref.read(analyticsServiceProvider).logEvent('map_recenter_clicked');
 
+    ref.read(analyticsServiceProvider).logEvent('map_recenter_clicked');
     setState(() {
       if (!_isFollowingUser && !_isCompassMode) {
         _isFollowingUser = true;
@@ -135,7 +168,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   List<Place> get _filteredPlaces {
-    return _allPlaces.where((place) {
+    return _cachedPlaces.values.where((place) {
       final matchesSearch = _searchQuery.isEmpty ||
           place.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           (place.eventName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
@@ -153,13 +186,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
       }
 
+      final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
+      
+      if (_currentZoom < 14.0 && isFood) {
+        return false;
+      }
+
+      if (_currentZoom < 13.0) {
+        final isPopular = place.crowdLevel == 'Druk' || 
+                          place.crowdLevel == 'Bomvol' || 
+                          place.crowdLevel == 'Sfeervol' || 
+                          place.isFlashPromoActive ||
+                          place.status.toString().contains('event');
+                          
+        if (!isPopular) {
+          return false;
+        }
+      }
+
       return matchesSearch && matchesFilter;
     }).toList();
   }
 
   void _openDetails(BuildContext context, Place place) {
     ref.read(analyticsServiceProvider).logEvent('viewed_venue_details', parameters: {'venue_name': place.name});
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -244,7 +294,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             _selectedFilters.remove(filterKey);
           }
         });
-        setState(() {}); 
+        setState(() {});
       },
       backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
       selectedColor: Colors.blueAccent.withValues(alpha: 0.2),
@@ -269,7 +319,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
-    if (_isLoading) {
+    if (_isLoading && _cachedPlaces.isEmpty) {
       return Scaffold(
         backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
         body: const Center(child: CircularProgressIndicator()),
@@ -294,22 +344,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 options: MapOptions(
                   initialCenter: _liveUserLocation ?? widget.userLocation ?? const LatLng(51.0543, 3.7174),
                   initialZoom: _currentZoom,
-                  onPositionChanged: (position, hasGesture) {
+                  onMapReady: () {
+                    _fetchPlacesForCurrentBounds();
+                  },
+                  onPositionChanged: (camera, hasGesture) {
                     if (hasGesture && _isFollowingUser) {
                       setState(() {
                         _isFollowingUser = false;
                       });
                     }
-                    if (position.zoom != _currentZoom) {
-                      setState(() => _currentZoom = position.zoom);
+                    if (camera.zoom != _currentZoom) {
+                      setState(() => _currentZoom = camera.zoom);
                     }
+                    
+                    _debounce?.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 300), () {
+                      _fetchPlacesForCurrentBounds(camera: camera);
+                    });
                   },
                 ),
                 children: [
                   TileLayer(
                     urlTemplate: currentIsDark 
-                      ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
-                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.jouwnaam.flutter_clubapp', 
                   ),
                   MarkerLayer(markers: _buildMarkers(squadState, currentIsDark)),
@@ -361,6 +419,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
                 ),
               ),
+              if (_isLoading)
+                Positioned(
+                  top: 90,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: currentIsDark ? Colors.black87 : Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                      ),
+                      child: const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                ),
             ]
           ),
           floatingActionButton: Column(
@@ -368,7 +447,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             children: [
               if (squadState.isInSquad) ...[
                 GestureDetector(
-                  // FIX: HAPTICS OP DE KNOP!
                   onTapDown: (_) {
                     if (settings.hapticsEnabled) HapticFeedback.mediumImpact();
                     ref.read(squadProvider.notifier).setMute(false);
@@ -442,120 +520,52 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final markers = <Marker>[];
     final activePlaces = _filteredPlaces;
 
-    if (_currentZoom < 14.5) {
-      final poiGroups = <String, List<Place>>{};
-      for (final p in activePlaces) {
-        final poi = p.poi ?? 'Andere';
-        poiGroups.putIfAbsent(poi, () => []).add(p);
-      }
+    final double scale = (_currentZoom / 16.0).clamp(0.4, 1.1);
+    final double baseSize = 54.0 * scale;
+    final double iconSize = 26.0 * scale;
 
-      for (final entry in poiGroups.entries) {
-        final poiName = entry.key;
-        final places = entry.value;
+    for (final place in activePlaces) {
+      final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
+      final isEvent = place.status.toString().contains('event');
 
-        double sumLat = 0, sumLng = 0;
-        for (var p in places) {
-          sumLat += p.location.latitude;
-          sumLng += p.location.longitude;
-        }
-        final centerPoint = LatLng(sumLat / places.length, sumLng / places.length);
-        markers.add(
-          Marker(
-            point: centerPoint,
-            width: 140, 
-            height: 48,
-            rotate: true, 
-            child: GestureDetector(
-              onTap: () {
-                _mapController.move(centerPoint, 15.5);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF18181B) : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.blueAccent, width: 2),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 3))
-                  ]
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      poiName, 
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black, 
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      )
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Colors.blueAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '${places.length}',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    )
-                  ],
-                ),
+      final IconData pinIcon = isFood 
+          ? Icons.fastfood_rounded 
+          : (isEvent ? Icons.local_fire_department : Icons.nightlife);
+
+      final Color pinColor = isFood 
+          ? Colors.orange 
+          : (isEvent ? Colors.purpleAccent : Colors.blueAccent);
+
+      markers.add(
+        Marker(
+          point: place.location,
+          width: baseSize, 
+          height: baseSize,
+          rotate: true, 
+          child: GestureDetector(
+            onTap: () => _openDetails(context, place),
+            child: Container(
+              decoration: BoxDecoration(
+                color: pinColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2.5 * scale),
+                boxShadow: [
+                  BoxShadow(
+                    color: pinColor.withValues(alpha: 0.5),
+                    blurRadius: 8 * scale,
+                    offset: Offset(0, 3 * scale),
+                  )
+                ]
+              ),
+              child: Icon(
+                pinIcon, 
+                color: Colors.white, 
+                size: iconSize,
               ),
             ),
-          )
-        );
-      }
-    } 
-    else {
-      final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
-      final double baseSize = 54.0 * scale;
-      final double iconSize = 26.0 * scale;
-      for (final place in activePlaces) {
-        final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
-        final isEvent = place.status.toString().contains('event');
-
-        final IconData pinIcon = isFood 
-            ? Icons.fastfood_rounded 
-            : (isEvent ? Icons.local_fire_department : Icons.nightlife);
-        final Color pinColor = isFood 
-            ? Colors.orange 
-            : (isEvent ? Colors.purpleAccent : Colors.blueAccent);
-        markers.add(
-          Marker(
-            point: place.location,
-            width: baseSize, 
-            height: baseSize,
-            rotate: true, 
-            child: GestureDetector(
-              onTap: () => _openDetails(context, place),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: pinColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2.5 * scale),
-                  boxShadow: [
-                    BoxShadow(
-                      color: pinColor.withValues(alpha: 0.5),
-                      blurRadius: 8 * scale,
-                      offset: Offset(0, 3 * scale),
-                    )
-                  ]
-                ),
-                child: Icon(
-                  pinIcon, 
-                  color: Colors.white, 
-                  size: iconSize,
-                ),
-              ),
-            ),
-          )
-        );
-      }
+          ),
+        )
+      );
     }
 
     if (squadState.isInSquad) {
@@ -573,7 +583,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF18181B) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  // FIX: Discord Green rand als je praat!
                   border: Border.all(
                     color: member.isSpeaking 
                         ? const Color(0xFF43B581) 
@@ -583,13 +592,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   boxShadow: [
                     if (member.isSpeaking)
                       BoxShadow(
-                        color: const Color(0xFF43B581).withValues(alpha: 0.6), // <-- Aangepast
+                        color: const Color(0xFF43B581).withValues(alpha: 0.6),
                         blurRadius: 15,
                         spreadRadius: 6,
                       )
                     else
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2), // <-- Aangepast
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       )

@@ -1,5 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 DO $$ BEGIN
     CREATE TYPE location_type AS ENUM ('club', 'food', 'emergency');
@@ -306,10 +307,6 @@ CREATE TRIGGER update_vibe_profiles_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================
--- ANALYTICS & TELEMETRY (FASE 4)
--- ============================================
-
 CREATE TABLE IF NOT EXISTS app_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id TEXT,
@@ -323,5 +320,100 @@ CREATE INDEX IF NOT EXISTS idx_app_events_created_at ON app_events(created_at DE
 
 ALTER TABLE app_events ENABLE ROW LEVEL SECURITY;
 
--- Iedereen mag events posten (ook anonieme gebruikers), maar niemand mag ze lezen (behalve jij via het Supabase dashboard)
 CREATE POLICY "Anyone can insert app_events" ON app_events FOR INSERT WITH CHECK (true);
+
+CREATE OR REPLACE FUNCTION get_venues_in_viewport(
+    min_lat FLOAT,
+    min_lng FLOAT,
+    max_lat FLOAT,
+    max_lng FLOAT
+)
+RETURNS SETOF venues
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT *
+    FROM venues
+    -- We casten het platte vierkant naar een ::geography bolling.
+    -- Omdat de 'location' kolom met rust wordt gelaten, knalt hij NU keihard door je GiST-index!
+    WHERE location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION calculate_and_update_vibes()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_venue RECORD;
+    v_time_score FLOAT;
+    v_checkin_score FLOAT;
+    v_squad_score FLOAT;
+    v_total_score FLOAT;
+    v_new_crowd_level TEXT;
+    v_current_hour INT;
+BEGIN
+    v_current_hour := EXTRACT(HOUR FROM (NOW() AT TIME ZONE 'Europe/Brussels'));
+
+    FOR v_venue IN SELECT * FROM venues LOOP
+        
+        IF v_current_hour >= 23 OR v_current_hour < 4 THEN
+            v_time_score := 10.0;
+        ELSIF v_current_hour >= 21 THEN
+            v_time_score := 6.0;
+        ELSIF v_current_hour >= 18 THEN
+            v_time_score := 3.0;
+        ELSE
+            v_time_score := 1.0;
+        END IF;
+
+        SELECT LEAST((COUNT(*) * 2.0), 10.0) INTO v_checkin_score
+        FROM vibe_actions
+        WHERE venue_id = v_venue.id
+          AND action_type = 'check_in'
+          AND created_at >= NOW() - INTERVAL '2 hours';
+
+        IF v_venue.location IS NOT NULL THEN
+            SELECT LEAST((COUNT(DISTINCT user_id) * 3.0), 10.0) INTO v_squad_score
+            FROM squad_members
+            WHERE ST_DWithin(
+                ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+                v_venue.location,
+                50 
+            )
+            AND updated_at >= NOW() - INTERVAL '30 minutes'; 
+        ELSE
+            v_squad_score := 0;
+        END IF;
+
+        v_total_score := (v_time_score * 0.4) + (v_checkin_score * 0.3) + (v_squad_score * 0.3);
+
+        IF v_total_score >= 8.0 THEN
+            v_new_crowd_level := 'Bomvol';
+        ELSIF v_total_score >= 6.0 THEN
+            v_new_crowd_level := 'Druk';
+        ELSIF v_total_score >= 4.0 THEN
+            v_new_crowd_level := 'Sfeervol';
+        ELSIF v_total_score >= 2.0 THEN
+            v_new_crowd_level := 'Gezellig';
+        ELSE
+            v_new_crowd_level := 'Rustig';
+        END IF;
+
+        UPDATE venues
+        SET crowd_level = v_new_crowd_level,
+            last_vibe_update = NOW()
+        WHERE id = v_venue.id;
+        
+    END LOOP;
+END;
+$$;
+
+SELECT cron.schedule(
+    'update-venue-vibes-every-5-mins',
+    '*/5 * * * *',
+    $$SELECT calculate_and_update_vibes();$$
+);

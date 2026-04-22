@@ -120,7 +120,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _placesFuture = ref.read(clubRepositoryProvider).getPlaces();
+    _placesFuture = ref.read(clubRepositoryProvider).getPlacesInViewport(49.4, 2.5, 51.6, 6.5);
     _pageController = PageController();
   }
 
@@ -455,7 +455,7 @@ class _HighlightCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                 place.eventName ?? place.genre ?? 'Event',
+                place.eventName ?? place.genre ?? 'Event',
                 style: const TextStyle(color: Colors.blueAccent, fontSize: 14),
               ),
               const Spacer(),

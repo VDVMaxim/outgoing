@@ -1,20 +1,36 @@
+import 'package:flutter/foundation.dart';
 import '../config/supabase_client.dart';
 import '../models/place.dart';
 import 'interfaces/club_repository.dart';
 
 class SupabaseClubRepository implements ClubRepository {
-  @override
-  Future<List<Place>> getPlaces() async {
+  
+  Future<List<Place>> _enrichPlaces(List<dynamic> placesList) async {
+    if (placesList.isEmpty) return [];
+    
     final client = SupabaseClientProvider.client;
-    final placesResponse = await client.from('venues').select();
+    final placeIds = placesList.map((p) => p['id'].toString()).toList();
 
-    final tagsWithNames = await client
-        .from('venue_tags')
-        .select('venue_id, tags:tag_id(name)');
+    final List<dynamic> tagsWithNames = [];
+    final List<dynamic> facilitiesWithNames = [];
+    const int chunkSize = 150;
 
-    final facilitiesWithNames = await client
-        .from('venue_facilities')
-        .select('venue_id, facilities:facility_id(name)');
+    for (var i = 0; i < placeIds.length; i += chunkSize) {
+      final end = (i + chunkSize < placeIds.length) ? i + chunkSize : placeIds.length;
+      final chunk = placeIds.sublist(i, end);
+
+      final tagsChunk = await client
+          .from('venue_tags')
+          .select('venue_id, tags:tag_id(name)')
+          .inFilter('venue_id', chunk);
+      tagsWithNames.addAll(tagsChunk);
+
+      final facilitiesChunk = await client
+          .from('venue_facilities')
+          .select('venue_id, facilities:facility_id(name)')
+          .inFilter('venue_id', chunk);
+      facilitiesWithNames.addAll(facilitiesChunk);
+    }
 
     final tagsByPlace = <String, List<String>>{};
     for (final tag in tagsWithNames) {
@@ -38,7 +54,7 @@ class SupabaseClubRepository implements ClubRepository {
       }
     }
 
-    return (placesResponse as List).map((json) {
+    return placesList.map((json) {
       final placeId = json['id'] as String;
       final enrichedJson = Map<String, dynamic>.from(json);
       enrichedJson['tags'] = tagsByPlace[placeId] ?? [];
@@ -48,39 +64,63 @@ class SupabaseClubRepository implements ClubRepository {
   }
 
   @override
+  Future<List<Place>> getPlacesInViewport(double minLat, double minLng, double maxLat, double maxLng) async {
+    final client = SupabaseClientProvider.client;
+
+    try {
+      final placesResponse = await client.rpc('get_venues_in_viewport', params: {
+        'min_lat': minLat,
+        'min_lng': minLng,
+        'max_lat': maxLat,
+        'max_lng': maxLng,
+      });
+
+      if (placesResponse == null) return [];
+      
+      final List<dynamic> placesList = List<dynamic>.from(placesResponse as Iterable<dynamic>);
+      return await _enrichPlaces(placesList);
+    } catch (e) {
+      debugPrint('🚨 CRASH PREVENTED in getPlacesInViewport: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Place>> getDiscoverPlaces() async {
+    final client = SupabaseClientProvider.client;
+
+    try {
+      final placesResponse = await client
+          .from('venues')
+          .select()
+          .or('location_type.eq.club,status.eq.event,is_flash_promo_active.eq.true')
+          .limit(1000);
+      
+      return await _enrichPlaces(placesResponse as List<dynamic>);
+    } catch (e) {
+      debugPrint('🚨 CRASH PREVENTED in getDiscoverPlaces: $e');
+      return [];
+    }
+  }
+
+  @override
   Future<Place?> getPlaceById(String id) async {
     final client = SupabaseClientProvider.client;
-    final placeResponse = await client
-        .from('venues')
-        .select()
-        .eq('id', id)
-        .maybeSingle();
 
-    if (placeResponse == null) return null;
+    try {
+      final placeResponse = await client
+          .from('venues')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
 
-    final tagsResponse = await client
-        .from('venue_tags')
-        .select('tags:tag_id(name)')
-        .eq('venue_id', id);
-
-    final facilitiesResponse = await client
-        .from('venue_facilities')
-        .select('facilities:facility_id(name)')
-        .eq('venue_id', id);
-
-    final enrichedJson = Map<String, dynamic>.from(placeResponse);
-    enrichedJson['tags'] = (tagsResponse as List)
-        .map((t) => (t['tags'] as Map<String, dynamic>?)?['name'] as String?)
-        .whereType<String>()
-        .toList();
-
-    enrichedJson['facilities'] = (facilitiesResponse as List)
-        .map(
-          (f) => (f['facilities'] as Map<String, dynamic>?)?['name'] as String?,
-        )
-        .whereType<String>()
-        .toList();
-
-    return Place.fromJson(enrichedJson);
+      if (placeResponse == null) return null;
+      
+      final result = await _enrichPlaces([placeResponse]);
+      return result.isNotEmpty ? result.first : null;
+    } catch (e) {
+      debugPrint('🚨 CRASH PREVENTED in getPlaceById: $e');
+      return null;
+    }
   }
 }

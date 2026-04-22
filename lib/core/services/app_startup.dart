@@ -7,7 +7,6 @@ enum AppStartupFailureKind { timeout, unknown }
 class AppStartupResult {
   const AppStartupResult._({required this.ok, this.failureKind, this.detail});
   const AppStartupResult.success() : this._(ok: true);
-
   factory AppStartupResult.failure(AppStartupFailureKind kind, {String? detail}) =>
       AppStartupResult._(ok: false, failureKind: kind, detail: detail);
 
@@ -23,7 +22,7 @@ class AppStartup {
   static Future<AppStartupResult> verify(ProviderContainer container) async {
     try {
       final repo = container.read(clubRepositoryProvider);
-      await repo.getPlaces().timeout(_placesTimeout, onTimeout: () => throw TimeoutException('places'));
+      await repo.getPlacesInViewport(49.4, 2.5, 51.6, 6.5).timeout(_placesTimeout, onTimeout: () => throw TimeoutException('places'));
       return const AppStartupResult.success();
     } on TimeoutException {
       return AppStartupResult.failure(AppStartupFailureKind.timeout);

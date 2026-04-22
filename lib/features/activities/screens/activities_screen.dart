@@ -24,7 +24,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
   @override
   void initState() {
     super.initState();
-    _placesFuture = ref.read(clubRepositoryProvider).getPlaces();
+    _placesFuture = ref.read(clubRepositoryProvider).getPlacesInViewport(49.4, 2.5, 51.6, 6.5);
   }
 
   @override
@@ -156,6 +156,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                     if (b.startTime == null) return -1;
                     return a.startTime!.compareTo(b.startTime!);
                   });
+
                   if (events.isEmpty) {
                     return Center(
                       child: Text(
@@ -261,7 +262,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                                     ),
                                   ],
                                 ),
-                               ],
+                              ],
                               if (place.startTime != null) ...[
                                 const SizedBox(height: 2),
                                 Row(
@@ -284,13 +285,13 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                             ],
                           ),
                           child: Padding(
-                             padding: const EdgeInsets.only(top: 12.0),
+                            padding: const EdgeInsets.only(top: 12.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (place.promo != null) ...[
                                   Text(
-                                     place.promo!,
+                                    place.promo!,
                                     style: TextStyle(
                                       color: place.isFlashPromoActive
                                           ? Colors.purpleAccent
