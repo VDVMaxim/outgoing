@@ -17,7 +17,7 @@ END $$;
 CREATE TABLE venues (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
-    address TEXT NOT NULL,
+    address TEXT,
     latitude FLOAT8 NOT NULL,
     longitude FLOAT8 NOT NULL,
     location geography(POINT, 4326),
@@ -29,13 +29,24 @@ CREATE TABLE venues (
     promo TEXT,
     is_flash_promo_active BOOLEAN DEFAULT false,
     poi TEXT,
-    crowd_level TEXT,
+    recent_likes INT DEFAULT 0,
+    recent_dislikes INT DEFAULT 0,
     wait_time TEXT,
+    opening_hours_raw TEXT,
     last_vibe_update TIMESTAMPTZ,
     is_vereniging BOOLEAN DEFAULT false,
     start_time TIME,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE opening_hours (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    venue_id UUID NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+    day_of_week INT NOT NULL,
+    open_time TIME NOT NULL,
+    close_time TIME NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE tags (
@@ -67,8 +78,7 @@ CREATE TABLE venue_facilities (
 CREATE TABLE vibe_checks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     venue_id UUID NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
-    crowd_level TEXT NOT NULL,
-    energy INT CHECK (energy >= 1 AND energy <= 10),
+    is_positive BOOLEAN NOT NULL DEFAULT true,
     user_id UUID,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -108,6 +118,8 @@ CREATE TABLE profiles (
 CREATE INDEX idx_venues_location_type ON venues(location_type);
 CREATE INDEX idx_venues_status ON venues(status);
 CREATE INDEX idx_venues_location ON venues USING GIST(location);
+CREATE INDEX idx_opening_hours_venue_id ON opening_hours(venue_id);
+CREATE INDEX idx_opening_hours_day_time ON opening_hours(day_of_week, open_time, close_time);
 CREATE INDEX idx_venue_tags_venue_id ON venue_tags(venue_id);
 CREATE INDEX idx_venue_tags_tag_id ON venue_tags(tag_id);
 CREATE INDEX idx_venue_facilities_venue_id ON venue_facilities(venue_id);
@@ -122,6 +134,7 @@ CREATE INDEX idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX idx_profiles_nickname ON profiles(nickname);
 
 ALTER TABLE venues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opening_hours ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE facilities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE venue_tags ENABLE ROW LEVEL SECURITY;
@@ -132,6 +145,7 @@ ALTER TABLE squad_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public can read venues" ON venues FOR SELECT USING (true);
+CREATE POLICY "Public can read opening_hours" ON opening_hours FOR SELECT USING (true);
 CREATE POLICY "Public can read tags" ON tags FOR SELECT USING (true);
 CREATE POLICY "Public can read facilities" ON facilities FOR SELECT USING (true);
 CREATE POLICY "Public can read venue_tags" ON venue_tags FOR SELECT USING (true);
@@ -336,8 +350,6 @@ BEGIN
     RETURN QUERY
     SELECT *
     FROM venues
-    -- We casten het platte vierkant naar een ::geography bolling.
-    -- Omdat de 'location' kolom met rust wordt gelaten, knalt hij NU keihard door je GiST-index!
     WHERE location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography;
 END;
 $$;
@@ -347,68 +359,25 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
-DECLARE
-    v_venue RECORD;
-    v_time_score FLOAT;
-    v_checkin_score FLOAT;
-    v_squad_score FLOAT;
-    v_total_score FLOAT;
-    v_new_crowd_level TEXT;
-    v_current_hour INT;
 BEGIN
-    v_current_hour := EXTRACT(HOUR FROM (NOW() AT TIME ZONE 'Europe/Brussels'));
-
-    FOR v_venue IN SELECT * FROM venues LOOP
-        
-        IF v_current_hour >= 23 OR v_current_hour < 4 THEN
-            v_time_score := 10.0;
-        ELSIF v_current_hour >= 21 THEN
-            v_time_score := 6.0;
-        ELSIF v_current_hour >= 18 THEN
-            v_time_score := 3.0;
-        ELSE
-            v_time_score := 1.0;
-        END IF;
-
-        SELECT LEAST((COUNT(*) * 2.0), 10.0) INTO v_checkin_score
-        FROM vibe_actions
-        WHERE venue_id = v_venue.id
-          AND action_type = 'check_in'
-          AND created_at >= NOW() - INTERVAL '2 hours';
-
-        IF v_venue.location IS NOT NULL THEN
-            SELECT LEAST((COUNT(DISTINCT user_id) * 3.0), 10.0) INTO v_squad_score
-            FROM squad_members
-            WHERE ST_DWithin(
-                ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
-                v_venue.location,
-                50 
-            )
-            AND updated_at >= NOW() - INTERVAL '30 minutes'; 
-        ELSE
-            v_squad_score := 0;
-        END IF;
-
-        v_total_score := (v_time_score * 0.4) + (v_checkin_score * 0.3) + (v_squad_score * 0.3);
-
-        IF v_total_score >= 8.0 THEN
-            v_new_crowd_level := 'Bomvol';
-        ELSIF v_total_score >= 6.0 THEN
-            v_new_crowd_level := 'Druk';
-        ELSIF v_total_score >= 4.0 THEN
-            v_new_crowd_level := 'Sfeervol';
-        ELSIF v_total_score >= 2.0 THEN
-            v_new_crowd_level := 'Gezellig';
-        ELSE
-            v_new_crowd_level := 'Rustig';
-        END IF;
-
-        UPDATE venues
-        SET crowd_level = v_new_crowd_level,
-            last_vibe_update = NOW()
-        WHERE id = v_venue.id;
-        
-    END LOOP;
+    WITH vibe_stats AS (
+        SELECT 
+            v.id AS venue_id,
+            COUNT(vc.id) FILTER (WHERE vc.is_positive = true) as likes,
+            COUNT(vc.id) FILTER (WHERE vc.is_positive = false) as dislikes
+        FROM venues v
+        LEFT JOIN vibe_checks vc 
+          ON v.id = vc.venue_id 
+          AND vc.created_at >= NOW() - INTERVAL '3 hours'
+        GROUP BY v.id
+    )
+    UPDATE venues v
+    SET 
+        recent_likes = vs.likes,
+        recent_dislikes = vs.dislikes,
+        last_vibe_update = NOW()
+    FROM vibe_stats vs
+    WHERE v.id = vs.venue_id;
 END;
 $$;
 

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
 import '../config/supabase_client.dart';
 import '../models/place.dart';
 import 'interfaces/club_repository.dart';
@@ -13,6 +14,7 @@ class SupabaseClubRepository implements ClubRepository {
 
     final List<dynamic> tagsWithNames = [];
     final List<dynamic> facilitiesWithNames = [];
+    final List<dynamic> openingHoursList = [];
     const int chunkSize = 150;
 
     for (var i = 0; i < placeIds.length; i += chunkSize) {
@@ -30,6 +32,13 @@ class SupabaseClubRepository implements ClubRepository {
           .select('venue_id, facilities:facility_id(name)')
           .inFilter('venue_id', chunk);
       facilitiesWithNames.addAll(facilitiesChunk);
+
+      final hoursChunk = await client
+          .from('opening_hours')
+          .select()
+          .inFilter('venue_id', chunk)
+          .order('day_of_week', ascending: true);
+      openingHoursList.addAll(hoursChunk);
     }
 
     final tagsByPlace = <String, List<String>>{};
@@ -37,9 +46,7 @@ class SupabaseClubRepository implements ClubRepository {
       final placeId = tag['venue_id'] as String;
       final tagData = tag['tags'];
       if (tagData != null && tagData['name'] != null) {
-        tagsByPlace
-            .putIfAbsent(placeId, () => [])
-            .add(tagData['name'] as String);
+        tagsByPlace.putIfAbsent(placeId, () => []).add(tagData['name'] as String);
       }
     }
 
@@ -48,10 +55,14 @@ class SupabaseClubRepository implements ClubRepository {
       final placeId = facility['venue_id'] as String;
       final facilityData = facility['facilities'];
       if (facilityData != null && facilityData['name'] != null) {
-        facilitiesByPlace
-            .putIfAbsent(placeId, () => [])
-            .add(facilityData['name'] as String);
+        facilitiesByPlace.putIfAbsent(placeId, () => []).add(facilityData['name'] as String);
       }
+    }
+
+    final hoursByPlace = <String, List<dynamic>>{};
+    for (final hour in openingHoursList) {
+      final placeId = hour['venue_id'] as String;
+      hoursByPlace.putIfAbsent(placeId, () => []).add(hour);
     }
 
     return placesList.map((json) {
@@ -59,6 +70,7 @@ class SupabaseClubRepository implements ClubRepository {
       final enrichedJson = Map<String, dynamic>.from(json);
       enrichedJson['tags'] = tagsByPlace[placeId] ?? [];
       enrichedJson['facilities'] = facilitiesByPlace[placeId] ?? [];
+      enrichedJson['opening_hours'] = hoursByPlace[placeId] ?? [];
       return Place.fromJson(enrichedJson);
     }).toList();
   }
@@ -86,17 +98,29 @@ class SupabaseClubRepository implements ClubRepository {
   }
 
   @override
-  Future<List<Place>> getDiscoverPlaces() async {
+  Future<List<Place>> getDiscoverPlaces({LatLng? userLocation}) async {
     final client = SupabaseClientProvider.client;
 
     try {
       final placesResponse = await client
           .from('venues')
           .select()
-          .or('location_type.eq.club,status.eq.event,is_flash_promo_active.eq.true')
-          .limit(1000);
+          .limit(300);
       
-      return await _enrichPlaces(placesResponse as List<dynamic>);
+      final enriched = await _enrichPlaces(placesResponse as List<dynamic>);
+
+      if (userLocation != null) {
+        const distance = Distance();
+        enriched.sort((a, b) {
+          final distA = distance.as(LengthUnit.Meter, userLocation, a.location);
+          final distB = distance.as(LengthUnit.Meter, userLocation, b.location);
+          return distA.compareTo(distB);
+        });
+      } else {
+        enriched.sort((a, b) => b.hotnessScore.compareTo(a.hotnessScore));
+      }
+
+      return enriched.take(100).toList();
     } catch (e) {
       debugPrint('🚨 CRASH PREVENTED in getDiscoverPlaces: $e');
       return [];

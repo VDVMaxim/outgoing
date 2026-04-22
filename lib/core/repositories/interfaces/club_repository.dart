@@ -1,7 +1,8 @@
+import 'package:latlong2/latlong.dart';
 import '../../models/place.dart';
 
 abstract class ClubRepository {
   Future<List<Place>> getPlacesInViewport(double minLat, double minLng, double maxLat, double maxLng);
-  Future<List<Place>> getDiscoverPlaces();
+  Future<List<Place>> getDiscoverPlaces({LatLng? userLocation});
   Future<Place?> getPlaceById(String id);
 }

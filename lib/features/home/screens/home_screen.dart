@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
+import 'package:flutter_clubapp/core/services/location_service.dart';
 import 'package:flutter_clubapp/core/widgets/badge_vault.dart';
-import '../../clubs/widgets/club_bottom_sheet.dart';
+import '../../places/widgets/place_bottom_sheet.dart';
 import '../../../main.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -120,8 +122,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _placesFuture = ref.read(clubRepositoryProvider).getPlacesInViewport(49.4, 2.5, 51.6, 6.5);
     _pageController = PageController();
+    _fetchData();
+  }
+
+  void _fetchData() {
+    _placesFuture = _loadPlaces();
+  }
+
+  Future<List<Place>> _loadPlaces() async {
+    LatLng? userLocation;
+    try {
+      final pos = await LocationService.instance.getCurrentPosition();
+      if (pos != null) {
+        userLocation = LatLng(pos.latitude, pos.longitude);
+      }
+    } catch (_) {}
+    return ref.read(clubRepositoryProvider).getDiscoverPlaces(userLocation: userLocation);
   }
 
   @override
@@ -135,7 +152,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ClubBottomSheet(place: place),
+      builder: (context) => PlaceBottomSheet(place: place),
     );
   }
 
@@ -165,16 +182,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               }
 
               final allPlaces = snapshot.data ?? [];
+              
               final featured = allPlaces
                   .where((p) => p.status == ClubStatus.event || p.promo != null)
                   .take(5)
                   .toList();
-              final trending = allPlaces
-                  .where(
-                    (p) => p.crowdLevel == 'Sfeervol' || p.crowdLevel == 'Druk',
-                  )
-                  .take(3)
-                  .toList();
+                  
+              final trendingList = allPlaces.where((p) => p.hotnessScore > 0).toList();
+              trendingList.sort((a, b) => b.hotnessScore.compareTo(a.hotnessScore));
+              final trending = trendingList.take(3).toList();
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -348,7 +364,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  'Vibe: ${place.crowdLevel}',
+                                  place.recentLikes > 0 ? '🔥 ${place.recentLikes} Vibes' : 'Nieuw',
                                   style: const TextStyle(color: Colors.grey),
                                 ),
                                 trailing: Icon(

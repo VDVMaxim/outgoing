@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/favorites_provider.dart';
-import '../../clubs/widgets/club_bottom_sheet.dart';
+import 'package:flutter_clubapp/core/services/location_service.dart';
+import '../../places/widgets/place_bottom_sheet.dart';
 import '../../../main.dart';
 
 class ActivitiesScreen extends ConsumerStatefulWidget {
@@ -24,7 +26,22 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
   @override
   void initState() {
     super.initState();
-    _placesFuture = ref.read(clubRepositoryProvider).getPlacesInViewport(49.4, 2.5, 51.6, 6.5);
+    _fetchData();
+  }
+
+  void _fetchData() {
+    _placesFuture = _loadPlaces();
+  }
+
+  Future<List<Place>> _loadPlaces() async {
+    LatLng? userLocation;
+    try {
+      final pos = await LocationService.instance.getCurrentPosition();
+      if (pos != null) {
+        userLocation = LatLng(pos.latitude, pos.longitude);
+      }
+    } catch (_) {}
+    return ref.read(clubRepositoryProvider).getDiscoverPlaces(userLocation: userLocation);
   }
 
   @override
@@ -38,7 +55,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ClubBottomSheet(place: place),
+      builder: (context) => PlaceBottomSheet(place: place),
     );
   }
 
@@ -308,7 +325,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                                     Row(
                                       children: [
                                         Icon(
-                                          Icons.people,
+                                          Icons.local_fire_department,
                                           size: 16,
                                           color: isDark
                                               ? Colors.white54
@@ -316,7 +333,9 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          place.crowdLevel ?? l10n.activitiesUnknownCrowd,
+                                          place.recentLikes > 0 
+                                              ? '${place.recentLikes} Vibes' 
+                                              : l10n.activitiesUnknownCrowd,
                                           style: TextStyle(
                                             color: isDark
                                                 ? Colors.white54

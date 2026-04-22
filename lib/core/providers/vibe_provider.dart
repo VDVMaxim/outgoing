@@ -100,7 +100,7 @@ class VibeNotifier extends StateNotifier<VibeState> {
     }
   }
 
-  Future<bool> updateVibe(String placeId) async {
+  Future<bool> updateVibe(String placeId, {required bool isPositive}) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return false;
 
@@ -110,6 +110,12 @@ class VibeNotifier extends StateNotifier<VibeState> {
         actionType: VibeActionType.vibeUpdate,
         placeId: placeId,
       );
+
+      await Supabase.instance.client.from('vibe_checks').insert({
+        'venue_id': placeId,
+        'is_positive': isPositive,
+        'user_id': userId,
+      });
 
       final rank = await _repository.getRank(userId);
       final recentActions = await _repository.getRecentActions(userId);
@@ -140,7 +146,6 @@ class VibeNotifier extends StateNotifier<VibeState> {
       final rank = await _repository.getRank(userId);
       state = state.copyWith(profile: profile, rank: rank);
       return true;
-
     } catch (e) {
       state = state.copyWith(error: e.toString());
       return false;

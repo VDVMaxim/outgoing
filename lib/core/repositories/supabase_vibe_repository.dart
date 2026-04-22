@@ -6,14 +6,14 @@ class SupabaseVibeRepository implements VibeRepository {
   @override
   Future<void> submitVibeCheck({
     required String placeId,
-    required String crowdLevel,
-    required int energy,
+    required bool isPositive,
   }) async {
     final client = SupabaseClientProvider.client;
+    
     await client.from('vibe_checks').insert({
       'venue_id': placeId,
-      'crowd_level': crowdLevel,
-      'energy': energy,
+      'is_positive': isPositive,
+      'user_id': client.auth.currentUser?.id,
     });
   }
 
@@ -23,6 +23,7 @@ class SupabaseVibeRepository implements VibeRepository {
     int limit = 10,
   }) async {
     final client = SupabaseClientProvider.client;
+
     final response = await client
         .from('vibe_checks')
         .select()

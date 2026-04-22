@@ -22,7 +22,7 @@ class AppStartup {
   static Future<AppStartupResult> verify(ProviderContainer container) async {
     try {
       final repo = container.read(clubRepositoryProvider);
-      await repo.getPlacesInViewport(49.4, 2.5, 51.6, 6.5).timeout(_placesTimeout, onTimeout: () => throw TimeoutException('places'));
+      await repo.getDiscoverPlaces().timeout(_placesTimeout, onTimeout: () => throw TimeoutException('places'));
       return const AppStartupResult.success();
     } on TimeoutException {
       return AppStartupResult.failure(AppStartupFailureKind.timeout);

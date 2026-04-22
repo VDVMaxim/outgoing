@@ -12,7 +12,7 @@ import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/main.dart';
-import '../../clubs/widgets/club_bottom_sheet.dart';
+import '../../places/widgets/place_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
 import '../../squad/providers/squad_provider.dart';
 
@@ -68,7 +68,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
-Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
+  Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
     final currentCamera = camera ?? _mapController.camera;
     final currentCenter = currentCamera.center;
     final currentZoom = currentCamera.zoom;
@@ -105,7 +105,9 @@ Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
     if (mounted) {
       setState(() {
         for (final p in places) {
-          _cachedPlaces[p.id] = p;
+          if (p.hasValidLocation) {
+            _cachedPlaces[p.id] = p;
+          }
         }
         _isLoading = false;
       });
@@ -186,20 +188,9 @@ Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
         }
       }
 
-      final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
-      
-      if (_currentZoom < 14.0 && isFood) {
-        return false;
-      }
-
       if (_currentZoom < 13.0) {
-        final isPopular = place.crowdLevel == 'Druk' || 
-                          place.crowdLevel == 'Bomvol' || 
-                          place.crowdLevel == 'Sfeervol' || 
-                          place.isFlashPromoActive ||
-                          place.status.toString().contains('event');
-                          
-        if (!isPopular) {
+        final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || place.status.toString().contains('event');
+        if (!isHot) {
           return false;
         }
       }
@@ -209,12 +200,12 @@ Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
   }
 
   void _openDetails(BuildContext context, Place place) {
-    ref.read(analyticsServiceProvider).logEvent('viewed_venue_details', parameters: {'venue_name': place.name});
+    ref.read(analyticsServiceProvider).logEvent('viewed_place_details', parameters: {'place_name': place.name});
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ClubBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
+      builder: (context) => PlaceBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
     );
   }
 
@@ -318,14 +309,6 @@ Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
-
-    if (_isLoading && _cachedPlaces.isEmpty) {
-      return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
     final squadState = ref.watch(squadProvider);
     final settings = ref.watch(settingsServiceProvider);
 
@@ -518,54 +501,153 @@ Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
 
   List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
     final markers = <Marker>[];
-    final activePlaces = _filteredPlaces;
+    
+    final activePlaces = _filteredPlaces.toList();
+    activePlaces.sort((a, b) => a.hotnessScore.compareTo(b.hotnessScore));
 
-    final double scale = (_currentZoom / 16.0).clamp(0.4, 1.1);
-    final double baseSize = 54.0 * scale;
-    final double iconSize = 26.0 * scale;
+    if (_currentZoom < 14.5) {
+      final poiGroups = <String, List<Place>>{};
+      for (final p in activePlaces) {
+        final poi = p.poi ?? 'Andere';
+        poiGroups.putIfAbsent(poi, () => []).add(p);
+      }
 
-    for (final place in activePlaces) {
-      final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
-      final isEvent = place.status.toString().contains('event');
+      for (final entry in poiGroups.entries) {
+        final poiName = entry.key;
+        final places = entry.value;
 
-      final IconData pinIcon = isFood 
-          ? Icons.fastfood_rounded 
-          : (isEvent ? Icons.local_fire_department : Icons.nightlife);
+        if (poiName == 'Andere') continue;
 
-      final Color pinColor = isFood 
-          ? Colors.orange 
-          : (isEvent ? Colors.purpleAccent : Colors.blueAccent);
+        double sumLat = 0, sumLng = 0;
+        for (var p in places) {
+          sumLat += p.location.latitude;
+          sumLng += p.location.longitude;
+        }
+        final centerPoint = LatLng(sumLat / places.length, sumLng / places.length);
 
-      markers.add(
-        Marker(
-          point: place.location,
-          width: baseSize, 
-          height: baseSize,
-          rotate: true, 
-          child: GestureDetector(
-            onTap: () => _openDetails(context, place),
-            child: Container(
-              decoration: BoxDecoration(
-                color: pinColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2.5 * scale),
-                boxShadow: [
-                  BoxShadow(
-                    color: pinColor.withValues(alpha: 0.5),
-                    blurRadius: 8 * scale,
-                    offset: Offset(0, 3 * scale),
-                  )
-                ]
-              ),
-              child: Icon(
-                pinIcon, 
-                color: Colors.white, 
-                size: iconSize,
+        markers.add(
+          Marker(
+            point: centerPoint,
+            width: 140, 
+            height: 48,
+            rotate: true, 
+            child: GestureDetector(
+              onTap: () {
+                _mapController.move(centerPoint, 15.5);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.blueAccent, width: 2),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 3))
+                  ]
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      poiName, 
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      )
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.blueAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${places.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  ],
+                ),
               ),
             ),
-          ),
-        )
-      );
+          )
+        );
+      }
+    } 
+    else {
+      final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
+      final double baseSize = 54.0 * scale;
+      final double iconSize = 26.0 * scale;
+
+      for (final place in activePlaces) {
+        final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
+        final isEvent = place.status.toString().contains('event');
+        final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || isEvent;
+
+        if (!isHot && _currentZoom < 15.5) {
+          final Color dotColor = isFood ? Colors.orange.withValues(alpha: 0.6) : Colors.blueAccent.withValues(alpha: 0.6);
+          markers.add(
+            Marker(
+              point: place.location,
+              width: 12,
+              height: 12,
+              rotate: true,
+              child: GestureDetector(
+                onTap: () => _openDetails(context, place),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: dotColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: isDark ? Colors.white24 : Colors.black12, width: 1),
+                  ),
+                ),
+              ),
+            )
+          );
+        } else {
+          final IconData pinIcon = isFood 
+              ? Icons.fastfood_rounded 
+              : (isHot ? Icons.local_fire_department : Icons.nightlife);
+
+          final Color pinColor = isFood 
+              ? Colors.orange 
+              : (isHot ? Colors.purpleAccent : Colors.blueAccent);
+
+          markers.add(
+            Marker(
+              point: place.location,
+              width: baseSize, 
+              height: baseSize,
+              rotate: true, 
+              child: GestureDetector(
+                onTap: () => _openDetails(context, place),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: pinColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2.5 * scale),
+                    boxShadow: [
+                      BoxShadow(
+                        color: pinColor.withValues(alpha: 0.5),
+                        blurRadius: 8 * scale,
+                        offset: Offset(0, 3 * scale),
+                      )
+                    ]
+                  ),
+                  child: Icon(
+                    pinIcon, 
+                    color: Colors.white, 
+                    size: iconSize,
+                  ),
+                ),
+              ),
+            )
+          );
+        }
+      }
     }
 
     if (squadState.isInSquad) {

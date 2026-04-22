@@ -1,4 +1,5 @@
 import 'package:latlong2/latlong.dart';
+import 'opening_hour.dart';
 
 enum LocationType { club, food, emergency }
 
@@ -7,7 +8,7 @@ enum ClubStatus { open, event, closed }
 class Place {
   final String id;
   final String name;
-  final String address;
+  final String? address;
   final LatLng location;
   final LocationType type;
   final String? genre;
@@ -18,8 +19,11 @@ class Place {
   final String? promo;
   final bool isFlashPromoActive;
   final String? poi;
-  final String? crowdLevel;
+  final int recentLikes;
+  final int recentDislikes;
   final String? waitTime;
+  final String? openingHoursRaw;
+  final List<OpeningHour> openingHours;
   final DateTime? lastVibeUpdate;
   final List<String> facilities;
   final bool isVereniging;
@@ -28,7 +32,7 @@ class Place {
   const Place({
     required this.id,
     required this.name,
-    required this.address,
+    this.address,
     required this.location,
     required this.type,
     this.genre,
@@ -39,19 +43,26 @@ class Place {
     this.promo,
     this.isFlashPromoActive = false,
     this.poi,
-    this.crowdLevel,
+    this.recentLikes = 0,
+    this.recentDislikes = 0,
     this.waitTime,
+    this.openingHoursRaw,
+    this.openingHours = const [],
     this.lastVibeUpdate,
     this.facilities = const [],
     this.isVereniging = false,
     this.startTime,
   });
 
+  int get hotnessScore => recentLikes - recentDislikes;
+
+  bool get hasValidLocation => location.latitude != 0.0 && location.longitude != 0.0;
+
   factory Place.fromJson(Map<String, dynamic> json) {
     return Place(
       id: json['id'] as String,
       name: json['name'] as String,
-      address: json['address'] as String,
+      address: json['address'] as String?,
       location: LatLng(
         (json['latitude'] as num).toDouble(),
         (json['longitude'] as num).toDouble(),
@@ -71,8 +82,14 @@ class Place {
       promo: json['promo'] as String?,
       isFlashPromoActive: json['is_flash_promo_active'] as bool? ?? false,
       poi: json['poi'] as String?,
-      crowdLevel: json['crowd_level'] as String?,
+      recentLikes: json['recent_likes'] as int? ?? 0,
+      recentDislikes: json['recent_dislikes'] as int? ?? 0,
       waitTime: json['wait_time'] as String?,
+      openingHoursRaw: json['opening_hours_raw'] as String?,
+      openingHours: (json['opening_hours'] as List<dynamic>?)
+              ?.map((e) => OpeningHour.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       lastVibeUpdate: json['last_vibe_update'] != null
           ? DateTime.parse(json['last_vibe_update'] as String)
           : null,
@@ -100,8 +117,11 @@ class Place {
       'promo': promo,
       'is_flash_promo_active': isFlashPromoActive,
       'poi': poi,
-      'crowd_level': crowdLevel,
+      'recent_likes': recentLikes,
+      'recent_dislikes': recentDislikes,
       'wait_time': waitTime,
+      'opening_hours_raw': openingHoursRaw,
+      'opening_hours': openingHours.map((e) => e.toJson()).toList(),
       'last_vibe_update': lastVibeUpdate?.toIso8601String(),
       'facilities': facilities,
       'is_vereniging': isVereniging,
@@ -138,8 +158,11 @@ class Place {
     String? promo,
     bool? isFlashPromoActive,
     String? poi,
-    String? crowdLevel,
+    int? recentLikes,
+    int? recentDislikes,
     String? waitTime,
+    String? openingHoursRaw,
+    List<OpeningHour>? openingHours,
     DateTime? lastVibeUpdate,
     List<String>? facilities,
     bool? isVereniging,
@@ -159,8 +182,11 @@ class Place {
       promo: promo ?? this.promo,
       isFlashPromoActive: isFlashPromoActive ?? this.isFlashPromoActive,
       poi: poi ?? this.poi,
-      crowdLevel: crowdLevel ?? this.crowdLevel,
+      recentLikes: recentLikes ?? this.recentLikes,
+      recentDislikes: recentDislikes ?? this.recentDislikes,
       waitTime: waitTime ?? this.waitTime,
+      openingHoursRaw: openingHoursRaw ?? this.openingHoursRaw,
+      openingHours: openingHours ?? this.openingHours,
       lastVibeUpdate: lastVibeUpdate ?? this.lastVibeUpdate,
       facilities: facilities ?? this.facilities,
       isVereniging: isVereniging ?? this.isVereniging,
