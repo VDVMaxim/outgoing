@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +42,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   
   LatLng? _lastFetchCenter;
   double? _lastFetchZoom;
+
+  // NIEUW: Houdt bij welke Place we momenteel bekijken in de BottomSheet
+  String? _selectedPlaceId;
 
   @override
   void initState() {
@@ -199,14 +203,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }).toList();
   }
 
-  void _openDetails(BuildContext context, Place place) {
+  Future<void> _openDetails(BuildContext context, Place place) async {
     ref.read(analyticsServiceProvider).logEvent('viewed_place_details', parameters: {'place_name': place.name});
-    showModalBottomSheet(
+    
+    // Zet de pin als "geselecteerd" zodat de map hem prachtig highlight
+    setState(() => _selectedPlaceId = place.id);
+    
+    // Wacht tot de bottomsheet weer wordt weggesleept
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => PlaceBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
     );
+
+    // Verwijder de selectie
+    if (mounted) {
+      setState(() => _selectedPlaceId = null);
+    }
   }
 
   void _showFilterSheet(BuildContext context, bool isDark) {
@@ -307,7 +321,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     final squadState = ref.watch(squadProvider);
     final settings = ref.watch(settingsServiceProvider);
@@ -499,90 +512,82 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
+List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
     final markers = <Marker>[];
     
     final activePlaces = _filteredPlaces.toList();
     activePlaces.sort((a, b) => a.hotnessScore.compareTo(b.hotnessScore));
 
-    if (_currentZoom < 14.5) {
-      final poiGroups = <String, List<Place>>{};
-      for (final p in activePlaces) {
-        final poi = p.poi ?? 'Andere';
-        poiGroups.putIfAbsent(poi, () => []).add(p);
+    final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
+    final double baseSize = 54.0 * scale;
+    final double iconSize = 26.0 * scale;
+
+    // FIX 1: Discrete zoom-levels (.floor) zodat clustering niet meer zenuwachtig flikkert tijdens het zoomen
+    final int discreteZoom = _currentZoom.floor();
+    final bool doClustering = _currentZoom < 14.5;
+    final double gridSize = doClustering ? 0.003 * math.pow(2, 14.5 - discreteZoom).toDouble() : 0.0;
+    
+    final Map<String, List<Place>> clusters = {};
+    Place? selectedPlace;
+
+    for (final place in activePlaces) {
+      if (place.id == _selectedPlaceId) {
+        selectedPlace = place;
+        continue; 
       }
 
-      for (final entry in poiGroups.entries) {
-        final poiName = entry.key;
-        final places = entry.value;
+      if (doClustering) {
+        final int gridX = (place.location.longitude / gridSize).round();
+        final int gridY = (place.location.latitude / gridSize).round();
+        final String key = '$gridX,$gridY';
+        clusters.putIfAbsent(key, () => []).add(place);
+      } else {
+        clusters[place.id] = [place];
+      }
+    }
 
-        if (poiName == 'Andere') continue;
-
+    // 1. Teken de Clusters & Normale Pins
+    for (final cluster in clusters.values) {
+      if (cluster.length > 1) {
         double sumLat = 0, sumLng = 0;
-        for (var p in places) {
+        bool hasHot = false;
+
+        for (final p in cluster) {
           sumLat += p.location.latitude;
           sumLng += p.location.longitude;
+          if (p.hotnessScore >= 5 || p.isFlashPromoActive) hasHot = true;
         }
-        final centerPoint = LatLng(sumLat / places.length, sumLng / places.length);
 
-        markers.add(
-          Marker(
-            point: centerPoint,
-            width: 140, 
-            height: 48,
-            rotate: true, 
-            child: GestureDetector(
-              onTap: () {
-                _mapController.move(centerPoint, 15.5);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF18181B) : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.blueAccent, width: 2),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 3))
-                  ]
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      poiName, 
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black, 
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      )
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Colors.blueAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '${places.length}',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    )
-                  ],
+        final LatLng center = LatLng(sumLat / cluster.length, sumLng / cluster.length);
+        final Color clusterColor = hasHot ? Colors.purpleAccent : Colors.blueAccent;
+
+        markers.add(Marker(
+          point: center,
+          width: 52 * scale,
+          height: 52 * scale,
+          rotate: true, // FIX 2: Zorgt dat de marker altijd rechtop staat!
+          child: GestureDetector(
+            onTap: () {
+              _mapController.move(center, _currentZoom + 1.5);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: clusterColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2.5 * scale),
+                boxShadow: [BoxShadow(color: clusterColor.withValues(alpha: 0.5), blurRadius: 8 * scale)],
+              ),
+              child: Center(
+                child: Text(
+                  '${cluster.length}', 
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18 * scale)
                 ),
               ),
             ),
-          )
-        );
-      }
-    } 
-    else {
-      final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
-      final double baseSize = 54.0 * scale;
-      final double iconSize = 26.0 * scale;
-
-      for (final place in activePlaces) {
+          ),
+        ));
+      } else {
+        final place = cluster.first;
         final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
         final isEvent = place.status.toString().contains('event');
         final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || isEvent;
@@ -594,7 +599,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               point: place.location,
               width: 12,
               height: 12,
-              rotate: true,
+              rotate: true, // FIX 2: Altijd rechtop
               child: GestureDetector(
                 onTap: () => _openDetails(context, place),
                 child: Container(
@@ -608,20 +613,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             )
           );
         } else {
-          final IconData pinIcon = isFood 
-              ? Icons.fastfood_rounded 
-              : (isHot ? Icons.local_fire_department : Icons.nightlife);
-
-          final Color pinColor = isFood 
-              ? Colors.orange 
-              : (isHot ? Colors.purpleAccent : Colors.blueAccent);
+          final IconData pinIcon = isFood ? Icons.fastfood_rounded : (isHot ? Icons.local_fire_department : Icons.nightlife);
+          final Color pinColor = isFood ? Colors.orange : (isHot ? Colors.purpleAccent : Colors.blueAccent);
 
           markers.add(
             Marker(
               point: place.location,
               width: baseSize, 
               height: baseSize,
-              rotate: true, 
+              rotate: true, // FIX 2: Altijd rechtop
               child: GestureDetector(
                 onTap: () => _openDetails(context, place),
                 child: Container(
@@ -630,18 +630,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2.5 * scale),
                     boxShadow: [
-                      BoxShadow(
-                        color: pinColor.withValues(alpha: 0.5),
-                        blurRadius: 8 * scale,
-                        offset: Offset(0, 3 * scale),
-                      )
+                      BoxShadow(color: pinColor.withValues(alpha: 0.5), blurRadius: 8 * scale, offset: Offset(0, 3 * scale))
                     ]
                   ),
-                  child: Icon(
-                    pinIcon, 
-                    color: Colors.white, 
-                    size: iconSize,
-                  ),
+                  child: Icon(pinIcon, color: Colors.white, size: iconSize),
                 ),
               ),
             )
@@ -650,6 +642,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
 
+    // 2. Teken de Squad Members
     if (squadState.isInSquad) {
       for (final member in squadState.members) {
         markers.add(
@@ -657,7 +650,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             point: member.position,
             width: 160,
             height: 48,
-            rotate: true, 
+            rotate: true, // FIX 2: Altijd rechtop
             child: Center(
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
@@ -666,24 +659,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   color: isDark ? const Color(0xFF18181B) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: member.isSpeaking 
-                        ? const Color(0xFF43B581) 
-                        : (member.isOnline ? Colors.green : Colors.grey), 
+                    color: member.isSpeaking ? const Color(0xFF43B581) : (member.isOnline ? Colors.green : Colors.grey), 
                     width: member.isSpeaking ? 3 : 2
                   ),
                   boxShadow: [
                     if (member.isSpeaking)
-                      BoxShadow(
-                        color: const Color(0xFF43B581).withValues(alpha: 0.6),
-                        blurRadius: 15,
-                        spreadRadius: 6,
-                      )
+                      BoxShadow(color: const Color(0xFF43B581).withValues(alpha: 0.6), blurRadius: 15, spreadRadius: 6)
                     else
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      )
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 2))
                   ]
                 ),
                 child: Row(
@@ -699,11 +682,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       child: Center(
                         child: Text(
                           member.nickname.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white, 
-                            fontWeight: FontWeight.bold, 
-                            fontSize: 16
-                          ),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                       ),
                     ),
@@ -713,11 +692,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         member.nickname,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                     ),
                   ],
@@ -729,26 +704,53 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
 
+    // 3. Teken je Eigen Locatie
     if (_liveUserLocation != null && !squadState.isInSquad) {
       markers.add(
         Marker(
           point: _liveUserLocation!,
           width: 24,
           height: 24,
-          rotate: true,
+          rotate: true, // FIX 2: Altijd rechtop
           child: Container(
             decoration: BoxDecoration(
               color: Colors.blueAccent,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [BoxShadow(color: Colors.blueAccent.withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 2)]
+            ),
+          ),
+        )
+      );
+    }
+
+    // 4. Teken de GESELECTEERDE Place
+    if (selectedPlace != null) {
+      final isFood = selectedPlace.type.toString().contains('food') || selectedPlace.name.toLowerCase().contains('food');
+      final isEvent = selectedPlace.status.toString().contains('event');
+      final isHot = selectedPlace.hotnessScore >= 5 || selectedPlace.isFlashPromoActive || isEvent;
+      
+      final IconData pinIcon = isFood ? Icons.fastfood_rounded : (isHot ? Icons.local_fire_department : Icons.nightlife);
+      final Color pinColor = isFood ? Colors.orange : (isHot ? Colors.purpleAccent : Colors.blueAccent);
+
+      final double selectedSize = 68.0 * scale;
+
+      markers.add(
+        Marker(
+          point: selectedPlace.location,
+          width: selectedSize, 
+          height: selectedSize,
+          rotate: true, // FIX 2: Altijd rechtop
+          child: Container(
+            decoration: BoxDecoration(
+              color: pinColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4 * scale),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.blueAccent.withValues(alpha: 0.5),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                )
+                BoxShadow(color: pinColor, blurRadius: 16 * scale, spreadRadius: 4 * scale) 
               ]
             ),
+            child: Icon(pinIcon, color: Colors.white, size: 32 * scale),
           ),
         )
       );
