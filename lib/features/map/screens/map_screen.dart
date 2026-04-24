@@ -43,7 +43,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   LatLng? _lastFetchCenter;
   double? _lastFetchZoom;
 
-  // NIEUW: Houdt bij welke Place we momenteel bekijken in de BottomSheet
   String? _selectedPlaceId;
 
   @override
@@ -192,7 +191,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
       }
 
-      if (_currentZoom < 13.0) {
+      // FIX 3: Pas vanaf zoom 10.5 (Landelijk niveau) verbergen we de "koude" plekken om de map schoon te houden.
+      // Daarboven vertrouwen we gewoon op onze nieuwe clustering!
+      if (_currentZoom < 10.5) {
         final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || place.status.toString().contains('event');
         if (!isHot) {
           return false;
@@ -206,10 +207,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _openDetails(BuildContext context, Place place) async {
     ref.read(analyticsServiceProvider).logEvent('viewed_place_details', parameters: {'place_name': place.name});
     
-    // Zet de pin als "geselecteerd" zodat de map hem prachtig highlight
     setState(() => _selectedPlaceId = place.id);
     
-    // Wacht tot de bottomsheet weer wordt weggesleept
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -217,7 +216,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       builder: (context) => PlaceBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
     );
 
-    // Verwijder de selectie
     if (mounted) {
       setState(() => _selectedPlaceId = null);
     }
@@ -512,20 +510,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
+  List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
     final markers = <Marker>[];
     
     final activePlaces = _filteredPlaces.toList();
     activePlaces.sort((a, b) => a.hotnessScore.compareTo(b.hotnessScore));
 
-    final double scale = (_currentZoom / 16.0).clamp(0.6, 1.1);
+    // FIX 1: Dynamische schaling (breed bereik). Kleiner als je uitzoomt, groter als je inzoomt.
+    final double scale = (_currentZoom / 15.0).clamp(0.35, 1.15);
     final double baseSize = 54.0 * scale;
     final double iconSize = 26.0 * scale;
 
-    // FIX 1: Discrete zoom-levels (.floor) zodat clustering niet meer zenuwachtig flikkert tijdens het zoomen
+    // FIX 2: Oneindige Clustering die perfect dubbelt bij elke zoom-stap.
     final int discreteZoom = _currentZoom.floor();
     final bool doClustering = _currentZoom < 14.5;
-    final double gridSize = doClustering ? 0.003 * math.pow(2, 14.5 - discreteZoom).toDouble() : 0.0;
+    
+    // Bij zoom 14 = 0.004 raster. Bij zoom 13 = 0.008 raster, etc.
+    final double gridSize = doClustering ? 0.004 * math.pow(2, 14 - discreteZoom).toDouble() : 0.0;
     
     final Map<String, List<Place>> clusters = {};
     Place? selectedPlace;
@@ -565,7 +566,7 @@ List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
           point: center,
           width: 52 * scale,
           height: 52 * scale,
-          rotate: true, // FIX 2: Zorgt dat de marker altijd rechtop staat!
+          rotate: true,
           child: GestureDetector(
             onTap: () {
               _mapController.move(center, _currentZoom + 1.5);
@@ -599,7 +600,7 @@ List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
               point: place.location,
               width: 12,
               height: 12,
-              rotate: true, // FIX 2: Altijd rechtop
+              rotate: true,
               child: GestureDetector(
                 onTap: () => _openDetails(context, place),
                 child: Container(
@@ -621,7 +622,7 @@ List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
               point: place.location,
               width: baseSize, 
               height: baseSize,
-              rotate: true, // FIX 2: Altijd rechtop
+              rotate: true,
               child: GestureDetector(
                 onTap: () => _openDetails(context, place),
                 child: Container(
@@ -650,7 +651,7 @@ List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
             point: member.position,
             width: 160,
             height: 48,
-            rotate: true, // FIX 2: Altijd rechtop
+            rotate: true,
             child: Center(
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
@@ -711,7 +712,7 @@ List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
           point: _liveUserLocation!,
           width: 24,
           height: 24,
-          rotate: true, // FIX 2: Altijd rechtop
+          rotate: true,
           child: Container(
             decoration: BoxDecoration(
               color: Colors.blueAccent,
@@ -740,7 +741,7 @@ List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
           point: selectedPlace.location,
           width: selectedSize, 
           height: selectedSize,
-          rotate: true, // FIX 2: Altijd rechtop
+          rotate: true,
           child: Container(
             decoration: BoxDecoration(
               color: pinColor,
