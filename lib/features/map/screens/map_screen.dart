@@ -25,7 +25,7 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final Map<String, Place> _cachedPlaces = {};
   bool _isLoading = true;
@@ -44,11 +44,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   double? _lastFetchZoom;
 
   String? _selectedPlaceId;
+  bool _isPlacingPin = false;
+  DateTime _pinTargetTime = DateTime.now().add(const Duration(minutes: 30));
+  late AnimationController _fabAnimController;
 
   @override
   void initState() {
     super.initState();
     _liveUserLocation = widget.userLocation;
+    
+    _fabAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(analyticsServiceProvider).logEvent('opened_map');
     });
@@ -62,6 +70,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _debounce?.cancel();
     _locationSubscription?.cancel();
     _compassSubscription?.cancel();
+    _fabAnimController.dispose();
     super.dispose();
   }
 
@@ -82,19 +91,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final distanceScrolled = const Distance().as(LengthUnit.Meter, _lastFetchCenter!, currentCenter);
         final bounds = currentCamera.visibleBounds;
         final screenWidthMeters = const Distance().as(LengthUnit.Meter, bounds.southWest, bounds.southEast);
-        
         if (distanceScrolled < (screenWidthMeters * 0.4)) {
-          return; 
+          return;
         }
       }
     }
 
     setState(() => _isLoading = true);
-    
     final bounds = currentCamera.visibleBounds;
     final latDelta = bounds.northEast.latitude - bounds.southWest.latitude;
     final lngDelta = bounds.northEast.longitude - bounds.southWest.longitude;
-
     final minLat = bounds.southWest.latitude - (latDelta * 0.5);
     final maxLat = bounds.northEast.latitude + (latDelta * 0.5);
     final minLng = bounds.southWest.longitude - (lngDelta * 0.5);
@@ -104,7 +110,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _lastFetchZoom = currentZoom;
 
     final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng);
-
     if (mounted) {
       setState(() {
         for (final p in places) {
@@ -180,21 +185,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       bool matchesFilter = true;
       if (_selectedFilters.isNotEmpty) {
-        if (_selectedFilters.contains('club') && !place.type.toString().contains('club')) {
+        if (_selectedFilters.contains('club') && place.type != LocationType.club) {
           matchesFilter = false;
         }
-        if (_selectedFilters.contains('event') && !place.status.toString().contains('event')) {
+        if (_selectedFilters.contains('event') && place.status != ClubStatus.event) {
           matchesFilter = false;
         }
-        if (_selectedFilters.contains('__food__') && !place.type.toString().contains('food')) {
+        if (_selectedFilters.contains('__food__') && place.type != LocationType.food) {
           matchesFilter = false;
         }
       }
 
-      // FIX 3: Pas vanaf zoom 10.5 (Landelijk niveau) verbergen we de "koude" plekken om de map schoon te houden.
-      // Daarboven vertrouwen we gewoon op onze nieuwe clustering!
       if (_currentZoom < 10.5) {
-        final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || place.status.toString().contains('event');
+        final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || place.status == ClubStatus.event;
         if (!isHot) {
           return false;
         }
@@ -205,8 +208,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _openDetails(BuildContext context, Place place) async {
+    if (_isPlacingPin) return;
+
     ref.read(analyticsServiceProvider).logEvent('viewed_place_details', parameters: {'place_name': place.name});
-    
     setState(() => _selectedPlaceId = place.id);
     
     await showModalBottomSheet(
@@ -215,13 +219,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => PlaceBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
     );
-
     if (mounted) {
       setState(() => _selectedPlaceId = null);
     }
   }
 
   void _showFilterSheet(BuildContext context, bool isDark) {
+    if (_isPlacingPin) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -317,12 +321,31 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  Widget _buildAnimatedFab(Widget child, int index) {
+    return AnimatedBuilder(
+      animation: _fabAnimController,
+      builder: (context, child) {
+        final double start = index * 0.15;
+        final double end = start + 0.5;
+        final double t = ((_fabAnimController.value - start) / (end - start)).clamp(0.0, 1.0);
+        final curvedValue = Curves.easeInBack.transform(t);
+        return Transform.translate(
+          offset: Offset(curvedValue * 150, 0),
+          child: Opacity(
+            opacity: 1.0 - t,
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final squadState = ref.watch(squadProvider);
     final settings = ref.watch(settingsServiceProvider);
-
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
@@ -350,7 +373,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     if (camera.zoom != _currentZoom) {
                       setState(() => _currentZoom = camera.zoom);
                     }
-                    
                     _debounce?.cancel();
                     _debounce = Timer(const Duration(milliseconds: 300), () {
                       _fetchPlacesForCurrentBounds(camera: camera);
@@ -367,53 +389,67 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   MarkerLayer(markers: _buildMarkers(squadState, currentIsDark)),
                 ],
               ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: currentIsDark 
-                            ? const Color(0xFF18181B).withValues(alpha: 0.9) 
-                            : Colors.white.withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        cursorColor: currentIsDark ? Colors.white : Colors.black,
-                        style: TextStyle(color: currentIsDark ? Colors.white : Colors.black),
-                        decoration: InputDecoration(
-                          hintText: l10n.activitiesSearchHint,
-                          hintStyle: const TextStyle(color: Colors.grey),
-                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              Icons.tune, 
-                              color: _selectedFilters.isNotEmpty 
-                                  ? Colors.blueAccent 
-                                  : (currentIsDark ? Colors.white70 : Colors.black87),
-                            ),
-                            onPressed: () => _showFilterSheet(context, currentIsDark),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                        onChanged: (val) => setState(() => _searchQuery = val),
-                      ),
+              IgnorePointer(
+                ignoring: true,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: _isPlacingPin ? 1.0 : 0.0,
+                  child: const Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: 40.0),
+                      child: Icon(Icons.push_pin, size: 48, color: Colors.blueAccent),
                     ),
                   ),
                 ),
               ),
-              if (_isLoading)
+              if (!_isPlacingPin)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: currentIsDark 
+                              ? const Color(0xFF18181B).withValues(alpha: 0.9) 
+                              : Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          cursorColor: currentIsDark ? Colors.white : Colors.black,
+                          style: TextStyle(color: currentIsDark ? Colors.white : Colors.black),
+                          decoration: InputDecoration(
+                            hintText: l10n.activitiesSearchHint,
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                Icons.tune, 
+                                color: _selectedFilters.isNotEmpty 
+                                    ? Colors.blueAccent 
+                                    : (currentIsDark ? Colors.white70 : Colors.black87),
+                              ),
+                              onPressed: () => _showFilterSheet(context, currentIsDark),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          ),
+                          onChanged: (val) => setState(() => _searchQuery = val),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_isLoading && !_isPlacingPin)
                 Positioned(
                   top: 90,
                   left: 0,
@@ -434,76 +470,188 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
                   ),
                 ),
-            ]
-          ),
-          floatingActionButton: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (squadState.isInSquad) ...[
-                GestureDetector(
-                  onTapDown: (_) {
-                    if (settings.hapticsEnabled) HapticFeedback.mediumImpact();
-                    ref.read(squadProvider.notifier).setMute(false);
-                  },
-                  onTapUp: (_) {
-                    if (settings.hapticsEnabled) HapticFeedback.lightImpact();
-                    ref.read(squadProvider.notifier).setMute(true);
-                  },
-                  onTapCancel: () {
-                    if (!squadState.isMuted) {
-                      if (settings.hapticsEnabled) HapticFeedback.lightImpact();
-                      ref.read(squadProvider.notifier).setMute(true);
-                    }
-                  },
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16), 
-                      color: squadState.isMuted ? Colors.redAccent : Colors.green,
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
-                      ],
-                    ),
-                    child: Icon(
-                      squadState.isMuted ? Icons.mic_off : Icons.mic,
-                      color: Colors.white,
-                      size: 24,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutCubic,
+                bottom: _isPlacingPin ? 16 : -300, 
+                left: 16,
+                right: 16,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 250),
+                  opacity: _isPlacingPin ? 1.0 : 0.0,
+                  child: SafeArea(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: currentIsDark ? const Color(0xFF18181B) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(0, 5))],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Stel doeltijd in', 
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: currentIsDark ? Colors.white : Colors.black)),
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.fromDateTime(_pinTargetTime),
+                              );
+                              if (picked != null) {
+                                final now = DateTime.now();
+                                setState(() {
+                                  _pinTargetTime = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                                  if (_pinTargetTime.isBefore(now)) {
+                                    _pinTargetTime = _pinTargetTime.add(const Duration(days: 1));
+                                  }
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.blueAccent.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3), width: 2),
+                              ),
+                              child: Text(
+                                '${_pinTargetTime.hour.toString().padLeft(2, '0')}:${_pinTargetTime.minute.toString().padLeft(2, '0')}',
+                                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.blueAccent, letterSpacing: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ShadButton.ghost(
+                                  onPressed: () {
+                                    _fabAnimController.reverse();
+                                    setState(() => _isPlacingPin = false);
+                                  },
+                                  child: const Text('Annuleren'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ShadButton(
+                                  onPressed: () {
+                                    final center = _mapController.camera.center;
+                                    ref.read(squadProvider.notifier).createPin(center, _pinTargetTime);
+                                    _fabAnimController.reverse();
+                                    setState(() => _isPlacingPin = false);
+                                  },
+                                  child: const Text('Plaats Pin'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (_liveUserLocation != null) ...[
-                FloatingActionButton(
-                  heroTag: 'my_location_fab',
-                  onPressed: _onMyLocationTapped,
-                  backgroundColor: _isCompassMode 
-                      ? Colors.blueAccent 
-                      : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
-                  child: Icon(
-                    _isCompassMode ? Icons.explore : (_isFollowingUser ? Icons.my_location : Icons.location_searching), 
-                    color: _isCompassMode ? Colors.white : (currentIsDark ? Colors.white : Colors.black)
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              FloatingActionButton(
-                heroTag: 'squad_fab',
-                onPressed: () {
-                  showSquadSheet(context);
-                },
-                backgroundColor: squadState.isInSquad
-                    ? Colors.blueAccent
-                    : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
-                child: Icon(
-                  Icons.groups,
-                  color: squadState.isInSquad
-                      ? Colors.white
-                      : (currentIsDark ? Colors.white : Colors.black),
                 ),
               ),
             ]
+          ),
+          floatingActionButton: IgnorePointer(
+            ignoring: _isPlacingPin,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (squadState.isInSquad) ...[
+                  _buildAnimatedFab(
+                    FloatingActionButton(
+                      heroTag: 'place_pin_fab',
+                      onPressed: () {
+                        _fabAnimController.forward();
+                        setState(() {
+                          _isPlacingPin = true;
+                          _pinTargetTime = DateTime.now().add(const Duration(minutes: 30));
+                        });
+                      },
+                      backgroundColor: currentIsDark ? const Color(0xFF18181B) : Colors.white,
+                      child: const Icon(Icons.push_pin, color: Colors.blueAccent),
+                    ),
+                    0, 
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAnimatedFab(
+                    GestureDetector(
+                      onTapDown: (_) {
+                        if (settings.hapticsEnabled) HapticFeedback.mediumImpact();
+                        ref.read(squadProvider.notifier).setMute(false);
+                      },
+                      onTapUp: (_) {
+                        if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                        ref.read(squadProvider.notifier).setMute(true);
+                      },
+                      onTapCancel: () {
+                        if (!squadState.isMuted) {
+                          if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                          ref.read(squadProvider.notifier).setMute(true);
+                        }
+                      },
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16), 
+                          color: squadState.isMuted ? Colors.redAccent : Colors.green,
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
+                          ],
+                        ),
+                        child: Icon(
+                          squadState.isMuted ? Icons.mic_off : Icons.mic,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                    1, 
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_liveUserLocation != null) ...[
+                  _buildAnimatedFab(
+                    FloatingActionButton(
+                      heroTag: 'my_location_fab',
+                      onPressed: _onMyLocationTapped,
+                      backgroundColor: _isCompassMode 
+                          ? Colors.blueAccent 
+                          : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                      child: Icon(
+                        _isCompassMode ? Icons.explore : (_isFollowingUser ? Icons.my_location : Icons.location_searching), 
+                        color: _isCompassMode ? Colors.white : (currentIsDark ? Colors.white : Colors.black)
+                      ),
+                    ),
+                    2, 
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _buildAnimatedFab(
+                  FloatingActionButton(
+                    heroTag: 'squad_fab',
+                    onPressed: () {
+                      showSquadSheet(context);
+                    },
+                    backgroundColor: squadState.isInSquad
+                      ? Colors.blueAccent
+                        : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                    child: Icon(
+                      Icons.groups,
+                      color: squadState.isInSquad
+                          ? Colors.white
+                          : (currentIsDark ? Colors.white : Colors.black),
+                    ),
+                  ),
+                  3, 
+                ),
+              ]
+            ),
           )
         );
       }
@@ -512,31 +660,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   List<Marker> _buildMarkers(SquadProviderState squadState, bool isDark) {
     final markers = <Marker>[];
-    
     final activePlaces = _filteredPlaces.toList();
     activePlaces.sort((a, b) => a.hotnessScore.compareTo(b.hotnessScore));
 
-    // FIX 1: Dynamische schaling (breed bereik). Kleiner als je uitzoomt, groter als je inzoomt.
     final double scale = (_currentZoom / 15.0).clamp(0.35, 1.15);
     final double baseSize = 54.0 * scale;
     final double iconSize = 26.0 * scale;
 
-    // FIX 2: Oneindige Clustering die perfect dubbelt bij elke zoom-stap.
     final int discreteZoom = _currentZoom.floor();
     final bool doClustering = _currentZoom < 14.5;
-    
-    // Bij zoom 14 = 0.004 raster. Bij zoom 13 = 0.008 raster, etc.
     final double gridSize = doClustering ? 0.004 * math.pow(2, 14 - discreteZoom).toDouble() : 0.0;
     
     final Map<String, List<Place>> clusters = {};
     Place? selectedPlace;
-
     for (final place in activePlaces) {
       if (place.id == _selectedPlaceId) {
         selectedPlace = place;
         continue; 
       }
-
       if (doClustering) {
         final int gridX = (place.location.longitude / gridSize).round();
         final int gridY = (place.location.latitude / gridSize).round();
@@ -547,21 +688,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
 
-    // 1. Teken de Clusters & Normale Pins
     for (final cluster in clusters.values) {
       if (cluster.length > 1) {
         double sumLat = 0, sumLng = 0;
         bool hasHot = false;
-
         for (final p in cluster) {
           sumLat += p.location.latitude;
           sumLng += p.location.longitude;
           if (p.hotnessScore >= 5 || p.isFlashPromoActive) hasHot = true;
         }
-
         final LatLng center = LatLng(sumLat / cluster.length, sumLng / cluster.length);
         final Color clusterColor = hasHot ? Colors.purpleAccent : Colors.blueAccent;
-
         markers.add(Marker(
           point: center,
           width: 52 * scale,
@@ -589,10 +726,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ));
       } else {
         final place = cluster.first;
-        final isFood = place.type.toString().contains('food') || place.name.toLowerCase().contains('food');
-        final isEvent = place.status.toString().contains('event');
+        final isFood = place.type == LocationType.food || place.name.toLowerCase().contains('food');
+        final isEvent = place.status == ClubStatus.event;
         final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || isEvent;
-
         if (!isHot && _currentZoom < 15.5) {
           final Color dotColor = isFood ? Colors.orange.withValues(alpha: 0.6) : Colors.blueAccent.withValues(alpha: 0.6);
           markers.add(
@@ -616,7 +752,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         } else {
           final IconData pinIcon = isFood ? Icons.fastfood_rounded : (isHot ? Icons.local_fire_department : Icons.nightlife);
           final Color pinColor = isFood ? Colors.orange : (isHot ? Colors.purpleAccent : Colors.blueAccent);
-
           markers.add(
             Marker(
               point: place.location,
@@ -643,7 +778,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
 
-    // 2. Teken de Squad Members
     if (squadState.isInSquad) {
       for (final member in squadState.members) {
         markers.add(
@@ -703,9 +837,93 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           )
         );
       }
+
+      final currentMember = squadState.members.where((m) => m.isCurrentUser).firstOrNull;
+      final currentUserId = currentMember?.odmemberId;
+
+      for (final pin in squadState.pins) {
+        final joinedMembers = squadState.members.where((m) => pin.joinedUserIds.contains(m.odmemberId)).toList();
+        final hasJoined = currentUserId != null && pin.joinedUserIds.contains(currentUserId);
+        final timeStr = '${pin.targetTime.toLocal().hour.toString().padLeft(2, '0')}:${pin.targetTime.toLocal().minute.toString().padLeft(2, '0')}';
+        final double stackWidth = joinedMembers.isEmpty ? 0 : (joinedMembers.length * 32.0) - ((joinedMembers.length - 1) * 16.0);
+        markers.add(Marker(
+          point: pin.position,
+          width: 300, 
+          height: 100,
+          rotate: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF18181B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: isDark ? Colors.white24 : Colors.black87, width: 2),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(timeStr, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white : Colors.black)),
+                    ),
+                    if (joinedMembers.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: stackWidth,
+                        height: 32,
+                        child: Stack(
+                          children: List.generate(joinedMembers.length, (i) {
+                            final m = joinedMembers[i];
+                            return Positioned(
+                              left: i * 16.0, 
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: m.isOnline ? Colors.green : Colors.grey,
+                                  border: Border.all(color: isDark ? const Color(0xFF18181B) : Colors.white, width: 2),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    m.nickname.substring(0, 1).toUpperCase(),
+                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                    if (!hasJoined && currentUserId != null) ...[
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () => ref.read(squadProvider.notifier).joinPin(pin.id),
+                        child: const Text('Ik doe mee', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueAccent)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Transform.translate(
+                offset: const Offset(0, -5),
+                child: Icon(Icons.arrow_drop_down, size: 40, color: isDark ? Colors.white24 : Colors.black87),
+              ),
+            ],
+          ),
+        ));
+      }
     }
 
-    // 3. Teken je Eigen Locatie
     if (_liveUserLocation != null && !squadState.isInSquad) {
       markers.add(
         Marker(
@@ -725,17 +943,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     }
 
-    // 4. Teken de GESELECTEERDE Place
     if (selectedPlace != null) {
-      final isFood = selectedPlace.type.toString().contains('food') || selectedPlace.name.toLowerCase().contains('food');
-      final isEvent = selectedPlace.status.toString().contains('event');
+      final isFood = selectedPlace.type == LocationType.food || selectedPlace.name.toLowerCase().contains('food');
+      final isEvent = selectedPlace.status == ClubStatus.event;
       final isHot = selectedPlace.hotnessScore >= 5 || selectedPlace.isFlashPromoActive || isEvent;
-      
       final IconData pinIcon = isFood ? Icons.fastfood_rounded : (isHot ? Icons.local_fire_department : Icons.nightlife);
       final Color pinColor = isFood ? Colors.orange : (isHot ? Colors.purpleAccent : Colors.blueAccent);
-
       final double selectedSize = 68.0 * scale;
-
       markers.add(
         Marker(
           point: selectedPlace.location,
@@ -756,7 +970,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         )
       );
     }
-
     return markers;
   }
 }

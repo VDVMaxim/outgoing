@@ -144,7 +144,6 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                 valueListenable: FavoritesProvider.instance,
                 builder: (context, favorites, _) {
                   List<Place> events = allPlaces.where((p) {
-                    if (p.type != LocationType.club) return false;
                     if (p.status != ClubStatus.event && !p.isFlashPromoActive) {
                       return false;
                     }
@@ -311,7 +310,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                                     place.promo!,
                                     style: TextStyle(
                                       color: place.isFlashPromoActive
-                                          ? Colors.purpleAccent
+                                        ? Colors.purpleAccent
                                           : Colors.amber,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -334,7 +333,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                                         const SizedBox(width: 4),
                                         Text(
                                           place.recentLikes > 0 
-                                              ? '${place.recentLikes} Vibes' 
+                                            ? '${place.recentLikes} Vibes' 
                                               : l10n.activitiesUnknownCrowd,
                                           style: TextStyle(
                                             color: isDark

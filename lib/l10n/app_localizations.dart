@@ -106,12 +106,6 @@ abstract class AppLocalizations {
   /// **'Club App'**
   String get appName;
 
-  /// No description provided for @navHome.
-  ///
-  /// In nl, this message translates to:
-  /// **'Home'**
-  String get navHome;
-
   /// No description provided for @navMap.
   ///
   /// In nl, this message translates to:
@@ -285,30 +279,6 @@ abstract class AppLocalizations {
   /// In nl, this message translates to:
   /// **'Nickname moet minimaal 3 tekens zijn'**
   String get onboardingNicknameMinLength;
-
-  /// No description provided for @homeHighlightsTitle.
-  ///
-  /// In nl, this message translates to:
-  /// **'Top 3 Highlights'**
-  String get homeHighlightsTitle;
-
-  /// No description provided for @homeTrendingTitle.
-  ///
-  /// In nl, this message translates to:
-  /// **'Trending: Meest Populair'**
-  String get homeTrendingTitle;
-
-  /// No description provided for @homeAlertTitle.
-  ///
-  /// In nl, this message translates to:
-  /// **'Let op: Controleactie'**
-  String get homeAlertTitle;
-
-  /// No description provided for @homeAlertDesc.
-  ///
-  /// In nl, this message translates to:
-  /// **'Er is momenteel veel drukte en politiecontrole gemeld aan het begin van de Overpoortstraat. Wees voorzichtig.'**
-  String get homeAlertDesc;
 
   /// No description provided for @activitiesTitle.
   ///

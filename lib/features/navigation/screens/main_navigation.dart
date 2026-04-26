@@ -5,7 +5,6 @@ import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import '../../map/screens/map_screen.dart';
 import '../../activities/screens/activities_screen.dart';
 import '../../settings/screens/settings_screen.dart';
-import '../../home/screens/home_screen.dart';
 import '../../../main.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -41,7 +40,6 @@ class _MainNavigationState extends State<MainNavigation> {
                 child: IndexedStack(
                   index: _currentIndex,
                   children: [
-                    const HomeScreen(),
                     MapScreen(userLocation: widget.userLocation),
                     const ActivitiesScreen(),
                     const SettingsScreen(),
@@ -71,11 +69,6 @@ class _MainNavigationState extends State<MainNavigation> {
               currentIndex: _currentIndex,
               onTap: (index) => setState(() => _currentIndex = index),
               items: [
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.home_outlined),
-                  activeIcon: const Icon(Icons.home),
-                  label: AppLocalizations.of(context)!.navHome,
-                ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.map_outlined),
                   activeIcon: const Icon(Icons.map),

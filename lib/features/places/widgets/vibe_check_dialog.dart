@@ -20,7 +20,7 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
     setState(() => _isLoading = true);
 
     await ref.read(vibeProvider.notifier).updateVibe(widget.place.id, isPositive: isPositive);
-    
+
     ref.read(analyticsServiceProvider).logEvent('vibe_check_submitted', parameters: {
       'place_id': widget.place.id,
       'is_positive': isPositive,

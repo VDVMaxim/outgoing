@@ -2,7 +2,6 @@
   "@@locale": "nl",
   "appName": "Club App",
 
-  "navHome": "Home",
   "navMap": "Kaart",
   "navActivities": "Acties",
   "navSettings": "Instellingen",
@@ -34,11 +33,6 @@
   "onboardingSettingUp": "Account wordt ingesteld...",
   "onboardingNicknameRequired": "Voer een nickname in",
   "onboardingNicknameMinLength": "Nickname moet minimaal 3 tekens zijn",
-
-  "homeHighlightsTitle": "Top 3 Highlights",
-  "homeTrendingTitle": "Trending: Meest Populair",
-  "homeAlertTitle": "Let op: Controleactie",
-  "homeAlertDesc": "Er is momenteel veel drukte en politiecontrole gemeld aan het begin van de Overpoortstraat. Wees voorzichtig.",
 
   "activitiesTitle": "Activiteiten & Acties",
   "activitiesSearchHint": "Zoek vereniging, club, thema...",

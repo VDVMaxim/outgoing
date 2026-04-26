@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:flutter_clubapp/core/models/squad.dart';
 import 'package:flutter_clubapp/core/models/squad_member.dart' as models;
+import 'package:flutter_clubapp/core/models/squad_pin.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/repositories/interfaces/squad_repository.dart';
@@ -27,6 +28,7 @@ class SquadProviderState {
   final String? squadPin;
   final String? memberId;
   final List<SquadMemberDisplay> members;
+  final List<SquadPin> pins;
   final String? errorMessage;
   final bool isMuted;
 
@@ -36,6 +38,7 @@ class SquadProviderState {
     this.squadPin,
     this.memberId,
     this.members = const [],
+    this.pins = const [],
     this.errorMessage,
     this.isMuted = true,
   });
@@ -48,6 +51,7 @@ class SquadProviderState {
     String? squadPin,
     String? memberId,
     List<SquadMemberDisplay>? members,
+    List<SquadPin>? pins,
     String? errorMessage,
     bool? isMuted,
   }) {
@@ -57,6 +61,7 @@ class SquadProviderState {
       squadPin: squadPin ?? this.squadPin,
       memberId: memberId ?? this.memberId,
       members: members ?? this.members,
+      pins: pins ?? this.pins,
       errorMessage: errorMessage,
       isMuted: isMuted ?? this.isMuted,
     );
@@ -135,6 +140,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   Timer? _onlineCheckTimer;
   Timer? _dbAnalyticsTimer;
   StreamSubscription<List<models.SquadMember>>? _realtimeSubscription;
+  StreamSubscription<List<SquadPin>>? _pinsSubscription;
 
   VoidCallback? _onPositionPulse;
   LatLng? _lastSentPosition;
@@ -145,8 +151,6 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
   final Map<String, MediaStream> _remoteStreams = {};
   MediaStream? _localStream;
   RealtimeChannel? _signalingChannel;
-
-  // FIX: Bewaar het échte database-ID zodat de UI weet wie we zijn!
   String? _myDbUserId;
 
   SquadNotifier(this._ref) : super(const SquadProviderState());
@@ -204,11 +208,10 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         _userProfileService.nickname ?? 'Anonymous',
         userPosition,
       );
-      
+
       final squad = data['squad'] as Squad;
       final member = data['member'] as models.SquadMember;
       
-      // FIX: Stel het unieke database ID in!
       _myDbUserId = member.userId;
 
       state = state.copyWith(
@@ -225,6 +228,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       await _initWebRTC();
 
       _realtimeSubscription = _squadRepository.subscribeToSquad(squad.id).listen(_onSquadMembersUpdate);
+      _pinsSubscription = _squadRepository.subscribeToPins(squad.id).listen(_onPinsUpdate);
 
       _analytics.logEvent('squad_created', parameters: {'squad_id': squad.id});
       HapticFeedback.mediumImpact();
@@ -263,6 +267,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
     try {
       final squad = await _squadRepository.getSquadByPin(pin);
+
       if (squad == null) {
         state = state.copyWith(status: SquadConnectionStatus.error, errorMessage: 'Ongeldige squad PIN.');
         return state;
@@ -274,7 +279,6 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         userPosition,
       );
 
-      // FIX: Stel het unieke database ID in!
       _myDbUserId = member.userId;
 
       state = state.copyWith(
@@ -291,6 +295,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       await _initWebRTC();
 
       _realtimeSubscription = _squadRepository.subscribeToSquad(squad.id).listen(_onSquadMembersUpdate);
+      _pinsSubscription = _squadRepository.subscribeToPins(squad.id).listen(_onPinsUpdate);
 
       _analytics.logEvent('squad_joined', parameters: {'squad_id': squad.id});
       HapticFeedback.mediumImpact();
@@ -301,12 +306,28 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
     }
   }
 
+  Future<void> createPin(LatLng position, DateTime targetTime) async {
+    if (state.squadId == null || _myDbUserId == null) return;
+    await _squadRepository.createPin(state.squadId!, _myDbUserId!, position, targetTime);
+  }
+
+  Future<void> joinPin(String pinId) async {
+    if (_myDbUserId == null) return;
+    await _squadRepository.joinPin(pinId, _myDbUserId!);
+  }
+
+  void _onPinsUpdate(List<SquadPin> pins) {
+    state = state.copyWith(pins: pins);
+    _onPositionPulse?.call();
+  }
+
   Future<void> _initWebRTC() async {
     try {
       _localStream = await navigator.mediaDevices.getUserMedia({
         'audio': true,
         'video': false,
       });
+
       _localStream?.getAudioTracks().forEach((track) {
         track.enabled = !state.isMuted;
       });
@@ -331,8 +352,10 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   void _handleSignalingMessage(Map<String, dynamic> rawData) async {
     Map<String, dynamic> data = {};
+
     if (rawData.containsKey('payload')) {
       final innerPayload = rawData['payload'];
+
       if (innerPayload is Map) {
         if (innerPayload.containsKey('payload') && innerPayload['payload'] is Map) {
           data = innerPayload['payload'] as Map<String, dynamic>;
@@ -340,7 +363,8 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
           data = innerPayload as Map<String, dynamic>;
         }
       } else if (innerPayload is String) {
-        try { data = jsonDecode(innerPayload) as Map<String, dynamic>; } catch (_) {}
+        try { data = jsonDecode(innerPayload) as Map<String, dynamic>;
+        } catch (_) {}
       }
     } else {
       data = rawData;
@@ -352,6 +376,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
     if (signalType == null || userId == null) return;
     if (userId == _myDbUserId) return;
+
     if (targetUserId != null && targetUserId != _myDbUserId) return;
 
     try {
@@ -362,6 +387,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         case 'offer':
           await _createPeerConnection(userId, isInitiator: false);
           await _peers[userId]!.setRemoteDescription(RTCSessionDescription(data['sdp'], 'offer'));
+
           final answer = await _peers[userId]!.createAnswer();
           await _peers[userId]!.setLocalDescription(answer);
           _broadcastSignaling({
@@ -376,6 +402,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
             await _peers[userId]!.setRemoteDescription(RTCSessionDescription(data['sdp'], 'answer'));
           }
           break;
+
         case 'ice-candidate':
           if (_peers.containsKey(userId)) {
             await _peers[userId]!.addCandidate(RTCIceCandidate(
@@ -385,6 +412,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
             ));
           }
           break;
+
       }
     } catch (e) {
       debugPrint('❌ Fout tijdens _handleSignalingMessage verwerking: $e');
@@ -445,17 +473,20 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
       if (isInitiator) {
         final init = RTCDataChannelInit()..ordered = false..maxRetransmits = 0;
+
         final dc = await pc.createDataChannel('data', init);
         _setupDataChannel(peerId, dc);
 
         final offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+
         _broadcastSignaling({
           'signalType': 'offer',
           'userId': _myDbUserId,
           'targetUserId': peerId,
           'sdp': offer.sdp,
         });
+
       } else {
         pc.onDataChannel = (dc) {
           _setupDataChannel(peerId, dc);
@@ -468,18 +499,23 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   void _setupDataChannel(String peerId, RTCDataChannel dc) {
     _dataChannels[peerId] = dc;
+
     dc.onMessage = (message) {
       try {
         final data = jsonDecode(message.text);
+
         final msgType = data['type'];
         final sender = data['userId'] as String;
 
         if (msgType == 'pos') {
           final lat = data['lat'] as double;
+
           final lng = data['lng'] as double;
           _updateMemberStateFromWebRTC(sender, position: LatLng(lat, lng));
+
         } else if (msgType == 'ptt') {
           final isSpeaking = data['isSpeaking'] as bool;
+
           _updateMemberStateFromWebRTC(sender, isSpeaking: isSpeaking);
         }
       } catch (_) {}
@@ -497,6 +533,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
     if (state.isMuted == mute) return; 
     
     state = state.copyWith(isMuted: mute);
+
     _localStream?.getAudioTracks().forEach((track) {
       track.enabled = !mute;
     });
@@ -530,6 +567,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
           isOnline: true,
         );
       }
+  
       return m;
     }).toList();
     
@@ -571,8 +609,10 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
     try {
       final position = await _locationService.getCurrentPosition();
+
       if (position != null) {
         final currentPosition = LatLng(position.latitude, position.longitude);
+
         if (_shouldSendPositionUpdate(currentPosition)) {
           
           final posMsg = jsonEncode({
@@ -600,18 +640,22 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   bool _shouldSendPositionUpdate(LatLng currentPosition) {
     if (_lastSentPosition == null || _lastSentTime == null) return true;
+
     final distance = const Distance().as(LengthUnit.Meter, _lastSentPosition!, currentPosition);
     if (distance >= _positionUpdateThresholdMeters) return true;
     if (DateTime.now().difference(_lastSentTime!).inSeconds >= _positionUpdateFallbackSeconds) return true;
+
     return false;
   }
 
   void _checkOnlineStatus() {
     if (state.members.isEmpty) return;
+
     final updatedMembers = state.members.map((member) {
       final isOnline = DateTime.now().difference(member.lastUpdate).inMilliseconds < _offlineThresholdMs;
       return member.copyWith(isOnline: isOnline, isSpeaking: isOnline ? member.isSpeaking : false);
     }).toList();
+
     if (!_listEquals(updatedMembers, state.members)) {
       state = state.copyWith(members: updatedMembers);
     }
@@ -619,6 +663,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   void _onSquadMembersUpdate(List<models.SquadMember> modelMembers) {
     final cId = _myDbUserId ?? '';
+
     final currentMembersMap = {for (var m in state.members) m.odmemberId: m};
 
     final displayMembers = modelMembers.map((m) {
@@ -631,6 +676,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       return SquadMemberDisplay(
         id: m.id,
         odmemberId: m.userId,
+     
         nickname: m.nickname,
         avatarUrl: null,
         position: pos,
@@ -655,6 +701,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
     _onlineCheckTimer?.cancel();
     _dbAnalyticsTimer?.cancel();
     _realtimeSubscription?.cancel();
+    _pinsSubscription?.cancel();
     _locationService.stopTracking();
 
     for (final pc in _peers.values) { pc.close(); }
@@ -664,19 +711,22 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
     _localStream?.dispose();
     _localStream = null;
     _signalingChannel?.unsubscribe();
+
     _signalingChannel = null;
 
     if (state.squadId != null && _myDbUserId != null) {
       try {
         _squadRepository.leaveSquad(state.squadId!, _myDbUserId!);
       } catch (e) {
-        debugPrint('⚠️ Kon squad niet verlaten in DB: $e'); // <-- Ingevuld!
+        debugPrint('⚠️ Kon squad niet verlaten in DB: $e');
       }
     }
     _squadRepository.unsubscribeFromSquad();
+    _squadRepository.unsubscribeFromPins();
 
     _myDbUserId = null;
     state = const SquadProviderState();
+
     _onPositionPulse = null;
     _lastSentPosition = null;
     _lastSentTime = null;
@@ -684,6 +734,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
 
   bool _listEquals(List<SquadMemberDisplay> a, List<SquadMemberDisplay> b) {
     if (a.length != b.length) return false;
+
     for (int i = 0; i < a.length; i++) {
       if (a[i].id != b[i].id || 
           a[i].position.latitude != b[i].position.latitude || 

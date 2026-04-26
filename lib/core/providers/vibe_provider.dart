@@ -112,7 +112,7 @@ class VibeNotifier extends StateNotifier<VibeState> {
       );
 
       await Supabase.instance.client.from('vibe_checks').insert({
-        'venue_id': placeId,
+        'place_id': placeId,
         'is_positive': isPositive,
         'user_id': userId,
       });

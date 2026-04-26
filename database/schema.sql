@@ -1,9 +1,17 @@
+drop schema public cascade;
+create schema public;
+
+-- ==========================================
+-- 0. RE-ESTABLISH BASE PERMISSIONS (CRITICAL AFTER DROP SCHEMA)
+-- ==========================================
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
 -- ==========================================
 -- 1. EXTENSIONS
 -- ==========================================
--- Zorg ervoor dat de pg_uuidv7 of vergelijkbare extensie/functie aanstaat in Supabase
--- Als Supabase standaard uuid_generate_v7() nog niet herkent, gebruik dan tijdelijk gen_random_uuid() 
--- of activeer de juiste pg_uuidv7 extensie in je dashboard.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS postgis;
 
@@ -13,7 +21,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- De hoofd-tabel (Gevoed door OpenStreetMap)
 CREATE TABLE osm_places (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     address TEXT,
     latitude FLOAT8 NOT NULL,
@@ -33,7 +41,7 @@ CREATE TABLE osm_places (
 
 -- De Shadow Table (Append-Only geschiedenis van aanpassingen)
 CREATE TABLE place_overrides (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
     name TEXT,
     address TEXT,
@@ -43,12 +51,10 @@ CREATE TABLE place_overrides (
     location_type TEXT,
     updated_by UUID REFERENCES auth.users(id),
     created_at TIMESTAMPTZ DEFAULT NOW()
-    -- GEEN unique constraint meer op place_id: we bouwen een historie op!
-    -- GEEN updated_at meer, want we updaten rijen niet, we voegen nieuwe toe.
 );
 
 CREATE TABLE opening_hours (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
     day_of_week INT NOT NULL,
     open_time TIME NOT NULL,
@@ -58,15 +64,15 @@ CREATE TABLE opening_hours (
 
 -- Samengevoegde Tags & Facilities
 CREATE TABLE tags (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
-    category TEXT NOT NULL DEFAULT 'general', -- bijv. 'music', 'facility', 'vibe'
+    category TEXT NOT NULL DEFAULT 'general', 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(name, category)
 );
 
 CREATE TABLE place_tags (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
     tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     UNIQUE(place_id, tag_id)
@@ -74,20 +80,29 @@ CREATE TABLE place_tags (
 
 -- Verenegingen (Associations)
 CREATE TABLE associations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE association_places (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     association_id UUID NOT NULL REFERENCES associations(id) ON DELETE CASCADE,
     place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
     UNIQUE(association_id, place_id)
 );
 
+CREATE TABLE association_members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    association_id UUID NOT NULL REFERENCES associations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'member', -- Opties: 'member', 'board', 'praeses'
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(association_id, user_id)
+);
+
 CREATE TABLE vibe_checks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
     is_positive BOOLEAN NOT NULL DEFAULT true,
     user_id UUID,
@@ -95,14 +110,14 @@ CREATE TABLE vibe_checks (
 );
 
 CREATE TABLE squads (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pin TEXT UNIQUE NOT NULL,
     created_by TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE squad_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
     user_id TEXT NOT NULL,
     nickname TEXT NOT NULL,
@@ -113,7 +128,7 @@ CREATE TABLE squad_members (
 );
 
 CREATE TABLE squad_pins (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
     creator_id TEXT NOT NULL,
     latitude FLOAT8 NOT NULL,
@@ -131,7 +146,7 @@ CREATE TABLE squad_pin_joins (
 );
 
 CREATE TABLE profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
@@ -145,7 +160,7 @@ CREATE TABLE profiles (
 );
 
 CREATE TABLE IF NOT EXISTS vibe_profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     total_vp INTEGER DEFAULT 0,
     current_level INTEGER DEFAULT 1,
@@ -158,7 +173,7 @@ CREATE TABLE IF NOT EXISTS vibe_profiles (
 );
 
 CREATE TABLE IF NOT EXISTS vibe_actions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     action_type TEXT NOT NULL,
     place_id UUID REFERENCES osm_places(id) ON DELETE SET NULL,
@@ -167,7 +182,7 @@ CREATE TABLE IF NOT EXISTS vibe_actions (
 );
 
 CREATE TABLE IF NOT EXISTS user_badges (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
     badge_type TEXT NOT NULL,
     unlocked_at TIMESTAMPTZ DEFAULT NOW(),
@@ -176,7 +191,7 @@ CREATE TABLE IF NOT EXISTS user_badges (
 );
 
 CREATE TABLE IF NOT EXISTS squad_challenges (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
     challenge_type TEXT NOT NULL,
     status TEXT DEFAULT 'available',
@@ -187,7 +202,7 @@ CREATE TABLE IF NOT EXISTS squad_challenges (
 );
 
 CREATE TABLE IF NOT EXISTS safety_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
     checked_in_at TIMESTAMPTZ DEFAULT NOW(),
     location_lat DOUBLE PRECISION,
@@ -195,7 +210,7 @@ CREATE TABLE IF NOT EXISTS safety_sessions (
 );
 
 CREATE TABLE IF NOT EXISTS app_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT,
     event_name TEXT NOT NULL,
     event_data JSONB DEFAULT '{}'::jsonb,
@@ -207,7 +222,6 @@ CREATE TABLE IF NOT EXISTS app_events (
 -- ==========================================
 CREATE OR REPLACE VIEW places WITH (security_invoker = true) AS
 WITH latest_overrides AS (
-    -- Dit pakt dynamisch altijd de NIEUWSTE regel per place_id
     SELECT DISTINCT ON (place_id) *
     FROM place_overrides
     ORDER BY place_id, created_at DESC
@@ -228,7 +242,6 @@ SELECT
     op.opening_hours_raw,
     op.start_time,
     op.created_at,
-    -- Als er een nieuwe override is, neem dan de tijd daarvan
     GREATEST(op.updated_at, lo.created_at) AS updated_at
 FROM osm_places op
 LEFT JOIN latest_overrides lo ON op.id = lo.place_id;
@@ -244,6 +257,8 @@ CREATE INDEX idx_opening_hours_day_time ON opening_hours(day_of_week, open_time,
 CREATE INDEX idx_place_tags_place_id ON place_tags(place_id);
 CREATE INDEX idx_place_tags_tag_id ON place_tags(tag_id);
 CREATE INDEX idx_association_places_place_id ON association_places(place_id);
+CREATE INDEX idx_association_members_association_id ON association_members(association_id); -- NIEUW
+CREATE INDEX idx_association_members_user_id ON association_members(user_id); -- NIEUW
 CREATE INDEX idx_tags_name_category ON tags(name, category);
 CREATE INDEX idx_vibe_checks_place_id ON vibe_checks(place_id);
 CREATE INDEX idx_vibe_checks_created_at ON vibe_checks(created_at DESC);
@@ -272,6 +287,7 @@ ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE associations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE association_places ENABLE ROW LEVEL SECURITY;
+ALTER TABLE association_members ENABLE ROW LEVEL SECURITY; -- NIEUW
 ALTER TABLE vibe_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE squads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE squad_members ENABLE ROW LEVEL SECURITY;
@@ -293,6 +309,7 @@ CREATE POLICY "Public can read tags" ON tags FOR SELECT USING (true);
 CREATE POLICY "Public can read place_tags" ON place_tags FOR SELECT USING (true);
 CREATE POLICY "Public can read associations" ON associations FOR SELECT USING (true);
 CREATE POLICY "Public can read association_places" ON association_places FOR SELECT USING (true);
+CREATE POLICY "Public can read association_members" ON association_members FOR SELECT USING (true); -- NIEUW
 CREATE POLICY "Public can read vibe_checks" ON vibe_checks FOR SELECT USING (true);
 CREATE POLICY "Anyone can read squads" ON squads FOR SELECT USING (true);
 CREATE POLICY "Anyone can read squad_members" ON squad_members FOR SELECT USING (true);
@@ -307,8 +324,11 @@ CREATE POLICY "Anyone can insert squad_pins" ON squad_pins FOR INSERT WITH CHECK
 CREATE POLICY "Anyone can insert squad_pin_joins" ON squad_pin_joins FOR INSERT WITH CHECK (true);
 CREATE POLICY "Anyone can insert app_events" ON app_events FOR INSERT WITH CHECK (true);
 
--- Authenticated users can create overrides
+-- Authenticated users policies
 CREATE POLICY "Authenticated users can insert overrides" ON place_overrides FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Users can join associations" ON association_members FOR INSERT WITH CHECK (auth.uid() = user_id); -- NIEUW
+CREATE POLICY "Users can update own membership" ON association_members FOR UPDATE USING (auth.uid() = user_id); -- NIEUW
+CREATE POLICY "Users can leave associations" ON association_members FOR DELETE USING (auth.uid() = user_id); -- NIEUW
 
 -- Update/Delete policies for squads and pins
 CREATE POLICY "Anyone can update squad_pins" ON squad_pins FOR UPDATE USING (true);
@@ -342,10 +362,17 @@ CREATE POLICY "Squad members can view squad_challenges" ON squad_challenges
 -- ==========================================
 -- 6. REALTIME PUBLICATIONS
 -- ==========================================
+DO $$ BEGIN
+    CREATE PUBLICATION supabase_realtime;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE vibe_actions;
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_pins;
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_pin_joins;
+ALTER PUBLICATION supabase_realtime ADD TABLE association_members; -- NIEUW
 
 -- ==========================================
 -- 7. FUNCTIONS & TRIGGERS
@@ -379,7 +406,7 @@ CREATE TRIGGER update_osm_places_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Triggers for place_overrides (Alleen voor locatie, GEEN updated_at trigger meer nodig!)
+-- Triggers for place_overrides
 CREATE TRIGGER update_place_overrides_location_trigger
     BEFORE INSERT OR UPDATE OF latitude, longitude ON place_overrides
     FOR EACH ROW
@@ -448,5 +475,3 @@ BEGIN
     WHERE location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography;
 END;
 $$;
-
--- Opmerking: calculate_and_update_vibes() is verwijderd omdat we dit in de frontend of via Edge Functions berekenen!

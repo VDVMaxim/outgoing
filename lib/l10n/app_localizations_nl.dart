@@ -12,9 +12,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get appName => 'Club App';
 
   @override
-  String get navHome => 'Home';
-
-  @override
   String get navMap => 'Kaart';
 
   @override
@@ -108,19 +105,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get onboardingNicknameMinLength =>
       'Nickname moet minimaal 3 tekens zijn';
-
-  @override
-  String get homeHighlightsTitle => 'Top 3 Highlights';
-
-  @override
-  String get homeTrendingTitle => 'Trending: Meest Populair';
-
-  @override
-  String get homeAlertTitle => 'Let op: Controleactie';
-
-  @override
-  String get homeAlertDesc =>
-      'Er is momenteel veel drukte en politiecontrole gemeld aan het begin van de Overpoortstraat. Wees voorzichtig.';
 
   @override
   String get activitiesTitle => 'Activiteiten & Acties';

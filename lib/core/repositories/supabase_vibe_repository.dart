@@ -9,9 +9,9 @@ class SupabaseVibeRepository implements VibeRepository {
     required bool isPositive,
   }) async {
     final client = SupabaseClientProvider.client;
-    
+
     await client.from('vibe_checks').insert({
-      'venue_id': placeId,
+      'place_id': placeId,
       'is_positive': isPositive,
       'user_id': client.auth.currentUser?.id,
     });
@@ -27,7 +27,7 @@ class SupabaseVibeRepository implements VibeRepository {
     final response = await client
         .from('vibe_checks')
         .select()
-        .eq('venue_id', placeId)
+        .eq('place_id', placeId)
         .order('created_at', ascending: false)
         .limit(limit);
 

@@ -1,10 +1,10 @@
-// lib/features/settings/screens/account_settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/features/settings/screens/settings_screen.dart';
+import 'package:flutter_clubapp/features/settings/screens/associations_settings_screen.dart';
 
 class AccountSettingsScreen extends ConsumerWidget {
   const AccountSettingsScreen({super.key});
@@ -42,12 +42,28 @@ class AccountSettingsScreen extends ConsumerWidget {
                 context,
                 MaterialPageRoute(
                   builder: (_) => EditNicknameScreen(
-                    initialNickname: ref.read(authProvider).nickname ?? ref.read(userProfileServiceProvider).nickname,
+                    initialNickname: ref.read(authProvider).nickname ??
+                        ref.read(userProfileServiceProvider).nickname,
                     isAuthenticated: true,
                     onSaved: () {
                       ref.read(authProvider.notifier).refresh();
                     },
                   ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          _SettingsListTile(
+            isDark: isDark,
+            icon: Icons.shield_outlined,
+            iconColor: Colors.purpleAccent,
+            title: 'Mijn Verenigingen',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AssociationsSettingsScreen(),
                 ),
               );
             },
@@ -117,6 +133,7 @@ class AccountSettingsScreen extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     final authService = ref.read(authServiceProvider);
+
     if (!context.mounted) return;
 
     showDialog(

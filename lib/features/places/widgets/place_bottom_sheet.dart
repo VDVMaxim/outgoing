@@ -26,7 +26,6 @@ class PlaceBottomSheet extends ConsumerWidget {
 
   void _openVibeCheck(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-
     if (userLocation == null) {
       ShadSonner.of(context).show(
         ShadToast.raw(

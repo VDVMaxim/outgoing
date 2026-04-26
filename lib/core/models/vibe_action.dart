@@ -39,7 +39,7 @@ class VibeAction {
   final String id;
   final String odUserId;
   final VibeActionType actionType;
-  final String? venueId;
+  final String? placeId;
   final int vpEarned;
   final DateTime createdAt;
 
@@ -47,7 +47,7 @@ class VibeAction {
     required this.id,
     required this.odUserId,
     required this.actionType,
-    this.venueId,
+    this.placeId,
     required this.vpEarned,
     required this.createdAt,
   });
@@ -59,7 +59,7 @@ class VibeAction {
       actionType: VibeActionTypeExtension.fromDbValue(
         json['action_type'] as String,
       ),
-      venueId: json['venue_id'] as String?,
+      placeId: json['place_id'] as String?,
       vpEarned: json['vp_earned'] as int,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -70,7 +70,7 @@ class VibeAction {
       'id': id,
       'user_id': odUserId,
       'action_type': actionType.dbValue,
-      'venue_id': venueId,
+      'place_id': placeId,
       'vp_earned': vpEarned,
       'created_at': createdAt.toIso8601String(),
     };

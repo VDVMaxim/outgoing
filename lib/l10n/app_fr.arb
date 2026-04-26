@@ -2,7 +2,6 @@
   "@@locale": "fr",
   "appName": "Club App",
 
-  "navHome": "Accueil",
   "navMap": "Carte",
   "navActivities": "Sorties",
   "navSettings": "Réglages",
@@ -34,11 +33,6 @@
   "onboardingSettingUp": "Configuration de votre compte...",
   "onboardingNicknameRequired": "Veuillez entrer un pseudo",
   "onboardingNicknameMinLength": "Le pseudo doit comporter au moins 3 caractères",
-
-  "homeHighlightsTitle": "Top 3 à la une",
-  "homeTrendingTitle": "Tendances : Les plus populaires",
-  "homeAlertTitle": "Attention : Contrôle policier",
-  "homeAlertDesc": "Une forte affluence et un contrôle policier ont été signalés au début de l'Overpoortstraat. Soyez prudent.",
 
   "activitiesTitle": "Sorties & Promotions",
   "activitiesSearchHint": "Rechercher par association, club, thème...",

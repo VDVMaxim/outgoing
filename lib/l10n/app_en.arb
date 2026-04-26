@@ -2,7 +2,6 @@
   "@@locale": "en",
   "appName": "Club App",
 
-  "navHome": "Home",
   "navMap": "Map",
   "navActivities": "Events",
   "navSettings": "Settings",
@@ -34,11 +33,6 @@
   "onboardingSettingUp": "Setting up your account...",
   "onboardingNicknameRequired": "Please enter a nickname",
   "onboardingNicknameMinLength": "Nickname must be at least 3 characters",
-
-  "homeHighlightsTitle": "Top 3 Highlights",
-  "homeTrendingTitle": "Trending: Most Popular",
-  "homeAlertTitle": "Warning: Police Check",
-  "homeAlertDesc": "Heavy crowds and a police control have been reported at the start of Overpoortstraat. Be careful.",
 
   "activitiesTitle": "Events & Promotions",
   "activitiesSearchHint": "Search by association, club, theme...",

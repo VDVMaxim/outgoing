@@ -13,15 +13,18 @@ class VibeRepository {
         .select()
         .eq('user_id', odUserId)
         .maybeSingle();
+
     if (response == null) return null;
     return VibeProfile.fromJson(response);
   }
 
   Future<VibeProfile> getOrCreateProfile(String odUserId) async {
     final existing = await getProfile(odUserId);
+
     if (existing != null) return existing;
 
     final newProfile = VibeProfile.empty(odUserId);
+
     await _supabase.from('vibe_profiles').insert({
       'id': newProfile.id,
       'user_id': odUserId,
@@ -30,6 +33,7 @@ class VibeRepository {
       'weekend_streak': 0,
       'visited_places': [],
     });
+
     return newProfile;
   }
 
@@ -40,6 +44,7 @@ class VibeRepository {
     List<String> visitedPlaces = const [],
   }) async {
     final profile = await getOrCreateProfile(odUserId);
+
     final now = DateTime.now();
     final isEarlyBird = VibePointsService.isEarlyBird();
     final isNewPlace = placeId != null && !visitedPlaces.contains(placeId);
@@ -55,6 +60,7 @@ class VibeRepository {
     final newLevel = VibePointsService.calculateLevel(newTotalVp);
 
     final newVisitedPlaces = List<String>.from(profile.visitedPlaces);
+
     if (placeId != null && !newVisitedPlaces.contains(placeId)) {
       newVisitedPlaces.add(placeId);
     }
@@ -74,7 +80,7 @@ class VibeRepository {
       'id': const Uuid().v4(),
       'user_id': odUserId,
       'action_type': actionType.dbValue,
-      'venue_id': placeId,
+      'place_id': placeId,
       'vp_earned': newVp,
       'created_at': now.toIso8601String(),
     });
@@ -90,12 +96,14 @@ class VibeRepository {
   Future<VibeProfile> updateStreak(String odUserId) async {
     final profile = await getOrCreateProfile(odUserId);
     final now = DateTime.now();
+
     final shouldReset = VibePointsService.shouldUpdateStreak(profile.lastCheckIn);
     
     int newStreak = shouldReset ? 1 : profile.weekendStreak;
 
     if (!shouldReset && profile.lastCheckIn != null) {
       final daysSince = now.difference(profile.lastCheckIn!).inDays;
+
       if (daysSince == 1 || daysSince == 2) {
         newStreak = profile.weekendStreak + 1;
       }
@@ -108,7 +116,7 @@ class VibeRepository {
           'updated_at': now.toIso8601String(),
         })
         .eq('user_id', odUserId);
-        
+
     return profile.copyWith(weekendStreak: newStreak);
   }
 
@@ -119,6 +127,7 @@ class VibeRepository {
         .eq('user_id', odUserId)
         .order('created_at', ascending: false)
         .limit(limit);
+
     return response.map((json) => VibeAction.fromJson(json)).toList();
   }
 
@@ -128,18 +137,20 @@ class VibeRepository {
         .select()
         .order('total_vp', ascending: false)
         .limit(limit);
+
     return response.map((json) => VibeProfile.fromJson(json)).toList();
   }
 
   Future<int?> getRank(String odUserId) async {
     final profile = await getProfile(odUserId);
+
     if (profile == null) return null;
 
     final response = await _supabase
         .from('vibe_profiles')
         .select('user_id')
         .order('total_vp', ascending: false);
-        
+
     final index = response.indexWhere((p) => p['user_id'] == odUserId);
     return index >= 0 ? index + 1 : null;
   }

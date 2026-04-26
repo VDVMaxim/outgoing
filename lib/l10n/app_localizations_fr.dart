@@ -12,9 +12,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get appName => 'Club App';
 
   @override
-  String get navHome => 'Accueil';
-
-  @override
   String get navMap => 'Carte';
 
   @override
@@ -108,19 +105,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get onboardingNicknameMinLength =>
       'Le pseudo doit comporter au moins 3 caractères';
-
-  @override
-  String get homeHighlightsTitle => 'Top 3 à la une';
-
-  @override
-  String get homeTrendingTitle => 'Tendances : Les plus populaires';
-
-  @override
-  String get homeAlertTitle => 'Attention : Contrôle policier';
-
-  @override
-  String get homeAlertDesc =>
-      'Une forte affluence et un contrôle policier ont été signalés au début de l\'Overpoortstraat. Soyez prudent.';
 
   @override
   String get activitiesTitle => 'Sorties & Promotions';
