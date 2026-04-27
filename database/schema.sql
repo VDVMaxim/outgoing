@@ -2,14 +2,6 @@ drop schema public cascade;
 create schema public;
 
 -- ==========================================
--- 0. RE-ESTABLISH BASE PERMISSIONS (CRITICAL AFTER DROP SCHEMA)
--- ==========================================
-GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
-
--- ==========================================
 -- 1. EXTENSIONS
 -- ==========================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -18,8 +10,6 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- ==========================================
 -- 2. TABLES
 -- ==========================================
-
--- De hoofd-tabel (Gevoed door OpenStreetMap)
 CREATE TABLE osm_places (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -39,7 +29,6 @@ CREATE TABLE osm_places (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- De Shadow Table (Append-Only geschiedenis van aanpassingen)
 CREATE TABLE place_overrides (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
@@ -62,7 +51,6 @@ CREATE TABLE opening_hours (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Samengevoegde Tags & Facilities
 CREATE TABLE tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -78,7 +66,6 @@ CREATE TABLE place_tags (
     UNIQUE(place_id, tag_id)
 );
 
--- Verenegingen (Associations)
 CREATE TABLE associations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
@@ -96,18 +83,52 @@ CREATE TABLE association_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     association_id UUID NOT NULL REFERENCES associations(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role TEXT NOT NULL DEFAULT 'member', -- Opties: 'member', 'board', 'praeses'
+    role TEXT NOT NULL DEFAULT 'member',
     joined_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(association_id, user_id)
 );
 
+-- EVENTS TABEL
+CREATE TABLE events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    address TEXT,
+    latitude FLOAT8 NOT NULL, 
+    longitude FLOAT8 NOT NULL,
+    location geography(POINT, 4326),
+    start_datetime TIMESTAMPTZ NOT NULL,
+    end_datetime TIMESTAMPTZ,
+    image_url TEXT,
+    place_id UUID REFERENCES osm_places(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- VIBE CHECKS (Werkt nu voor places & events)
 CREATE TABLE vibe_checks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
+    place_id UUID REFERENCES osm_places(id) ON DELETE CASCADE,
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     is_positive BOOLEAN NOT NULL DEFAULT true,
     user_id UUID,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CHECK (place_id IS NOT NULL OR event_id IS NOT NULL)
 );
+
+-- USER SAVES (Nieuwe, nettere naam)
+CREATE TABLE user_saves (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    place_id UUID REFERENCES osm_places(id) ON DELETE CASCADE,
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CHECK (place_id IS NOT NULL OR event_id IS NOT NULL)
+);
+CREATE UNIQUE INDEX idx_user_saves_place ON user_saves(user_id, place_id) WHERE place_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_user_saves_event ON user_saves(user_id, event_id) WHERE event_id IS NOT NULL;
+
 
 CREATE TABLE squads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -159,7 +180,7 @@ CREATE TABLE profiles (
     UNIQUE(user_id)
 );
 
-CREATE TABLE IF NOT EXISTS vibe_profiles (
+CREATE TABLE vibe_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     total_vp INTEGER DEFAULT 0,
@@ -172,16 +193,17 @@ CREATE TABLE IF NOT EXISTS vibe_profiles (
     UNIQUE(user_id)
 );
 
-CREATE TABLE IF NOT EXISTS vibe_actions (
+CREATE TABLE vibe_actions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     action_type TEXT NOT NULL,
     place_id UUID REFERENCES osm_places(id) ON DELETE SET NULL,
+    event_id UUID REFERENCES events(id) ON DELETE SET NULL,
     vp_earned INTEGER NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS user_badges (
+CREATE TABLE user_badges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
     badge_type TEXT NOT NULL,
@@ -190,7 +212,7 @@ CREATE TABLE IF NOT EXISTS user_badges (
     UNIQUE(user_id, badge_type)
 );
 
-CREATE TABLE IF NOT EXISTS squad_challenges (
+CREATE TABLE squad_challenges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
     challenge_type TEXT NOT NULL,
@@ -201,7 +223,7 @@ CREATE TABLE IF NOT EXISTS squad_challenges (
     current_progress INTEGER DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS safety_sessions (
+CREATE TABLE safety_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
     checked_in_at TIMESTAMPTZ DEFAULT NOW(),
@@ -209,7 +231,7 @@ CREATE TABLE IF NOT EXISTS safety_sessions (
     location_lng DOUBLE PRECISION
 );
 
-CREATE TABLE IF NOT EXISTS app_events (
+CREATE TABLE app_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT,
     event_name TEXT NOT NULL,
@@ -218,7 +240,7 @@ CREATE TABLE IF NOT EXISTS app_events (
 );
 
 -- ==========================================
--- 3. THE MAGIC VIEW (Transparent for Flutter)
+-- 3. THE MAGIC VIEW 
 -- ==========================================
 CREATE OR REPLACE VIEW places WITH (security_invoker = true) AS
 WITH latest_overrides AS (
@@ -253,32 +275,19 @@ CREATE INDEX idx_osm_places_location_type ON osm_places(location_type);
 CREATE INDEX idx_osm_places_location ON osm_places USING GIST(location);
 CREATE INDEX idx_place_overrides_place_id_time ON place_overrides(place_id, created_at DESC);
 CREATE INDEX idx_opening_hours_place_id ON opening_hours(place_id);
-CREATE INDEX idx_opening_hours_day_time ON opening_hours(day_of_week, open_time, close_time);
 CREATE INDEX idx_place_tags_place_id ON place_tags(place_id);
-CREATE INDEX idx_place_tags_tag_id ON place_tags(tag_id);
 CREATE INDEX idx_association_places_place_id ON association_places(place_id);
-CREATE INDEX idx_association_members_association_id ON association_members(association_id); -- NIEUW
-CREATE INDEX idx_association_members_user_id ON association_members(user_id); -- NIEUW
-CREATE INDEX idx_tags_name_category ON tags(name, category);
+CREATE INDEX idx_association_members_association_id ON association_members(association_id);
+CREATE INDEX idx_association_members_user_id ON association_members(user_id);
+CREATE INDEX idx_events_location ON events USING GIST(location);
+CREATE INDEX idx_events_start_datetime ON events(start_datetime);
 CREATE INDEX idx_vibe_checks_place_id ON vibe_checks(place_id);
-CREATE INDEX idx_vibe_checks_created_at ON vibe_checks(created_at DESC);
+CREATE INDEX idx_vibe_checks_event_id ON vibe_checks(event_id);
 CREATE INDEX idx_squad_members_squad_id ON squad_members(squad_id);
-CREATE INDEX idx_squad_members_user_id ON squad_members(user_id);
 CREATE INDEX idx_squad_pins_squad_id ON squad_pins(squad_id);
-CREATE INDEX idx_squad_pin_joins_pin_id ON squad_pin_joins(pin_id);
-CREATE INDEX idx_profiles_user_id ON profiles(user_id);
-CREATE INDEX idx_profiles_nickname ON profiles(nickname);
-CREATE INDEX IF NOT EXISTS idx_vibe_profiles_user_id ON vibe_profiles(user_id);
-CREATE INDEX IF NOT EXISTS idx_vibe_actions_user_id ON vibe_actions(user_id);
-CREATE INDEX IF NOT EXISTS idx_vibe_actions_created_at ON vibe_actions(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id);
-CREATE INDEX IF NOT EXISTS idx_squad_challenges_squad_id ON squad_challenges(squad_id);
-CREATE INDEX IF NOT EXISTS idx_safety_sessions_user_id ON safety_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_app_events_event_name ON app_events(event_name);
-CREATE INDEX IF NOT EXISTS idx_app_events_created_at ON app_events(created_at DESC);
 
 -- ==========================================
--- 5. ROW LEVEL SECURITY (RLS) & POLICIES
+-- 5. ROW LEVEL SECURITY (RLS)
 -- ==========================================
 ALTER TABLE osm_places ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_overrides ENABLE ROW LEVEL SECURITY;
@@ -287,7 +296,9 @@ ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE associations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE association_places ENABLE ROW LEVEL SECURITY;
-ALTER TABLE association_members ENABLE ROW LEVEL SECURITY; -- NIEUW
+ALTER TABLE association_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_saves ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vibe_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE squads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE squad_members ENABLE ROW LEVEL SECURITY;
@@ -301,43 +312,43 @@ ALTER TABLE squad_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE safety_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_events ENABLE ROW LEVEL SECURITY;
 
--- Public read policies
-CREATE POLICY "Public can read osm_places" ON osm_places FOR SELECT USING (true);
-CREATE POLICY "Public can read place_overrides" ON place_overrides FOR SELECT USING (true);
-CREATE POLICY "Public can read opening_hours" ON opening_hours FOR SELECT USING (true);
-CREATE POLICY "Public can read tags" ON tags FOR SELECT USING (true);
-CREATE POLICY "Public can read place_tags" ON place_tags FOR SELECT USING (true);
-CREATE POLICY "Public can read associations" ON associations FOR SELECT USING (true);
-CREATE POLICY "Public can read association_places" ON association_places FOR SELECT USING (true);
-CREATE POLICY "Public can read association_members" ON association_members FOR SELECT USING (true); -- NIEUW
-CREATE POLICY "Public can read vibe_checks" ON vibe_checks FOR SELECT USING (true);
-CREATE POLICY "Anyone can read squads" ON squads FOR SELECT USING (true);
-CREATE POLICY "Anyone can read squad_members" ON squad_members FOR SELECT USING (true);
-CREATE POLICY "Anyone can read squad_pins" ON squad_pins FOR SELECT USING (true);
-CREATE POLICY "Anyone can read squad_pin_joins" ON squad_pin_joins FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON osm_places FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON place_overrides FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON opening_hours FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON tags FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON place_tags FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON associations FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON association_places FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON association_members FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON events FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON vibe_checks FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON squads FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON squad_members FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON squad_pins FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON squad_pin_joins FOR SELECT USING (true);
 
--- Insert policies
-CREATE POLICY "Anyone can insert vibe_checks" ON vibe_checks FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can insert squads" ON squads FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can insert squad_members" ON squad_members FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can insert squad_pins" ON squad_pins FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can insert squad_pin_joins" ON squad_pin_joins FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can insert app_events" ON app_events FOR INSERT WITH CHECK (true);
+-- User Saves Policies
+CREATE POLICY "Users can manage their saves" ON user_saves FOR ALL USING (auth.uid() = user_id);
 
--- Authenticated users policies
-CREATE POLICY "Authenticated users can insert overrides" ON place_overrides FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "Users can join associations" ON association_members FOR INSERT WITH CHECK (auth.uid() = user_id); -- NIEUW
-CREATE POLICY "Users can update own membership" ON association_members FOR UPDATE USING (auth.uid() = user_id); -- NIEUW
-CREATE POLICY "Users can leave associations" ON association_members FOR DELETE USING (auth.uid() = user_id); -- NIEUW
+-- User Event Policies
+CREATE POLICY "Users can insert events" ON events FOR INSERT WITH CHECK (auth.uid() = created_by);
+CREATE POLICY "Users can update own events" ON events FOR UPDATE USING (auth.uid() = created_by);
+CREATE POLICY "Users can delete own events" ON events FOR DELETE USING (auth.uid() = created_by);
 
--- Update/Delete policies for squads and pins
-CREATE POLICY "Anyone can update squad_pins" ON squad_pins FOR UPDATE USING (true);
-CREATE POLICY "Anyone can delete squad_pins" ON squad_pins FOR DELETE USING (true);
-CREATE POLICY "Anyone can delete squad_pin_joins" ON squad_pin_joins FOR DELETE USING (true);
+-- Other Insert policies
+CREATE POLICY "Allow inserts" ON vibe_checks FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow inserts" ON squads FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow inserts" ON squad_members FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow inserts" ON squad_pins FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow inserts" ON squad_pin_joins FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow inserts" ON app_events FOR INSERT WITH CHECK (true);
 
--- User specific policies
-CREATE POLICY "Users can update own squad_member" ON squad_members FOR UPDATE USING (auth.uid()::text = user_id OR user_id IS NOT NULL);
-CREATE POLICY "Users can delete own squad_member" ON squad_members FOR DELETE USING (auth.uid()::text = user_id OR user_id IS NOT NULL);
+CREATE POLICY "Allow updates" ON squad_pins FOR UPDATE USING (true);
+CREATE POLICY "Allow deletes" ON squad_pins FOR DELETE USING (true);
+CREATE POLICY "Allow deletes" ON squad_pin_joins FOR DELETE USING (true);
+
+CREATE POLICY "Users can update own squad_member" ON squad_members FOR UPDATE USING (true);
+CREATE POLICY "Users can delete own squad_member" ON squad_members FOR DELETE USING (true);
 
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = user_id);
@@ -347,17 +358,6 @@ CREATE POLICY "Users can delete own profile" ON profiles FOR DELETE USING (auth.
 CREATE POLICY "Users can own vibe_profile" ON vibe_profiles FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can own vibe_actions" ON vibe_actions FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can own user_badges" ON user_badges FOR ALL USING (user_id::text = auth.uid()::text);
-CREATE POLICY "Users can own safety_sessions" ON safety_sessions FOR ALL USING (user_id::text = auth.uid()::text);
-
--- Complex policies
-CREATE POLICY "Squad members can view squad_challenges" ON squad_challenges 
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM squad_members 
-            WHERE squad_id = squad_challenges.squad_id 
-            AND user_id::text = auth.uid()::text
-        )
-    );
 
 -- ==========================================
 -- 6. REALTIME PUBLICATIONS
@@ -372,7 +372,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE squad_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE vibe_actions;
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_pins;
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_pin_joins;
-ALTER PUBLICATION supabase_realtime ADD TABLE association_members; -- NIEUW
+ALTER PUBLICATION supabase_realtime ADD TABLE events;
+ALTER PUBLICATION supabase_realtime ADD TABLE user_saves;
 
 -- ==========================================
 -- 7. FUNCTIONS & TRIGGERS
@@ -395,45 +396,22 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers for osm_places
 CREATE TRIGGER update_osm_places_location_trigger
     BEFORE INSERT OR UPDATE OF latitude, longitude ON osm_places
-    FOR EACH ROW
-    EXECUTE FUNCTION sync_place_location();
+    FOR EACH ROW EXECUTE FUNCTION sync_place_location();
 
-CREATE TRIGGER update_osm_places_updated_at
-    BEFORE UPDATE ON osm_places
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_events_location_trigger
+    BEFORE INSERT OR UPDATE OF latitude, longitude ON events
+    FOR EACH ROW EXECUTE FUNCTION sync_place_location();
 
--- Triggers for place_overrides
-CREATE TRIGGER update_place_overrides_location_trigger
-    BEFORE INSERT OR UPDATE OF latitude, longitude ON place_overrides
-    FOR EACH ROW
-    EXECUTE FUNCTION sync_place_location();
+CREATE TRIGGER update_events_updated_at
+    BEFORE UPDATE ON events
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Other Triggers
 CREATE TRIGGER update_squad_members_updated_at
     BEFORE UPDATE ON squad_members
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_squad_pins_updated_at
-    BEFORE UPDATE ON squad_pins
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_profiles_updated_at
-    BEFORE UPDATE ON profiles
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_vibe_profiles_updated_at
-    BEFORE UPDATE ON vibe_profiles
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
--- Custom App Functions
 CREATE OR REPLACE FUNCTION create_squad(p_user_id TEXT, p_nickname TEXT, p_lat FLOAT8, p_lng FLOAT8)
 RETURNS json
 LANGUAGE plpgsql
@@ -445,33 +423,90 @@ DECLARE
     v_member RECORD;
 BEGIN
     v_pin := lpad(floor(random() * 1000000)::text, 6, '0');
-    
     INSERT INTO squads (pin, created_by) VALUES (v_pin, p_user_id) RETURNING * INTO v_squad;
-    
     INSERT INTO squad_members (squad_id, user_id, nickname, latitude, longitude)
     VALUES (v_squad.id, p_user_id, p_nickname, p_lat, p_lng) RETURNING * INTO v_member;
-    
-    RETURN json_build_object(
-        'squad', row_to_json(v_squad),
-        'member', row_to_json(v_member)
-    );
+    RETURN json_build_object('squad', row_to_json(v_squad), 'member', row_to_json(v_member));
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION get_places_in_viewport(
+-- 1. RPC voor Places
+CREATE OR REPLACE FUNCTION get_place_markers_in_viewport(
     min_lat FLOAT,
     min_lng FLOAT,
     max_lat FLOAT,
     max_lng FLOAT
 )
-RETURNS SETOF places
+RETURNS TABLE (
+    id UUID,
+    latitude FLOAT8,
+    longitude FLOAT8,
+    location_type TEXT,
+    hotness_score INT,
+    is_event BOOLEAN,
+    is_flash_promo BOOLEAN
+)
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT *
-    FROM places
-    WHERE location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography;
+    SELECT 
+        p.id,
+        p.latitude,
+        p.longitude,
+        p.location_type,
+        (
+            SELECT COALESCE(SUM(CASE WHEN is_positive THEN 1 ELSE -1 END), 0)::INT 
+            FROM vibe_checks vc 
+            WHERE vc.place_id = p.id AND vc.created_at >= NOW() - INTERVAL '12 hours'
+        ) AS hotness_score,
+        (p.event_name IS NOT NULL OR p.start_time IS NOT NULL) AS is_event,
+        (p.promo IS NOT NULL AND p.promo != '') AS is_flash_promo
+    FROM places p
+    WHERE p.location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography;
 END;
 $$;
+
+-- 2. RPC voor User Events
+CREATE OR REPLACE FUNCTION get_event_markers_in_viewport(
+    min_lat FLOAT,
+    min_lng FLOAT,
+    max_lat FLOAT,
+    max_lng FLOAT
+)
+RETURNS TABLE (
+    id UUID,
+    title TEXT,
+    latitude FLOAT8,
+    longitude FLOAT8,
+    hotness_score INT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        e.id,
+        e.title,
+        e.latitude,
+        e.longitude,
+        (
+            SELECT COALESCE(SUM(CASE WHEN is_positive THEN 1 ELSE -1 END), 0)::INT 
+            FROM vibe_checks vc 
+            WHERE vc.event_id = e.id AND vc.created_at >= NOW() - INTERVAL '12 hours'
+        ) AS hotness_score
+    FROM events e
+    WHERE e.location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography
+    AND (e.end_datetime IS NULL OR e.end_datetime > NOW()); 
+END;
+$$;
+
+-- ==========================================
+-- 8. GRANTS
+-- ==========================================
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
