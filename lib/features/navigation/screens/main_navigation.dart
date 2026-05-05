@@ -3,7 +3,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import '../../map/screens/map_screen.dart';
-import '../../activities/screens/activities_screen.dart';
+import '../../events/presentation/screens/events_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../../main.dart';
 
@@ -41,7 +41,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   index: _currentIndex,
                   children: [
                     MapScreen(userLocation: widget.userLocation),
-                    const ActivitiesScreen(),
+                    const EventsScreen(),
                     const SettingsScreen(),
                   ],
                 ),
@@ -75,9 +75,9 @@ class _MainNavigationState extends State<MainNavigation> {
                   label: AppLocalizations.of(context)!.navMap,
                 ),
                 BottomNavigationBarItem(
-                  icon: const Icon(Icons.local_activity_outlined),
-                  activeIcon: const Icon(Icons.local_activity),
-                  label: AppLocalizations.of(context)!.navActivities,
+                  icon: const Icon(Icons.event_outlined),
+                  activeIcon: const Icon(Icons.event),
+                  label: AppLocalizations.of(context)!.navEvents,
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.settings_outlined),

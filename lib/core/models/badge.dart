@@ -50,7 +50,7 @@ extension BadgeTypeExtension on BadgeType {
       case BadgeType.lastManStanding:
         return 'Check in after 05:00';
       case BadgeType.localHero:
-        return '5x at the same venue in a month';
+        return '5x at the same place in a month';
       case BadgeType.earlyBird:
         return 'First to check in before 23:30';
       case BadgeType.matchmaker:
@@ -58,7 +58,7 @@ extension BadgeTypeExtension on BadgeType {
       case BadgeType.nomad:
         return 'Complete a Pub Crawl';
       case BadgeType.trendsetter:
-        return 'First to discover a trending venue';
+        return 'First to discover a trending place';
       case BadgeType.noManLeftBehind:
         return 'Stay with your squad until 03:00';
       case BadgeType.safetyFirst:
@@ -68,7 +68,7 @@ extension BadgeTypeExtension on BadgeType {
       case BadgeType.vibeVeteran:
         return 'Reach Legend status';
       case BadgeType.explorer:
-        return 'Visit 10 different venues';
+        return 'Visit 10 different places';
       case BadgeType.socialButterfly:
         return 'Invite 5 friends to Squad';
     }

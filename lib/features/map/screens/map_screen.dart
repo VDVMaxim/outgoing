@@ -80,12 +80,15 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     });
   }
 
-  Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera}) async {
+  Future<void> _fetchPlacesForCurrentBounds({MapCamera? camera, bool clearCache = false}) async {
     final currentCamera = camera ?? _mapController.camera;
     final currentCenter = currentCamera.center;
     final currentZoom = currentCamera.zoom;
 
-    if (_lastFetchCenter != null && _lastFetchZoom != null) {
+    if (clearCache) {
+      setState(() => _cachedPlaces.clear());
+      _lastFetchCenter = null;
+    } else if (_lastFetchCenter != null && _lastFetchZoom != null) {
       final zoomDiff = (currentZoom - _lastFetchZoom!).abs();
       if (zoomDiff < 1.0) {
         final distanceScrolled = const Distance().as(LengthUnit.Meter, _lastFetchCenter!, currentCenter);
@@ -109,7 +112,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     _lastFetchCenter = currentCenter;
     _lastFetchZoom = currentZoom;
 
-    final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng);
+    final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng, searchQuery: _searchQuery);
     if (mounted) {
       setState(() {
         for (final p in places) {
@@ -179,19 +182,12 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
 
   List<Place> get _filteredPlaces {
     return _cachedPlaces.values.where((place) {
-      final matchesSearch = _searchQuery.isEmpty ||
-          place.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (place.eventName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
-
       bool matchesFilter = true;
       if (_selectedFilters.isNotEmpty) {
         if (_selectedFilters.contains('club') && place.type != LocationType.club) {
           matchesFilter = false;
         }
         if (_selectedFilters.contains('event') && place.status != ClubStatus.event) {
-          matchesFilter = false;
-        }
-        if (_selectedFilters.contains('__food__') && place.type != LocationType.food) {
           matchesFilter = false;
         }
       }
@@ -203,21 +199,38 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
         }
       }
 
-      return matchesSearch && matchesFilter;
+      return matchesFilter;
     }).toList();
   }
 
-  Future<void> _openDetails(BuildContext context, Place place) async {
+  Future<void> _openDetails(BuildContext context, Place markerPlace) async {
     if (_isPlacingPin) return;
 
-    ref.read(analyticsServiceProvider).logEvent('viewed_place_details', parameters: {'place_name': place.name});
-    setState(() => _selectedPlaceId = place.id);
+    ref.read(analyticsServiceProvider).logEvent('viewed_place_details', parameters: {'place_id': markerPlace.id});
+    setState(() => _selectedPlaceId = markerPlace.id);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final fullPlace = await ref.read(clubRepositoryProvider).getPlaceById(markerPlace.id);
+    
+    if (mounted) {
+      Navigator.pop(context);
+    }
+
+    if (fullPlace == null) {
+      setState(() => _selectedPlaceId = null);
+      return;
+    }
     
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => PlaceBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
+      builder: (context) => PlaceBottomSheet(place: fullPlace, userLocation: _liveUserLocation ?? widget.userLocation),
     );
     if (mounted) {
       setState(() => _selectedPlaceId = null);
@@ -266,7 +279,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildSheetFilterChip('__food__', 'Food & Drinks', isDark, setSheetState),
                       _buildSheetFilterChip('club', 'Clubs', isDark, setSheetState),
                       _buildSheetFilterChip('event', 'Events', isDark, setSheetState),
                     ],
@@ -428,7 +440,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                           cursorColor: currentIsDark ? Colors.white : Colors.black,
                           style: TextStyle(color: currentIsDark ? Colors.white : Colors.black),
                           decoration: InputDecoration(
-                            hintText: l10n.activitiesSearchHint,
+                            hintText: l10n.eventsSearchHint,
                             hintStyle: const TextStyle(color: Colors.grey),
                             prefixIcon: const Icon(Icons.search, color: Colors.grey),
                             suffixIcon: IconButton(
@@ -443,7 +455,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
-                          onChanged: (val) => setState(() => _searchQuery = val),
+                          onChanged: (val) {
+                            setState(() => _searchQuery = val);
+                            _debounce?.cancel();
+                            _debounce = Timer(const Duration(milliseconds: 300), () {
+                              _fetchPlacesForCurrentBounds(clearCache: true);
+                            });
+                          },
                         ),
                       ),
                     ),

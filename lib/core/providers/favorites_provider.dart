@@ -5,15 +5,15 @@ class FavoritesProvider extends ValueNotifier<Set<String>> {
 
   FavoritesProvider._internal() : super({});
 
-  void toggleFavorite(String placeId) {
+  void toggleFavorite(String eventId) {
     final newSet = Set<String>.from(value);
-    if (newSet.contains(placeId)) {
-      newSet.remove(placeId);
+    if (newSet.contains(eventId)) {
+      newSet.remove(eventId);
     } else {
-      newSet.add(placeId);
+      newSet.add(eventId);
     }
     value = newSet;
   }
 
-  bool isFavorite(String placeId) => value.contains(placeId);
+  bool isFavorite(String eventId) => value.contains(eventId);
 }

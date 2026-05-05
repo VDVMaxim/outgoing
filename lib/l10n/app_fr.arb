@@ -3,7 +3,7 @@
   "appName": "Club App",
 
   "navMap": "Carte",
-  "navActivities": "Sorties",
+  "navEvents": "Sorties",
   "navSettings": "Réglages",
 
   "onboardingSkip": "Passer",
@@ -34,11 +34,11 @@
   "onboardingNicknameRequired": "Veuillez entrer un pseudo",
   "onboardingNicknameMinLength": "Le pseudo doit comporter au moins 3 caractères",
 
-  "activitiesTitle": "Sorties & Promotions",
-  "activitiesSearchHint": "Rechercher par association, club, thème...",
-  "activitiesEmpty": "Aucune sortie trouvée.",
-  "activitiesDetails": "Détails",
-  "activitiesUnknownCrowd": "Inconnu",
+  "eventsTitle": "Sorties & Promotions",
+  "eventsSearchHint": "Rechercher par association, club, thème...",
+  "eventsEmpty": "Aucune sortie trouvée.",
+  "eventsDetails": "Détails",
+  "eventsUnknownCrowd": "Inconnu",
 
   "mapSearchHint": "Rechercher par quartier ou club...",
   "mapFood": "Manger",

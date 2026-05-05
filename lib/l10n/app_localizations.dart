@@ -112,11 +112,11 @@ abstract class AppLocalizations {
   /// **'Kaart'**
   String get navMap;
 
-  /// No description provided for @navActivities.
+  /// No description provided for @navEvents.
   ///
   /// In nl, this message translates to:
   /// **'Acties'**
-  String get navActivities;
+  String get navEvents;
 
   /// No description provided for @navSettings.
   ///
@@ -280,35 +280,35 @@ abstract class AppLocalizations {
   /// **'Nickname moet minimaal 3 tekens zijn'**
   String get onboardingNicknameMinLength;
 
-  /// No description provided for @activitiesTitle.
+  /// No description provided for @eventsTitle.
   ///
   /// In nl, this message translates to:
   /// **'Activiteiten & Acties'**
-  String get activitiesTitle;
+  String get eventsTitle;
 
-  /// No description provided for @activitiesSearchHint.
+  /// No description provided for @eventsSearchHint.
   ///
   /// In nl, this message translates to:
   /// **'Zoek vereniging, club, thema...'**
-  String get activitiesSearchHint;
+  String get eventsSearchHint;
 
-  /// No description provided for @activitiesEmpty.
+  /// No description provided for @eventsEmpty.
   ///
   /// In nl, this message translates to:
   /// **'Geen acties gevonden.'**
-  String get activitiesEmpty;
+  String get eventsEmpty;
 
-  /// No description provided for @activitiesDetails.
+  /// No description provided for @eventsDetails.
   ///
   /// In nl, this message translates to:
   /// **'Details'**
-  String get activitiesDetails;
+  String get eventsDetails;
 
-  /// No description provided for @activitiesUnknownCrowd.
+  /// No description provided for @eventsUnknownCrowd.
   ///
   /// In nl, this message translates to:
   /// **'Onbekend'**
-  String get activitiesUnknownCrowd;
+  String get eventsUnknownCrowd;
 
   /// No description provided for @mapSearchHint.
   ///

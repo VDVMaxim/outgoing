@@ -18,8 +18,8 @@ INSERT INTO associations (id, name) VALUES
     ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b33', 'Moeder Lies')
 ON CONFLICT DO NOTHING;
 
--- 3. Locaties (OSM Places)
-INSERT INTO osm_places (id, name, address, latitude, longitude, location_type, genre) VALUES
+-- 3. Locaties (Places)
+INSERT INTO places (id, name, address, latitude, longitude, location_type, genre) VALUES
     ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'De Twitch', 'Overpoortstraat 9, 9000 Gent', 51.038580, 3.726210, 'club', 'Party'),
     ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'De Gouden Saté', 'Overpoortstraat 51, 9000 Gent', 51.037400, 3.725900, 'food', 'Frituur'),
     ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', 'Vooruit', 'Sint-Pietersnieuwstraat 23, 9000 Gent', 51.047800, 3.727500, 'event', 'Cultuur/Techno')

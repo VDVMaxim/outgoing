@@ -1,16 +1,10 @@
 drop schema public cascade;
 create schema public;
 
--- ==========================================
--- 1. EXTENSIONS
--- ==========================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS postgis;
 
--- ==========================================
--- 2. TABLES
--- ==========================================
-CREATE TABLE osm_places (
+CREATE TABLE places (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     address TEXT,
@@ -31,7 +25,7 @@ CREATE TABLE osm_places (
 
 CREATE TABLE place_overrides (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
+    place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
     name TEXT,
     address TEXT,
     latitude FLOAT8,
@@ -44,7 +38,7 @@ CREATE TABLE place_overrides (
 
 CREATE TABLE opening_hours (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
+    place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
     day_of_week INT NOT NULL,
     open_time TIME NOT NULL,
     close_time TIME NOT NULL,
@@ -61,7 +55,7 @@ CREATE TABLE tags (
 
 CREATE TABLE place_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
+    place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
     tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     UNIQUE(place_id, tag_id)
 );
@@ -75,7 +69,7 @@ CREATE TABLE associations (
 CREATE TABLE association_places (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     association_id UUID NOT NULL REFERENCES associations(id) ON DELETE CASCADE,
-    place_id UUID NOT NULL REFERENCES osm_places(id) ON DELETE CASCADE,
+    place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
     UNIQUE(association_id, place_id)
 );
 
@@ -88,7 +82,6 @@ CREATE TABLE association_members (
     UNIQUE(association_id, user_id)
 );
 
--- EVENTS TABEL
 CREATE TABLE events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -101,33 +94,27 @@ CREATE TABLE events (
     start_datetime TIMESTAMPTZ NOT NULL,
     end_datetime TIMESTAMPTZ,
     image_url TEXT,
-    place_id UUID REFERENCES osm_places(id) ON DELETE SET NULL,
+    place_id UUID REFERENCES places(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- VIBE CHECKS (Werkt nu voor places & events)
 CREATE TABLE vibe_checks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    place_id UUID REFERENCES osm_places(id) ON DELETE CASCADE,
+    place_id UUID REFERENCES places(id) ON DELETE CASCADE,
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     is_positive BOOLEAN NOT NULL DEFAULT true,
     user_id UUID,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    CHECK (place_id IS NOT NULL OR event_id IS NOT NULL)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- USER SAVES (Nieuwe, nettere naam)
-CREATE TABLE user_saves (
+CREATE TABLE user_event_saves (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    place_id UUID REFERENCES osm_places(id) ON DELETE CASCADE,
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    CHECK (place_id IS NOT NULL OR event_id IS NOT NULL)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE UNIQUE INDEX idx_user_saves_place ON user_saves(user_id, place_id) WHERE place_id IS NOT NULL;
-CREATE UNIQUE INDEX idx_user_saves_event ON user_saves(user_id, event_id) WHERE event_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_user_event_saves_event ON user_event_saves(user_id, event_id) WHERE event_id IS NOT NULL;
 
 
 CREATE TABLE squads (
@@ -197,7 +184,7 @@ CREATE TABLE vibe_actions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     action_type TEXT NOT NULL,
-    place_id UUID REFERENCES osm_places(id) ON DELETE SET NULL,
+    place_id UUID REFERENCES places(id) ON DELETE SET NULL,
     event_id UUID REFERENCES events(id) ON DELETE SET NULL,
     vp_earned INTEGER NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -239,10 +226,7 @@ CREATE TABLE app_events (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ==========================================
--- 3. THE MAGIC VIEW 
--- ==========================================
-CREATE OR REPLACE VIEW places WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW places_view WITH (security_invoker = true) AS
 WITH latest_overrides AS (
     SELECT DISTINCT ON (place_id) *
     FROM place_overrides
@@ -265,14 +249,11 @@ SELECT
     op.start_time,
     op.created_at,
     GREATEST(op.updated_at, lo.created_at) AS updated_at
-FROM osm_places op
+FROM places op
 LEFT JOIN latest_overrides lo ON op.id = lo.place_id;
 
--- ==========================================
--- 4. INDEXES
--- ==========================================
-CREATE INDEX idx_osm_places_location_type ON osm_places(location_type);
-CREATE INDEX idx_osm_places_location ON osm_places USING GIST(location);
+CREATE INDEX idx_osm_places_location_type ON places(location_type);
+CREATE INDEX idx_osm_places_location ON places USING GIST(location);
 CREATE INDEX idx_place_overrides_place_id_time ON place_overrides(place_id, created_at DESC);
 CREATE INDEX idx_opening_hours_place_id ON opening_hours(place_id);
 CREATE INDEX idx_place_tags_place_id ON place_tags(place_id);
@@ -286,10 +267,7 @@ CREATE INDEX idx_vibe_checks_event_id ON vibe_checks(event_id);
 CREATE INDEX idx_squad_members_squad_id ON squad_members(squad_id);
 CREATE INDEX idx_squad_pins_squad_id ON squad_pins(squad_id);
 
--- ==========================================
--- 5. ROW LEVEL SECURITY (RLS)
--- ==========================================
-ALTER TABLE osm_places ENABLE ROW LEVEL SECURITY;
+ALTER TABLE places ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE opening_hours ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
@@ -298,7 +276,7 @@ ALTER TABLE associations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE association_places ENABLE ROW LEVEL SECURITY;
 ALTER TABLE association_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_saves ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_event_saves ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vibe_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE squads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE squad_members ENABLE ROW LEVEL SECURITY;
@@ -312,7 +290,7 @@ ALTER TABLE squad_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE safety_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public read access" ON osm_places FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON places FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON place_overrides FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON opening_hours FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON tags FOR SELECT USING (true);
@@ -327,15 +305,12 @@ CREATE POLICY "Public read access" ON squad_members FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON squad_pins FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON squad_pin_joins FOR SELECT USING (true);
 
--- User Saves Policies
-CREATE POLICY "Users can manage their saves" ON user_saves FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage their saves" ON user_event_saves FOR ALL USING (auth.uid() = user_id);
 
--- User Event Policies
 CREATE POLICY "Users can insert events" ON events FOR INSERT WITH CHECK (auth.uid() = created_by);
 CREATE POLICY "Users can update own events" ON events FOR UPDATE USING (auth.uid() = created_by);
 CREATE POLICY "Users can delete own events" ON events FOR DELETE USING (auth.uid() = created_by);
 
--- Other Insert policies
 CREATE POLICY "Allow inserts" ON vibe_checks FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow inserts" ON squads FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow inserts" ON squad_members FOR INSERT WITH CHECK (true);
@@ -359,9 +334,6 @@ CREATE POLICY "Users can own vibe_profile" ON vibe_profiles FOR ALL USING (auth.
 CREATE POLICY "Users can own vibe_actions" ON vibe_actions FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can own user_badges" ON user_badges FOR ALL USING (user_id::text = auth.uid()::text);
 
--- ==========================================
--- 6. REALTIME PUBLICATIONS
--- ==========================================
 DO $$ BEGIN
     CREATE PUBLICATION supabase_realtime;
 EXCEPTION
@@ -373,11 +345,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE vibe_actions;
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_pins;
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_pin_joins;
 ALTER PUBLICATION supabase_realtime ADD TABLE events;
-ALTER PUBLICATION supabase_realtime ADD TABLE user_saves;
+ALTER PUBLICATION supabase_realtime ADD TABLE user_event_saves;
 
--- ==========================================
--- 7. FUNCTIONS & TRIGGERS
--- ==========================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -397,7 +366,7 @@ END;
 $$ language 'plpgsql';
 
 CREATE TRIGGER update_osm_places_location_trigger
-    BEFORE INSERT OR UPDATE OF latitude, longitude ON osm_places
+    BEFORE INSERT OR UPDATE OF latitude, longitude ON places
     FOR EACH ROW EXECUTE FUNCTION sync_place_location();
 
 CREATE TRIGGER update_events_location_trigger
@@ -430,12 +399,12 @@ BEGIN
 END;
 $$;
 
--- 1. RPC voor Places
 CREATE OR REPLACE FUNCTION get_place_markers_in_viewport(
     min_lat FLOAT,
     min_lng FLOAT,
     max_lat FLOAT,
-    max_lng FLOAT
+    max_lng FLOAT,
+    search_query TEXT DEFAULT ''
 )
 RETURNS TABLE (
     id UUID,
@@ -463,21 +432,21 @@ BEGIN
         ) AS hotness_score,
         (p.event_name IS NOT NULL OR p.start_time IS NOT NULL) AS is_event,
         (p.promo IS NOT NULL AND p.promo != '') AS is_flash_promo
-    FROM places p
-    WHERE p.location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography;
+    FROM places_view p
+    WHERE p.location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography
+    AND (search_query = '' OR p.name ILIKE '%' || search_query || '%');
 END;
 $$;
 
--- 2. RPC voor User Events
 CREATE OR REPLACE FUNCTION get_event_markers_in_viewport(
     min_lat FLOAT,
     min_lng FLOAT,
     max_lat FLOAT,
-    max_lng FLOAT
+    max_lng FLOAT,
+    search_query TEXT DEFAULT ''
 )
 RETURNS TABLE (
     id UUID,
-    title TEXT,
     latitude FLOAT8,
     longitude FLOAT8,
     hotness_score INT
@@ -489,7 +458,6 @@ BEGIN
     RETURN QUERY
     SELECT 
         e.id,
-        e.title,
         e.latitude,
         e.longitude,
         (
@@ -499,13 +467,11 @@ BEGIN
         ) AS hotness_score
     FROM events e
     WHERE e.location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography
-    AND (e.end_datetime IS NULL OR e.end_datetime > NOW()); 
+    AND (e.end_datetime IS NULL OR e.end_datetime > NOW())
+    AND (search_query = '' OR e.title ILIKE '%' || search_query || '%'); 
 END;
 $$;
 
--- ==========================================
--- 8. GRANTS
--- ==========================================
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;

@@ -3,7 +3,7 @@
   "appName": "Club App",
 
   "navMap": "Map",
-  "navActivities": "Events",
+  "navEvents": "Events",
   "navSettings": "Settings",
 
   "onboardingSkip": "Skip",
@@ -34,11 +34,11 @@
   "onboardingNicknameRequired": "Please enter a nickname",
   "onboardingNicknameMinLength": "Nickname must be at least 3 characters",
 
-  "activitiesTitle": "Events & Promotions",
-  "activitiesSearchHint": "Search by association, club, theme...",
-  "activitiesEmpty": "No events found.",
-  "activitiesDetails": "Details",
-  "activitiesUnknownCrowd": "Unknown",
+  "eventsTitle": "Events & Promotions",
+  "eventsSearchHint": "Search by association, club, theme...",
+  "eventsEmpty": "No events found.",
+  "eventsDetails": "Details",
+  "eventsUnknownCrowd": "Unknown",
 
   "mapSearchHint": "Search by district or club...",
   "mapFood": "Food",

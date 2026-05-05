@@ -15,7 +15,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get navMap => 'Kaart';
 
   @override
-  String get navActivities => 'Acties';
+  String get navEvents => 'Acties';
 
   @override
   String get navSettings => 'Instellingen';
@@ -107,19 +107,19 @@ class AppLocalizationsNl extends AppLocalizations {
       'Nickname moet minimaal 3 tekens zijn';
 
   @override
-  String get activitiesTitle => 'Activiteiten & Acties';
+  String get eventsTitle => 'Activiteiten & Acties';
 
   @override
-  String get activitiesSearchHint => 'Zoek vereniging, club, thema...';
+  String get eventsSearchHint => 'Zoek vereniging, club, thema...';
 
   @override
-  String get activitiesEmpty => 'Geen acties gevonden.';
+  String get eventsEmpty => 'Geen acties gevonden.';
 
   @override
-  String get activitiesDetails => 'Details';
+  String get eventsDetails => 'Details';
 
   @override
-  String get activitiesUnknownCrowd => 'Onbekend';
+  String get eventsUnknownCrowd => 'Onbekend';
 
   @override
   String get mapSearchHint => 'Zoek op wijk of club...';

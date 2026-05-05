@@ -356,7 +356,7 @@ class ChallengesScreen extends StatelessWidget {
             children: [
               _buildChallengeCard(
                 'The Pub Crawl',
-                'Check in at 3 different venues with your Squad in one night',
+                'Check in at 3 different places with your Squad in one night',
                 Icons.local_bar,
                 0,
                 3,
@@ -374,7 +374,7 @@ class ChallengesScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _buildChallengeCard(
                 'Trendsetters',
-                'Be the first Squad to check in at a trending venue',
+                'Be the first Squad to check in at a trending place',
                 Icons.trending_up,
                 0,
                 1,

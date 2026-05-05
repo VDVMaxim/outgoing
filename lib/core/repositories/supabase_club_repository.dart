@@ -116,21 +116,61 @@ class SupabaseClubRepository implements ClubRepository {
   }
 
   @override
-  Future<List<Place>> getPlacesInViewport(double minLat, double minLng, double maxLat, double maxLng) async {
+  Future<List<Place>> getPlacesInViewport(double minLat, double minLng, double maxLat, double maxLng, {String searchQuery = ''}) async {
     final client = SupabaseClientProvider.client;
 
     try {
-      final placesResponse = await client.rpc('get_places_in_viewport', params: {
+      final placesResponse = await client.rpc('get_place_markers_in_viewport', params: {
         'min_lat': minLat,
         'min_lng': minLng,
         'max_lat': maxLat,
         'max_lng': maxLng,
+        'search_query': searchQuery,
       });
 
-      if (placesResponse == null) return [];
+      final eventsResponse = await client.rpc('get_event_markers_in_viewport', params: {
+        'min_lat': minLat,
+        'min_lng': minLng,
+        'max_lat': maxLat,
+        'max_lng': maxLng,
+        'search_query': searchQuery,
+      });
+
+      final List<dynamic> combinedList = [];
       
-      final List<dynamic> placesList = List<dynamic>.from(placesResponse as Iterable<dynamic>);
-      return await _enrichPlaces(placesList);
+      if (placesResponse != null) {
+        for (final p in placesResponse as Iterable<dynamic>) {
+          combinedList.add({
+            'id': p['id'],
+            'name': '',
+            'latitude': p['latitude'],
+            'longitude': p['longitude'],
+            'location_type': p['location_type'],
+            'recent_likes': p['hotness_score'] ?? 0,
+            'recent_dislikes': 0,
+            'event_name': p['is_event'] == true ? 'Event' : null,
+            'promo': p['is_flash_promo'] == true ? 'Promo' : null,
+          });
+        }
+      }
+      
+      if (eventsResponse != null) {
+        for (final e in eventsResponse as Iterable<dynamic>) {
+          combinedList.add({
+            'id': e['id'],
+            'name': '',
+            'event_name': 'Event',
+            'latitude': e['latitude'],
+            'longitude': e['longitude'],
+            'location_type': 'place',
+            'recent_likes': e['hotness_score'] ?? 0,
+            'recent_dislikes': 0,
+            'start_time': DateTime.now().toIso8601String(), // Set a start time so it's classified as an event
+          });
+        }
+      }
+
+      return combinedList.map((json) => Place.fromJson(json)).toList();
 
     } catch (e) {
       debugPrint('🚨 CRASH PREVENTED in getPlacesInViewport: $e');

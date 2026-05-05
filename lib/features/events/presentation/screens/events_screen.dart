@@ -7,17 +7,17 @@ import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/favorites_provider.dart';
 import 'package:flutter_clubapp/core/services/location_service.dart';
-import '../../places/widgets/place_bottom_sheet.dart';
-import '../../../main.dart';
+import '../../../places/widgets/place_bottom_sheet.dart';
+import '../../../../main.dart';
 
-class ActivitiesScreen extends ConsumerStatefulWidget {
-  const ActivitiesScreen({super.key});
+class EventsScreen extends ConsumerStatefulWidget {
+  const EventsScreen({super.key});
 
   @override
-  ConsumerState<ActivitiesScreen> createState() => _ActivitiesScreenState();
+  ConsumerState<EventsScreen> createState() => _EventsScreenState();
 }
 
-class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
+class _EventsScreenState extends ConsumerState<EventsScreen> {
   String _searchQuery = '';
   bool _showFavoritesOnly = false;
   final TextEditingController _searchController = TextEditingController();
@@ -84,7 +84,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
               style: TextStyle(color: textColor),
               cursorColor: textColor,
               decoration: InputDecoration(
-                hintText: l10n.activitiesSearchHint,
+                hintText: l10n.eventsSearchHint,
                 hintStyle: const TextStyle(color: Colors.grey),
                 border: InputBorder.none,
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -176,7 +176,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                   if (events.isEmpty) {
                     return Center(
                       child: Text(
-                        l10n.activitiesEmpty,
+                        l10n.eventsEmpty,
                         style: TextStyle(color: textColor),
                       ),
                     );
@@ -333,8 +333,8 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                                         const SizedBox(width: 4),
                                         Text(
                                           place.recentLikes > 0 
-                                            ? '${place.recentLikes} Vibes' 
-                                              : l10n.activitiesUnknownCrowd,
+                                              ? '${place.recentLikes} Vibes' 
+                                              : l10n.eventsUnknownCrowd,
                                           style: TextStyle(
                                             color: isDark
                                                 ? Colors.white54
@@ -348,7 +348,7 @@ class _ActivitiesScreenState extends ConsumerState<ActivitiesScreen> {
                                       onPressed: () =>
                                           _openDetails(context, place),
                                       child: Text(
-                                        l10n.activitiesDetails,
+                                        l10n.eventsDetails,
                                         style: TextStyle(color: textColor),
                                       ),
                                     ),

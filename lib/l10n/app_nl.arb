@@ -3,7 +3,7 @@
   "appName": "Club App",
 
   "navMap": "Kaart",
-  "navActivities": "Acties",
+  "navEvents": "Acties",
   "navSettings": "Instellingen",
 
   "onboardingSkip": "Overslaan",
@@ -34,11 +34,11 @@
   "onboardingNicknameRequired": "Voer een nickname in",
   "onboardingNicknameMinLength": "Nickname moet minimaal 3 tekens zijn",
 
-  "activitiesTitle": "Activiteiten & Acties",
-  "activitiesSearchHint": "Zoek vereniging, club, thema...",
-  "activitiesEmpty": "Geen acties gevonden.",
-  "activitiesDetails": "Details",
-  "activitiesUnknownCrowd": "Onbekend",
+  "eventsTitle": "Activiteiten & Acties",
+  "eventsSearchHint": "Zoek vereniging, club, thema...",
+  "eventsEmpty": "Geen acties gevonden.",
+  "eventsDetails": "Details",
+  "eventsUnknownCrowd": "Onbekend",
 
   "mapSearchHint": "Zoek op wijk of club...",
   "mapFood": "Eten",

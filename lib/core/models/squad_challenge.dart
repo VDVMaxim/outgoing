@@ -17,11 +17,11 @@ extension SquadChallengeTypeExtension on SquadChallengeType {
   String get description {
     switch (this) {
       case SquadChallengeType.pubCrawl:
-        return 'Check in at 3 different venues with your Squad in one night';
+        return 'Check in at 3 different places with your Squad in one night';
       case SquadChallengeType.noManLeftBehind:
         return 'Stay within 50m of your Squad until 03:00';
       case SquadChallengeType.trendsetters:
-        return 'Be the first Squad to check in at a trending venue';
+        return 'Be the first Squad to check in at a trending place';
     }
   }
 

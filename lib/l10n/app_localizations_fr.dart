@@ -15,7 +15,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navMap => 'Carte';
 
   @override
-  String get navActivities => 'Sorties';
+  String get navEvents => 'Sorties';
 
   @override
   String get navSettings => 'Réglages';
@@ -107,20 +107,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le pseudo doit comporter au moins 3 caractères';
 
   @override
-  String get activitiesTitle => 'Sorties & Promotions';
+  String get eventsTitle => 'Sorties & Promotions';
 
   @override
-  String get activitiesSearchHint =>
-      'Rechercher par association, club, thème...';
+  String get eventsSearchHint => 'Rechercher par association, club, thème...';
 
   @override
-  String get activitiesEmpty => 'Aucune sortie trouvée.';
+  String get eventsEmpty => 'Aucune sortie trouvée.';
 
   @override
-  String get activitiesDetails => 'Détails';
+  String get eventsDetails => 'Détails';
 
   @override
-  String get activitiesUnknownCrowd => 'Inconnu';
+  String get eventsUnknownCrowd => 'Inconnu';
 
   @override
   String get mapSearchHint => 'Rechercher par quartier ou club...';

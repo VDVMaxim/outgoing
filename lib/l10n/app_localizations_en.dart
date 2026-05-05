@@ -15,7 +15,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMap => 'Map';
 
   @override
-  String get navActivities => 'Events';
+  String get navEvents => 'Events';
 
   @override
   String get navSettings => 'Settings';
@@ -107,19 +107,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nickname must be at least 3 characters';
 
   @override
-  String get activitiesTitle => 'Events & Promotions';
+  String get eventsTitle => 'Events & Promotions';
 
   @override
-  String get activitiesSearchHint => 'Search by association, club, theme...';
+  String get eventsSearchHint => 'Search by association, club, theme...';
 
   @override
-  String get activitiesEmpty => 'No events found.';
+  String get eventsEmpty => 'No events found.';
 
   @override
-  String get activitiesDetails => 'Details';
+  String get eventsDetails => 'Details';
 
   @override
-  String get activitiesUnknownCrowd => 'Unknown';
+  String get eventsUnknownCrowd => 'Unknown';
 
   @override
   String get mapSearchHint => 'Search by district or club...';
