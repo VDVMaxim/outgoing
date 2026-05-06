@@ -15,10 +15,8 @@ import 'package:flutter_clubapp/core/constants/app_constants.dart';
 import 'package:flutter_clubapp/main.dart';
 import 'package:flutter_clubapp/core/widgets/permission_rationale_sheet.dart';
 import '../../places/widgets/place_bottom_sheet.dart';
-import '../../events/presentation/widgets/event_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
 import '../../squad/providers/squad_provider.dart';
-import 'package:flutter_clubapp/core/providers/navigation_provider.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   final LatLng? userLocation;
@@ -28,7 +26,7 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateMixin {
+class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final Map<String, Place> _cachedPlaces = {};
   bool _isLoading = true;
@@ -51,8 +49,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
   bool _isPlacingPin = false;
   DateTime _pinTargetTime = DateTime.now().add(const Duration(minutes: 30));
   late AnimationController _fabAnimController;
-  late AnimationController _pulseController;
-  String? _pulsingPlaceId;
 
   @override
   void initState() {
@@ -62,10 +58,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
     _fabAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
-    );
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(analyticsServiceProvider).logEvent('opened_map');
@@ -94,7 +86,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
     _locationSubscription?.cancel();
     _compassSubscription?.cancel();
     _fabAnimController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -294,17 +285,12 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
       setState(() => _selectedPlaceId = null);
       return;
     }
-
-    final place = fullPlace;
-    final isEvent = place.status == ClubStatus.event || place.eventName != null;
-
+    
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => isEvent
-          ? EventBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation)
-          : PlaceBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
+      builder: (context) => PlaceBottomSheet(place: fullPlace!, userLocation: _liveUserLocation ?? widget.userLocation),
     );
     if (mounted) {
       setState(() => _selectedPlaceId = null);
@@ -501,24 +487,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
     final l10n = AppLocalizations.of(context)!;
     final squadState = ref.watch(squadProvider);
     final settings = ref.watch(settingsServiceProvider);
-    
-    ref.listen<Place?>(mapFocusProvider, (previous, next) {
-      if (next != null) {
-        _mapController.move(next.location, 17.0);
-        setState(() => _pulsingPlaceId = next.id);
-        _pulseController.repeat();
-        Timer(const Duration(seconds: 4), () {
-          if (mounted) {
-            setState(() => _pulsingPlaceId = null);
-            _pulseController.stop();
-            if (ref.read(mapFocusProvider) == next) {
-              ref.read(mapFocusProvider.notifier).state = null;
-            }
-          }
-        });
-      }
-    });
-
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
@@ -885,47 +853,22 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
         markers.add(
           Marker(
             point: place.location,
-            width: baseSize * 2.5,
-            height: baseSize * 2.5,
-            alignment: Alignment.center,
+            width: baseSize,
+            height: baseSize,
             rotate: true,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (place.id == _pulsingPlaceId)
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      final size = baseSize + (_pulseController.value * baseSize * 1.5);
-                      return Container(
-                        width: size,
-                        height: size,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: pinColor.withValues(alpha: 0.4 * (1.0 - _pulseController.value)),
-                        ),
-                      );
-                    },
-                  ),
-                SizedBox(
-                  width: baseSize,
-                  height: baseSize,
-                  child: GestureDetector(
-                    onTap: () => _openDetails(context, place),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: pinColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2.5 * scale),
-                        boxShadow: [
-                          BoxShadow(color: pinColor.withValues(alpha: 0.5), blurRadius: 8 * scale, offset: Offset(0, 3 * scale))
-                        ]
-                      ),
-                      child: Icon(pinIcon, color: Colors.white, size: iconSize),
-                    ),
-                  ),
+            child: GestureDetector(
+              onTap: () => _openDetails(context, place),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: pinColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5 * scale),
+                  boxShadow: [
+                    BoxShadow(color: pinColor.withValues(alpha: 0.5), blurRadius: 8 * scale, offset: Offset(0, 3 * scale))
+                  ]
                 ),
-              ],
+                child: Icon(pinIcon, color: Colors.white, size: iconSize),
+              ),
             ),
           )
         );

@@ -8,8 +8,7 @@ import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/favorites_provider.dart';
 import 'package:flutter_clubapp/core/services/location_service.dart';
-import '../widgets/event_bottom_sheet.dart';
-import 'package:flutter_clubapp/core/providers/navigation_provider.dart';
+import '../../../places/widgets/place_bottom_sheet.dart';
 import '../../../../main.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
@@ -57,20 +56,12 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EventBottomSheet(place: place),
+      builder: (context) => PlaceBottomSheet(place: place),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // When any feature triggers a tab switch (e.g. minimap expand button in
-    // EventBottomSheet), pop this route so MainNavigation becomes visible.
-    ref.listen<int>(navIndexProvider, (previous, next) {
-      if (previous != next && mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    });
-
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {

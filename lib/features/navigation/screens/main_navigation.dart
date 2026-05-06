@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
@@ -7,18 +6,17 @@ import '../../map/screens/map_screen.dart';
 import '../../feed/screens/feed_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../../main.dart';
-import 'package:flutter_clubapp/core/providers/navigation_provider.dart';
 
-class MainNavigation extends ConsumerStatefulWidget {
+class MainNavigation extends StatefulWidget {
   final LatLng? userLocation;
   const MainNavigation({super.key, this.userLocation});
 
   @override
-  ConsumerState<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends ConsumerState<MainNavigation> {
-
+class _MainNavigationState extends State<MainNavigation> {
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -40,7 +38,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             children: [
               AnimatedBlurBackground(
                 child: IndexedStack(
-                  index: ref.watch(navIndexProvider),
+                  index: _currentIndex,
                   children: [
                     MapScreen(userLocation: widget.userLocation),
                     const FeedScreen(),
@@ -68,8 +66,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               selectedFontSize: 12,
               unselectedFontSize: 12,
               type: BottomNavigationBarType.fixed,
-              currentIndex: ref.watch(navIndexProvider),
-              onTap: (index) => ref.read(navIndexProvider.notifier).state = index,
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
               items: [
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.map_outlined),
