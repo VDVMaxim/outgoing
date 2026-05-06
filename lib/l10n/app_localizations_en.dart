@@ -18,7 +18,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navEvents => 'Events';
 
   @override
+  String get navFeed => 'Feed';
+
+  @override
   String get navSettings => 'Settings';
+
+  @override
+  String get feedViewEvents => 'View Events';
 
   @override
   String get onboardingSkip => 'Skip';

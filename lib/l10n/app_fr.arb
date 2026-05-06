@@ -4,7 +4,9 @@
 
   "navMap": "Carte",
   "navEvents": "Sorties",
+  "navFeed": "Feed",
   "navSettings": "Réglages",
+  "feedViewEvents": "Voir les Événements",
 
   "onboardingSkip": "Passer",
   "onboardingNext": "Suivant",

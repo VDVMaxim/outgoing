@@ -118,11 +118,23 @@ abstract class AppLocalizations {
   /// **'Acties'**
   String get navEvents;
 
+  /// No description provided for @navFeed.
+  ///
+  /// In nl, this message translates to:
+  /// **'Feed'**
+  String get navFeed;
+
   /// No description provided for @navSettings.
   ///
   /// In nl, this message translates to:
   /// **'Instellingen'**
   String get navSettings;
+
+  /// No description provided for @feedViewEvents.
+  ///
+  /// In nl, this message translates to:
+  /// **'Bekijk Events'**
+  String get feedViewEvents;
 
   /// No description provided for @onboardingSkip.
   ///

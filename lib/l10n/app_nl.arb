@@ -4,7 +4,9 @@
 
   "navMap": "Kaart",
   "navEvents": "Acties",
+  "navFeed": "Feed",
   "navSettings": "Instellingen",
+  "feedViewEvents": "Bekijk Events",
 
   "onboardingSkip": "Overslaan",
   "onboardingNext": "Volgende",

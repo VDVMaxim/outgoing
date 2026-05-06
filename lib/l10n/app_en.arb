@@ -4,7 +4,9 @@
 
   "navMap": "Map",
   "navEvents": "Events",
+  "navFeed": "Feed",
   "navSettings": "Settings",
+  "feedViewEvents": "View Events",
 
   "onboardingSkip": "Skip",
   "onboardingNext": "Next",
