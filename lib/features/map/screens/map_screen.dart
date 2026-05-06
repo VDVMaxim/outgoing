@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +13,7 @@ import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/constants/app_constants.dart';
 import 'package:flutter_clubapp/main.dart';
+import 'package:flutter_clubapp/core/widgets/permission_rationale_sheet.dart';
 import '../../places/widgets/place_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
 import '../../squad/providers/squad_provider.dart';
@@ -30,6 +30,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   final MapController _mapController = MapController();
   final Map<String, Place> _cachedPlaces = {};
   bool _isLoading = true;
+  bool _hasLocationPermission = false;
   final Set<String> _selectedFilters = {};
   String _searchQuery = '';
 
@@ -60,10 +61,23 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(analyticsServiceProvider).logEvent('opened_map');
+      _checkInitialPermission();
     });
     _setupSquadPulse();
-    _startLocationTracking();
     _startCompassTracking();
+  }
+
+  Future<void> _checkInitialPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+    
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+      if (mounted) {
+        setState(() => _hasLocationPermission = true);
+        _startLocationTracking();
+      }
+    }
   }
 
   @override
@@ -136,6 +150,27 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
         );
       }
     }
+  }
+
+  void _promptForLocation() async {
+    final l10n = AppLocalizations.of(context)!;
+    await PermissionRationaleSheet.show(
+      context: context,
+      icon: Icons.location_on,
+      title: l10n.onboardingLocationTitle,
+      message: l10n.onboardingLocationDesc,
+      primaryButtonText: l10n.onboardingLocationAllow,
+      onPrimary: () async {
+        final permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+          if (mounted) {
+            setState(() => _hasLocationPermission = true);
+            _startLocationTracking();
+          }
+        }
+      },
+      onSecondary: () {},
+    );
   }
 
   Future<void> _startLocationTracking() async {
@@ -378,6 +413,75 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     );
   }
 
+  Widget _buildLocationFallback(bool isDark, AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.location_off_rounded,
+                size: 72,
+                color: isDark ? Colors.white54 : Colors.black38,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              l10n.onboardingLocationTitle,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.onboardingLocationDesc,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.5,
+                color: isDark ? Colors.white54 : Colors.black54,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 36),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ShadButton(
+                onPressed: _promptForLocation,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.location_on, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.onboardingLocationAllow,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -391,7 +495,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                 MediaQuery.platformBrightnessOf(context) == Brightness.dark);
                 
         return Scaffold(
-          body: Stack(
+          body: !_hasLocationPermission
+            ? _buildLocationFallback(currentIsDark, l10n)
+            : Stack(
             children: [
               FlutterMap(
                 mapController: _mapController,
@@ -710,114 +816,62 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     final double baseSize = 54.0 * scale;
     final double iconSize = 26.0 * scale;
 
-    final int discreteZoom = _currentZoom.floor();
-    final bool doClustering = _currentZoom < 14.5;
-    final double gridSize = doClustering ? 0.004 * math.pow(2, 14 - discreteZoom).toDouble() : 0.0;
-    
-    final Map<String, List<Place>> clusters = {};
     Place? selectedPlace;
     for (final place in activePlaces) {
       if (place.id == _selectedPlaceId) {
         selectedPlace = place;
-        continue; 
+        continue;
       }
-      if (doClustering) {
-        final int gridX = (place.location.longitude / gridSize).round();
-        final int gridY = (place.location.latitude / gridSize).round();
-        final String key = '$gridX,$gridY';
-        clusters.putIfAbsent(key, () => []).add(place);
-      } else {
-        clusters[place.id] = [place];
-      }
-    }
 
-    for (final cluster in clusters.values) {
-      if (cluster.length > 1) {
-        double sumLat = 0, sumLng = 0;
-        bool hasHot = false;
-        for (final p in cluster) {
-          sumLat += p.location.latitude;
-          sumLng += p.location.longitude;
-          if (p.hotnessScore >= 5 || p.isFlashPromoActive) hasHot = true;
-        }
-        final LatLng center = LatLng(sumLat / cluster.length, sumLng / cluster.length);
-        final Color clusterColor = hasHot ? Colors.purpleAccent : Colors.blueAccent;
-        markers.add(Marker(
-          point: center,
-          width: 52 * scale,
-          height: 52 * scale,
-          rotate: true,
-          child: GestureDetector(
-            onTap: () {
-              _mapController.move(center, _currentZoom + 1.5);
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: clusterColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2.5 * scale),
-                boxShadow: [BoxShadow(color: clusterColor.withValues(alpha: 0.5), blurRadius: 8 * scale)],
-              ),
-              child: Center(
-                child: Text(
-                  '${cluster.length}', 
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18 * scale)
+      final isFood = place.type == LocationType.food || place.name.toLowerCase().contains('food');
+      final isEvent = place.status == ClubStatus.event;
+      final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || isEvent;
+
+      if (!isHot && _currentZoom < 15.5) {
+        final Color dotColor = isFood ? Colors.orange.withValues(alpha: 0.6) : Colors.blueAccent.withValues(alpha: 0.6);
+        markers.add(
+          Marker(
+            point: place.location,
+            width: 12 * scale,
+            height: 12 * scale,
+            rotate: true,
+            child: GestureDetector(
+              onTap: () => _openDetails(context, place),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: isDark ? Colors.white24 : Colors.black12, width: 1),
                 ),
               ),
             ),
-          ),
-        ));
+          )
+        );
       } else {
-        final place = cluster.first;
-        final isFood = place.type == LocationType.food || place.name.toLowerCase().contains('food');
-        final isEvent = place.status == ClubStatus.event;
-        final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || isEvent;
-        if (!isHot && _currentZoom < 15.5) {
-          final Color dotColor = isFood ? Colors.orange.withValues(alpha: 0.6) : Colors.blueAccent.withValues(alpha: 0.6);
-          markers.add(
-            Marker(
-              point: place.location,
-              width: 12,
-              height: 12,
-              rotate: true,
-              child: GestureDetector(
-                onTap: () => _openDetails(context, place),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: isDark ? Colors.white24 : Colors.black12, width: 1),
-                  ),
+        final IconData pinIcon = isFood ? Icons.fastfood_rounded : (isHot ? Icons.local_fire_department : Icons.nightlife);
+        final Color pinColor = isFood ? Colors.orange : (isHot ? Colors.purpleAccent : Colors.blueAccent);
+        markers.add(
+          Marker(
+            point: place.location,
+            width: baseSize,
+            height: baseSize,
+            rotate: true,
+            child: GestureDetector(
+              onTap: () => _openDetails(context, place),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: pinColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5 * scale),
+                  boxShadow: [
+                    BoxShadow(color: pinColor.withValues(alpha: 0.5), blurRadius: 8 * scale, offset: Offset(0, 3 * scale))
+                  ]
                 ),
+                child: Icon(pinIcon, color: Colors.white, size: iconSize),
               ),
-            )
-          );
-        } else {
-          final IconData pinIcon = isFood ? Icons.fastfood_rounded : (isHot ? Icons.local_fire_department : Icons.nightlife);
-          final Color pinColor = isFood ? Colors.orange : (isHot ? Colors.purpleAccent : Colors.blueAccent);
-          markers.add(
-            Marker(
-              point: place.location,
-              width: baseSize, 
-              height: baseSize,
-              rotate: true,
-              child: GestureDetector(
-                onTap: () => _openDetails(context, place),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: pinColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2.5 * scale),
-                    boxShadow: [
-                      BoxShadow(color: pinColor.withValues(alpha: 0.5), blurRadius: 8 * scale, offset: Offset(0, 3 * scale))
-                    ]
-                  ),
-                  child: Icon(pinIcon, color: Colors.white, size: iconSize),
-                ),
-              ),
-            )
-          );
-        }
+            ),
+          )
+        );
       }
     }
 

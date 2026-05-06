@@ -3,15 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
-import 'package:flutter_clubapp/core/widgets/permission_rationale_sheet.dart';
-import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker_with_button.dart';
 import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.dart';
 import 'package:flutter_clubapp/features/navigation/screens/main_navigation.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:latlong2/latlong.dart';
 
 class OnboardingSetup extends ConsumerStatefulWidget {
   const OnboardingSetup({super.key});
@@ -22,7 +18,6 @@ class OnboardingSetup extends ConsumerStatefulWidget {
 
 class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   final TextEditingController _nicknameController = TextEditingController();
-  bool _isLoading = false;
   bool _hasRegistrationCompleted = false;
   bool _isInitialized = false;
   bool _hasNickname = false;
@@ -53,36 +48,14 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
     super.dispose();
   }
 
-  void _setLoading(bool value) {
-    setState(() => _isLoading = value);
-  }
-
   Future<void> _finishOnboarding() async {
-    setState(() => _isLoading = true);
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    LatLng? userLocation;
-    if (permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always) {
-      try {
-        Position pos = await Geolocator.getCurrentPosition();
-        userLocation = LatLng(pos.latitude, pos.longitude);
-      } catch (e) {
-        userLocation = null;
-      }
-    }
-
     final profile = ref.read(userProfileServiceProvider);
     profile.hasCompletedOnboarding = true;
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         PageRouteBuilder(
           pageBuilder: (context, a1, a2) =>
-              MainNavigation(userLocation: userLocation),
+              const MainNavigation(userLocation: null),
           transitionsBuilder: (context, a1, a2, child) =>
               FadeTransition(opacity: a1, child: child),
           transitionDuration: const Duration(milliseconds: 600),
@@ -100,24 +73,6 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
     _finishOnboarding();
   }
 
-  void _onSkipLocation() async {
-    final profile = ref.read(userProfileServiceProvider);
-    profile.hasCompletedOnboarding = true;
-
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        PageRouteBuilder(
-          pageBuilder: (context, a1, a2) =>
-              const MainNavigation(userLocation: null),
-          transitionsBuilder: (context, a1, a2, child) =>
-              FadeTransition(opacity: a1, child: child),
-          transitionDuration: const Duration(milliseconds: 600),
-        ),
-        (route) => false,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
@@ -133,12 +88,6 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
 
     final steps = skipNickname
         ? [
-            _LocationWizardStep(
-              isLoading: _isLoading,
-              setLoading: _setLoading,
-              finishOnboarding: _finishOnboarding,
-              onSkip: _onSkipLocation,
-            ),
             _CompleteWizardStep(
               hasRegistrationCompleted: true,
               onComplete: _onCompletePressed,
@@ -148,12 +97,6 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
             _NicknameWizardStep(
               controller: _nicknameController,
               onRegistrationComplete: _onRegistrationComplete,
-            ),
-            _LocationWizardStep(
-              isLoading: _isLoading,
-              setLoading: _setLoading,
-              finishOnboarding: _finishOnboarding,
-              onSkip: _onSkipLocation,
             ),
             _CompleteWizardStep(
               hasRegistrationCompleted: _hasRegistrationCompleted,
@@ -252,137 +195,6 @@ class _NicknameContentState extends ConsumerState<_NicknameContent> {
       onStateRefresh: () {},
       showGenerateButton: true,
     );
-  }
-}
-
-class _LocationWizardStep implements OnboardingStep {
-  final bool isLoading;
-  final Function(bool) setLoading;
-  final VoidCallback finishOnboarding;
-  final VoidCallback onSkip;
-
-  _LocationWizardStep({
-    required this.isLoading,
-    required this.setLoading,
-    required this.finishOnboarding,
-    required this.onSkip,
-  });
-
-  @override
-  Widget build(BuildContext context, VoidCallback onStateRefresh) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context)!;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.location_on,
-              size: 80,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 48),
-          Text(
-            l10n.onboardingLocationTitle,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -1,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.onboardingLocationDesc,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ShadButton(
-              onPressed: isLoading ? null : () => _showLocationSheet(context),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      l10n.onboardingLocationAllow,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ShadButton.ghost(
-              onPressed: isLoading ? null : onSkip,
-              child: Text(
-                l10n.onboardingLocationSkip,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLocationSheet(BuildContext context) async {
-    final l10n = AppLocalizations.of(context)!;
-    await PermissionRationaleSheet.show(
-      context: context,
-      icon: Icons.location_on,
-      title: l10n.onboardingLocationTitle,
-      message: l10n.onboardingLocationDesc,
-      primaryButtonText: l10n.onboardingLocationAllow,
-      onPrimary: () async {
-        setLoading(true);
-        final permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          await Geolocator.requestPermission();
-        }
-        setLoading(false);
-        finishOnboarding();
-      },
-      onSecondary: onSkip,
-    );
-  }
-
-  @override
-  String? validate() => null;
-
-  @override
-  VoidCallback? onNextPressed;
-
-  @override
-  void setOnNextCallback(VoidCallback? callback) {
-    onNextPressed = callback;
   }
 }
 
