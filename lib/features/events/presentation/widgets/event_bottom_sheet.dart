@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/core/providers/navigation_provider.dart';
 
 class EventBottomSheet extends ConsumerWidget {
   final Place place;
@@ -66,6 +68,70 @@ class EventBottomSheet extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 12),
+
+              // Minimap
+              if (place.hasValidLocation) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 180,
+                    width: double.infinity,
+                    child: Stack(
+                      children: [
+                        FlutterMap(
+                          options: MapOptions(
+                            initialCenter: place.location,
+                            initialZoom: 15.0,
+                            interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName: 'com.clubapp.app',
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: place.location,
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(
+                                    Icons.location_on,
+                                    color: Colors.redAccent,
+                                    size: 40,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.black54 : Colors.white70,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.zoom_out_map),
+                              color: isDark ? Colors.white : Colors.black,
+                              onPressed: () {
+                                Navigator.pop(context);                                  
+                                Future.microtask(() {
+                                  ref.read(mapFocusProvider.notifier).state = place;
+                                  ref.read(navIndexProvider.notifier).state = 0;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Start time
               if (place.startTime != null)
