@@ -15,6 +15,7 @@ import 'package:flutter_clubapp/core/constants/app_constants.dart';
 import 'package:flutter_clubapp/main.dart';
 import 'package:flutter_clubapp/core/widgets/permission_rationale_sheet.dart';
 import '../../places/widgets/place_bottom_sheet.dart';
+import '../../events/presentation/widgets/event_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
 import '../../squad/providers/squad_provider.dart';
 
@@ -285,12 +286,17 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       setState(() => _selectedPlaceId = null);
       return;
     }
-    
+
+    final place = fullPlace;
+    final isEvent = place.status == ClubStatus.event || place.eventName != null;
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => PlaceBottomSheet(place: fullPlace!, userLocation: _liveUserLocation ?? widget.userLocation),
+      builder: (context) => isEvent
+          ? EventBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation)
+          : PlaceBottomSheet(place: place, userLocation: _liveUserLocation ?? widget.userLocation),
     );
     if (mounted) {
       setState(() => _selectedPlaceId = null);

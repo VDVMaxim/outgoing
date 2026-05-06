@@ -294,5 +294,9 @@
   "pushSquad": "Squad Alerts",
   "pushQuiet": "Stille Uren",
   "faqTitle": "FAQ",
-  "accountAssoc": "Mijn Verenigingen"
+  "accountAssoc": "Mijn Verenigingen",
+  "eventHostedBy": "Georganiseerd door",
+  "eventStartsAt": "Begint om",
+  "eventRoute": "Route naar locatie",
+  "eventCheckIn": "Check In (+10 VP)"
 }

@@ -762,4 +762,16 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get accountAssoc => 'Mijn Verenigingen';
+
+  @override
+  String get eventHostedBy => 'Georganiseerd door';
+
+  @override
+  String get eventStartsAt => 'Begint om';
+
+  @override
+  String get eventRoute => 'Route naar locatie';
+
+  @override
+  String get eventCheckIn => 'Check In (+10 VP)';
 }

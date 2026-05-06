@@ -294,5 +294,9 @@
   "pushSquad": "Squad Alerts",
   "pushQuiet": "Quiet Hours",
   "faqTitle": "FAQ",
-  "accountAssoc": "My Associations"
+  "accountAssoc": "My Associations",
+  "eventHostedBy": "Hosted by",
+  "eventStartsAt": "Starts at",
+  "eventRoute": "Route to location",
+  "eventCheckIn": "Check In (+10 VP)"
 }

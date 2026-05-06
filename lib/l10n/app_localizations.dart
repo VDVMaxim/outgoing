@@ -1527,6 +1527,30 @@ abstract class AppLocalizations {
   /// In nl, this message translates to:
   /// **'Mijn Verenigingen'**
   String get accountAssoc;
+
+  /// No description provided for @eventHostedBy.
+  ///
+  /// In nl, this message translates to:
+  /// **'Georganiseerd door'**
+  String get eventHostedBy;
+
+  /// No description provided for @eventStartsAt.
+  ///
+  /// In nl, this message translates to:
+  /// **'Begint om'**
+  String get eventStartsAt;
+
+  /// No description provided for @eventRoute.
+  ///
+  /// In nl, this message translates to:
+  /// **'Route naar locatie'**
+  String get eventRoute;
+
+  /// No description provided for @eventCheckIn.
+  ///
+  /// In nl, this message translates to:
+  /// **'Check In (+10 VP)'**
+  String get eventCheckIn;
 }
 
 class _AppLocalizationsDelegate

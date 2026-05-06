@@ -759,4 +759,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountAssoc => 'My Associations';
+
+  @override
+  String get eventHostedBy => 'Hosted by';
+
+  @override
+  String get eventStartsAt => 'Starts at';
+
+  @override
+  String get eventRoute => 'Route to location';
+
+  @override
+  String get eventCheckIn => 'Check In (+10 VP)';
 }
