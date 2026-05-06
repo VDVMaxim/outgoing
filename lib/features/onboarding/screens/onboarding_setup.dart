@@ -9,16 +9,18 @@ import 'package:flutter_clubapp/core/widgets/nickname_picker_with_button.dart';
 import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.dart';
 import 'package:flutter_clubapp/features/navigation/screens/main_navigation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:latlong2/latlong.dart';
 
-class OnboardingSetup extends StatefulWidget {
+class OnboardingSetup extends ConsumerStatefulWidget {
   const OnboardingSetup({super.key});
 
   @override
-  State<OnboardingSetup> createState() => _OnboardingSetupState();
+  ConsumerState<OnboardingSetup> createState() => _OnboardingSetupState();
 }
 
-class _OnboardingSetupState extends State<OnboardingSetup> {
+class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   final TextEditingController _nicknameController = TextEditingController();
   bool _isLoading = false;
   bool _hasRegistrationCompleted = false;
@@ -32,7 +34,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
   }
 
   Future<void> _initializeProfile() async {
-    final profile = await UserProfileService.getInstance();
+    final profile = ref.read(userProfileServiceProvider);
     if (mounted) {
       setState(() {
         _hasNickname = profile.hasNickname;
@@ -74,7 +76,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
       }
     }
 
-    final profile = await UserProfileService.getInstance();
+    final profile = ref.read(userProfileServiceProvider);
     profile.hasCompletedOnboarding = true;
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -99,7 +101,7 @@ class _OnboardingSetupState extends State<OnboardingSetup> {
   }
 
   void _onSkipLocation() async {
-    final profile = await UserProfileService.getInstance();
+    final profile = ref.read(userProfileServiceProvider);
     profile.hasCompletedOnboarding = true;
 
     if (mounted) {
@@ -213,7 +215,7 @@ class _NicknameWizardStep implements OnboardingStep {
   }
 }
 
-class _NicknameContent extends StatefulWidget {
+class _NicknameContent extends ConsumerStatefulWidget {
   final TextEditingController controller;
   final VoidCallback onRegistrationComplete;
 
@@ -223,10 +225,10 @@ class _NicknameContent extends StatefulWidget {
   });
 
   @override
-  State<_NicknameContent> createState() => _NicknameContentState();
+  ConsumerState<_NicknameContent> createState() => _NicknameContentState();
 }
 
-class _NicknameContentState extends State<_NicknameContent> {
+class _NicknameContentState extends ConsumerState<_NicknameContent> {
   @override
   void initState() {
     super.initState();
@@ -234,7 +236,7 @@ class _NicknameContentState extends State<_NicknameContent> {
   }
 
   Future<void> _loadNickname() async {
-    final profile = await UserProfileService.getInstance();
+    final profile = ref.read(userProfileServiceProvider);
     if (profile.hasNickname && mounted) {
       setState(() {
         widget.controller.text = profile.nickname!;

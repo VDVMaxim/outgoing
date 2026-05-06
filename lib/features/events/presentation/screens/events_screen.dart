@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/favorites_provider.dart';
 import 'package:flutter_clubapp/core/services/location_service.dart';
@@ -36,12 +37,12 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
   Future<List<Place>> _loadPlaces() async {
     LatLng? userLocation;
     try {
-      final pos = await LocationService.instance.getCurrentPosition();
+      final pos = await ref.read(locationServiceProvider).getCurrentPosition();
       if (pos != null) {
         userLocation = LatLng(pos.latitude, pos.longitude);
       }
     } catch (_) {}
-    return ref.read(clubRepositoryProvider).getDiscoverPlaces(userLocation: userLocation);
+    return ref.read(clubRepositoryProvider).getEvents(userLocation: userLocation);
   }
 
   @override
@@ -144,9 +145,6 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                 valueListenable: FavoritesProvider.instance,
                 builder: (context, favorites, _) {
                   List<Place> events = allPlaces.where((p) {
-                    if (p.status != ClubStatus.event && !p.isFlashPromoActive) {
-                      return false;
-                    }
                     if (_showFavoritesOnly && !favorites.contains(p.id)) {
                       return false;
                     }

@@ -1185,6 +1185,336 @@ abstract class AppLocalizations {
   /// In nl, this message translates to:
   /// **'Privacy Policy'**
   String get settingsPrivacy;
+
+  /// No description provided for @loginSubtitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Log in om door te gaan'**
+  String get loginSubtitle;
+
+  /// No description provided for @registerFirstNameTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wat is je voornaam?'**
+  String get registerFirstNameTitle;
+
+  /// No description provided for @registerFirstNameDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vul je voornaam in om te beginnen'**
+  String get registerFirstNameDesc;
+
+  /// No description provided for @registerLastNameTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wat is je achternaam?'**
+  String get registerLastNameTitle;
+
+  /// No description provided for @registerLastNameDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vul je achternaam in om door te gaan'**
+  String get registerLastNameDesc;
+
+  /// No description provided for @registerBirthdayTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wanneer ben je geboren?'**
+  String get registerBirthdayTitle;
+
+  /// No description provided for @registerBirthdayDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'We hebben dit nodig om je leeftijd te verifiëren'**
+  String get registerBirthdayDesc;
+
+  /// No description provided for @registerEmailTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wat is je e-mailadres?'**
+  String get registerEmailTitle;
+
+  /// No description provided for @registerEmailDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'We sturen je een verificatielink'**
+  String get registerEmailDesc;
+
+  /// No description provided for @registerPasswordTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Maak een wachtwoord'**
+  String get registerPasswordTitle;
+
+  /// No description provided for @registerPasswordDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Zorg dat het minstens 6 tekens lang is'**
+  String get registerPasswordDesc;
+
+  /// No description provided for @errorFirstNameRequired.
+  ///
+  /// In nl, this message translates to:
+  /// **'Voornaam is verplicht'**
+  String get errorFirstNameRequired;
+
+  /// No description provided for @errorLastNameRequired.
+  ///
+  /// In nl, this message translates to:
+  /// **'Achternaam is verplicht'**
+  String get errorLastNameRequired;
+
+  /// No description provided for @errorEmailRequired.
+  ///
+  /// In nl, this message translates to:
+  /// **'E-mailadres is verplicht'**
+  String get errorEmailRequired;
+
+  /// No description provided for @errorInvalidEmail.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ongeldig e-mailadres'**
+  String get errorInvalidEmail;
+
+  /// No description provided for @errorPasswordRequired.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wachtwoord is verplicht'**
+  String get errorPasswordRequired;
+
+  /// No description provided for @errorPasswordLength.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wachtwoord moet minstens 6 tekens zijn'**
+  String get errorPasswordLength;
+
+  /// No description provided for @errorConfirmPasswordRequired.
+  ///
+  /// In nl, this message translates to:
+  /// **'Bevestig je wachtwoord'**
+  String get errorConfirmPasswordRequired;
+
+  /// No description provided for @errorPasswordMismatch.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wachtwoorden komen niet overeen'**
+  String get errorPasswordMismatch;
+
+  /// No description provided for @errorNicknameRequired.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nickname is verplicht'**
+  String get errorNicknameRequired;
+
+  /// No description provided for @errorNicknameLength.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nickname moet minstens 3 tekens zijn'**
+  String get errorNicknameLength;
+
+  /// No description provided for @errorEmailInUse.
+  ///
+  /// In nl, this message translates to:
+  /// **'Dit e-mailadres is al in gebruik'**
+  String get errorEmailInUse;
+
+  /// No description provided for @mapApply.
+  ///
+  /// In nl, this message translates to:
+  /// **'Toepassen'**
+  String get mapApply;
+
+  /// No description provided for @mapSetTime.
+  ///
+  /// In nl, this message translates to:
+  /// **'Stel doeltijd in'**
+  String get mapSetTime;
+
+  /// No description provided for @mapCancel.
+  ///
+  /// In nl, this message translates to:
+  /// **'Annuleren'**
+  String get mapCancel;
+
+  /// No description provided for @mapPlacePin.
+  ///
+  /// In nl, this message translates to:
+  /// **'Plaats Pin'**
+  String get mapPlacePin;
+
+  /// No description provided for @mapJoin.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ik doe mee'**
+  String get mapJoin;
+
+  /// No description provided for @vibeCheckTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Hoe is de Vibe?'**
+  String get vibeCheckTitle;
+
+  /// No description provided for @vibeHot.
+  ///
+  /// In nl, this message translates to:
+  /// **'🔥 Heet'**
+  String get vibeHot;
+
+  /// No description provided for @vibeCold.
+  ///
+  /// In nl, this message translates to:
+  /// **'🧊 Koud'**
+  String get vibeCold;
+
+  /// No description provided for @vibeCancel.
+  ///
+  /// In nl, this message translates to:
+  /// **'Annuleren'**
+  String get vibeCancel;
+
+  /// No description provided for @vibeUpdated.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vibe geüpdatet! +20 VP'**
+  String get vibeUpdated;
+
+  /// No description provided for @placeOpeningHours.
+  ///
+  /// In nl, this message translates to:
+  /// **'Openingsuren'**
+  String get placeOpeningHours;
+
+  /// No description provided for @placeNoOpeningHours.
+  ///
+  /// In nl, this message translates to:
+  /// **'Geen openingsuren bekend'**
+  String get placeNoOpeningHours;
+
+  /// No description provided for @placeNoVibes.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nog geen vibes vanavond'**
+  String get placeNoVibes;
+
+  /// No description provided for @placeUpdate.
+  ///
+  /// In nl, this message translates to:
+  /// **'Update'**
+  String get placeUpdate;
+
+  /// No description provided for @placeRoute.
+  ///
+  /// In nl, this message translates to:
+  /// **'Route naar locatie'**
+  String get placeRoute;
+
+  /// No description provided for @placeCheckIn.
+  ///
+  /// In nl, this message translates to:
+  /// **'Check In (+10 VP)'**
+  String get placeCheckIn;
+
+  /// No description provided for @eventsFallback.
+  ///
+  /// In nl, this message translates to:
+  /// **'Event'**
+  String get eventsFallback;
+
+  /// No description provided for @eventsError.
+  ///
+  /// In nl, this message translates to:
+  /// **'Er is een fout opgetreden'**
+  String get eventsError;
+
+  /// No description provided for @assocSearchTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Verenigingen zoeken'**
+  String get assocSearchTitle;
+
+  /// No description provided for @assocSearchHint.
+  ///
+  /// In nl, this message translates to:
+  /// **'Zoek op naam...'**
+  String get assocSearchHint;
+
+  /// No description provided for @assocPending.
+  ///
+  /// In nl, this message translates to:
+  /// **'In afwachting van goedkeuring'**
+  String get assocPending;
+
+  /// No description provided for @assocActive.
+  ///
+  /// In nl, this message translates to:
+  /// **'Actief lid'**
+  String get assocActive;
+
+  /// No description provided for @assocLeave.
+  ///
+  /// In nl, this message translates to:
+  /// **'Verlaten'**
+  String get assocLeave;
+
+  /// No description provided for @assocCancel.
+  ///
+  /// In nl, this message translates to:
+  /// **'Annuleren'**
+  String get assocCancel;
+
+  /// No description provided for @assocSendRequest.
+  ///
+  /// In nl, this message translates to:
+  /// **'Verzoek sturen'**
+  String get assocSendRequest;
+
+  /// No description provided for @pushTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Push Notificaties'**
+  String get pushTitle;
+
+  /// No description provided for @pushEnable.
+  ///
+  /// In nl, this message translates to:
+  /// **'Zet Notificaties Aan'**
+  String get pushEnable;
+
+  /// No description provided for @pushReceive.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ontvang meldingen van Club App'**
+  String get pushReceive;
+
+  /// No description provided for @pushPromos.
+  ///
+  /// In nl, this message translates to:
+  /// **'Flash Promos'**
+  String get pushPromos;
+
+  /// No description provided for @pushSquad.
+  ///
+  /// In nl, this message translates to:
+  /// **'Squad Alerts'**
+  String get pushSquad;
+
+  /// No description provided for @pushQuiet.
+  ///
+  /// In nl, this message translates to:
+  /// **'Stille Uren'**
+  String get pushQuiet;
+
+  /// No description provided for @faqTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'FAQ'**
+  String get faqTitle;
+
+  /// No description provided for @accountAssoc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Mijn Verenigingen'**
+  String get accountAssoc;
 }
 
 class _AppLocalizationsDelegate

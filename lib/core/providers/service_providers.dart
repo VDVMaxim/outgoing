@@ -8,11 +8,11 @@ import '../services/user_profile_service.dart';
 import '../services/analytics_service.dart';
 
 final userProfileServiceProvider = Provider<UserProfileService>((ref) {
-  return UserProfileService.instance;
+  throw UnimplementedError('userProfileServiceProvider must be overridden in main.dart');
 });
 
 final locationServiceProvider = Provider<LocationService>((ref) {
-  return LocationService.instance;
+  return LocationService();
 });
 
 // Veranderd naar ChangeNotifierProvider om te kunnen luisteren naar haptics/darkmode veranderingen

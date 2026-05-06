@@ -11,16 +11,10 @@ enum LocationPermissionStatus {
 }
 
 class LocationService {
-  static LocationService? _instance;
   StreamSubscription<Position>? _positionSubscription;
   Function(Position)? _onPositionUpdate;
 
-  LocationService._();
-
-  static LocationService get instance {
-    _instance ??= LocationService._();
-    return _instance!;
-  }
+  LocationService();
 
   Future<bool> isLocationServiceEnabled() async {
     return await Geolocator.isLocationServiceEnabled();
@@ -147,7 +141,6 @@ class LocationService {
 
   void dispose() {
     stopTracking();
-    _instance = null;
   }
 
   Future<bool> openAppSettings() async {

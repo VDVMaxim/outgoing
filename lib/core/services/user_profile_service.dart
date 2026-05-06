@@ -3,8 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 
 class UserProfileService {
-  static UserProfileService? _instance;
-  static SharedPreferences? _prefs;
+  final SharedPreferences _prefs;
 
   static const String _keyUserId = 'user_id';
   static const String _keyNickname = 'nickname';
@@ -14,34 +13,13 @@ class UserProfileService {
   static const String _keyLastName = 'last_name';
   static const String _keyEmail = 'email';
 
-  UserProfileService._();
-
-  static Future<UserProfileService> getInstance() async {
-    if (_instance == null) {
-      _prefs = await SharedPreferences.getInstance();
-      _instance = UserProfileService._();
-    }
-    return _instance!;
-  }
-
-  static Future<UserProfileService> get instanceAsync => getInstance();
-
-  static UserProfileService? get instanceOrNull => _instance;
-
-  static UserProfileService get instance {
-    if (_instance == null) {
-      throw StateError(
-        'UserProfileService not initialized. Call getInstance() first.',
-      );
-    }
-    return _instance!;
-  }
+  UserProfileService(this._prefs);
 
   String get userId {
-    var id = _prefs?.getString(_keyUserId);
+    var id = _prefs.getString(_keyUserId);
     if (id == null || id.isEmpty) {
       id = _generateUserId();
-      _prefs?.setString(_keyUserId, id);
+      _prefs.setString(_keyUserId, id);
     }
     return id;
   }
@@ -52,13 +30,13 @@ class UserProfileService {
     return '$timestamp$random';
   }
 
-  String? get nickname => _prefs?.getString(_keyNickname);
+  String? get nickname => _prefs.getString(_keyNickname);
 
   set nickname(String? value) {
     if (value != null && value.isNotEmpty) {
-      _prefs?.setString(_keyNickname, value);
+      _prefs.setString(_keyNickname, value);
     } else {
-      _prefs?.remove(_keyNickname);
+      _prefs.remove(_keyNickname);
     }
   }
 
@@ -67,22 +45,22 @@ class UserProfileService {
     return n != null && n.isNotEmpty;
   }
 
-  String? get avatarUrl => _prefs?.getString(_keyAvatarUrl);
+  String? get avatarUrl => _prefs.getString(_keyAvatarUrl);
 
   set avatarUrl(String? value) {
     if (value != null && value.isNotEmpty) {
-      _prefs?.setString(_keyAvatarUrl, value);
+      _prefs.setString(_keyAvatarUrl, value);
     } else {
-      _prefs?.remove(_keyAvatarUrl);
+      _prefs.remove(_keyAvatarUrl);
     }
   }
 
   bool get hasCompletedOnboarding {
-    return _prefs?.getBool(_keyHasCompletedOnboarding) ?? false;
+    return _prefs.getBool(_keyHasCompletedOnboarding) ?? false;
   }
 
   set hasCompletedOnboarding(bool value) {
-    _prefs?.setBool(_keyHasCompletedOnboarding, value);
+    _prefs.setBool(_keyHasCompletedOnboarding, value);
   }
 
   bool get isAuthenticated {
@@ -91,33 +69,33 @@ class UserProfileService {
 
   String? get authUserId => Supabase.instance.client.auth.currentUser?.id;
 
-  String? get firstName => _prefs?.getString(_keyFirstName);
+  String? get firstName => _prefs.getString(_keyFirstName);
 
   set firstName(String? value) {
     if (value != null && value.isNotEmpty) {
-      _prefs?.setString(_keyFirstName, value);
+      _prefs.setString(_keyFirstName, value);
     } else {
-      _prefs?.remove(_keyFirstName);
+      _prefs.remove(_keyFirstName);
     }
   }
 
-  String? get lastName => _prefs?.getString(_keyLastName);
+  String? get lastName => _prefs.getString(_keyLastName);
 
   set lastName(String? value) {
     if (value != null && value.isNotEmpty) {
-      _prefs?.setString(_keyLastName, value);
+      _prefs.setString(_keyLastName, value);
     } else {
-      _prefs?.remove(_keyLastName);
+      _prefs.remove(_keyLastName);
     }
   }
 
-  String? get email => _prefs?.getString(_keyEmail);
+  String? get email => _prefs.getString(_keyEmail);
 
   set email(String? value) {
     if (value != null && value.isNotEmpty) {
-      _prefs?.setString(_keyEmail, value);
+      _prefs.setString(_keyEmail, value);
     } else {
-      _prefs?.remove(_keyEmail);
+      _prefs.remove(_keyEmail);
     }
   }
 
@@ -203,20 +181,20 @@ class UserProfileService {
   }
 
   void clearProfile() {
-    _prefs?.remove(_keyNickname);
-    _prefs?.remove(_keyAvatarUrl);
-    _prefs?.remove(_keyFirstName);
-    _prefs?.remove(_keyLastName);
-    _prefs?.remove(_keyEmail);
+    _prefs.remove(_keyNickname);
+    _prefs.remove(_keyAvatarUrl);
+    _prefs.remove(_keyFirstName);
+    _prefs.remove(_keyLastName);
+    _prefs.remove(_keyEmail);
   }
 
   void clearAuthData() {
-    _prefs?.remove(_keyFirstName);
-    _prefs?.remove(_keyLastName);
-    _prefs?.remove(_keyEmail);
+    _prefs.remove(_keyFirstName);
+    _prefs.remove(_keyLastName);
+    _prefs.remove(_keyEmail);
   }
 
   void resetOnboarding() {
-    _prefs?.setBool(_keyHasCompletedOnboarding, false);
+    _prefs.setBool(_keyHasCompletedOnboarding, false);
   }
 }

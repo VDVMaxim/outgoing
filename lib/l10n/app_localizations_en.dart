@@ -588,4 +588,169 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsPrivacy => 'Privacy Policy';
+
+  @override
+  String get loginSubtitle => 'Sign in to continue';
+
+  @override
+  String get registerFirstNameTitle => 'What\'s your first name?';
+
+  @override
+  String get registerFirstNameDesc => 'Enter your first name to get started';
+
+  @override
+  String get registerLastNameTitle => 'What\'s your last name?';
+
+  @override
+  String get registerLastNameDesc => 'Enter your last name to continue';
+
+  @override
+  String get registerBirthdayTitle => 'When were you born?';
+
+  @override
+  String get registerBirthdayDesc => 'We need this to verify your age';
+
+  @override
+  String get registerEmailTitle => 'What\'s your email?';
+
+  @override
+  String get registerEmailDesc => 'We\'ll send you a verification link';
+
+  @override
+  String get registerPasswordTitle => 'Create a password';
+
+  @override
+  String get registerPasswordDesc => 'Make sure it\'s at least 6 characters';
+
+  @override
+  String get errorFirstNameRequired => 'First name is required';
+
+  @override
+  String get errorLastNameRequired => 'Last name is required';
+
+  @override
+  String get errorEmailRequired => 'Email is required';
+
+  @override
+  String get errorInvalidEmail => 'Invalid email address';
+
+  @override
+  String get errorPasswordRequired => 'Password is required';
+
+  @override
+  String get errorPasswordLength => 'Password must be at least 6 characters';
+
+  @override
+  String get errorConfirmPasswordRequired => 'Please confirm your password';
+
+  @override
+  String get errorPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get errorNicknameRequired => 'Nickname is required';
+
+  @override
+  String get errorNicknameLength => 'Nickname must be at least 3 characters';
+
+  @override
+  String get errorEmailInUse => 'This email is already in use';
+
+  @override
+  String get mapApply => 'Apply';
+
+  @override
+  String get mapSetTime => 'Set target time';
+
+  @override
+  String get mapCancel => 'Cancel';
+
+  @override
+  String get mapPlacePin => 'Place Pin';
+
+  @override
+  String get mapJoin => 'I\'m in';
+
+  @override
+  String get vibeCheckTitle => 'How is the Vibe?';
+
+  @override
+  String get vibeHot => '🔥 Hot';
+
+  @override
+  String get vibeCold => '🧊 Cold';
+
+  @override
+  String get vibeCancel => 'Cancel';
+
+  @override
+  String get vibeUpdated => 'Vibe updated! +20 VP';
+
+  @override
+  String get placeOpeningHours => 'Opening Hours';
+
+  @override
+  String get placeNoOpeningHours => 'No opening hours known';
+
+  @override
+  String get placeNoVibes => 'No vibes yet tonight';
+
+  @override
+  String get placeUpdate => 'Update';
+
+  @override
+  String get placeRoute => 'Route to location';
+
+  @override
+  String get placeCheckIn => 'Check In (+10 VP)';
+
+  @override
+  String get eventsFallback => 'Event';
+
+  @override
+  String get eventsError => 'An error occurred';
+
+  @override
+  String get assocSearchTitle => 'Search Associations';
+
+  @override
+  String get assocSearchHint => 'Search by name...';
+
+  @override
+  String get assocPending => 'Pending approval';
+
+  @override
+  String get assocActive => 'Active member';
+
+  @override
+  String get assocLeave => 'Leave';
+
+  @override
+  String get assocCancel => 'Cancel';
+
+  @override
+  String get assocSendRequest => 'Send request';
+
+  @override
+  String get pushTitle => 'Push Notifications';
+
+  @override
+  String get pushEnable => 'Enable Notifications';
+
+  @override
+  String get pushReceive => 'Receive notifications from Club App';
+
+  @override
+  String get pushPromos => 'Flash Promos';
+
+  @override
+  String get pushSquad => 'Squad Alerts';
+
+  @override
+  String get pushQuiet => 'Quiet Hours';
+
+  @override
+  String get faqTitle => 'FAQ';
+
+  @override
+  String get accountAssoc => 'My Associations';
 }

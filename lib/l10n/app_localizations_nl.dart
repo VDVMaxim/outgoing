@@ -590,4 +590,170 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get settingsPrivacy => 'Privacy Policy';
+
+  @override
+  String get loginSubtitle => 'Log in om door te gaan';
+
+  @override
+  String get registerFirstNameTitle => 'Wat is je voornaam?';
+
+  @override
+  String get registerFirstNameDesc => 'Vul je voornaam in om te beginnen';
+
+  @override
+  String get registerLastNameTitle => 'Wat is je achternaam?';
+
+  @override
+  String get registerLastNameDesc => 'Vul je achternaam in om door te gaan';
+
+  @override
+  String get registerBirthdayTitle => 'Wanneer ben je geboren?';
+
+  @override
+  String get registerBirthdayDesc =>
+      'We hebben dit nodig om je leeftijd te verifiëren';
+
+  @override
+  String get registerEmailTitle => 'Wat is je e-mailadres?';
+
+  @override
+  String get registerEmailDesc => 'We sturen je een verificatielink';
+
+  @override
+  String get registerPasswordTitle => 'Maak een wachtwoord';
+
+  @override
+  String get registerPasswordDesc => 'Zorg dat het minstens 6 tekens lang is';
+
+  @override
+  String get errorFirstNameRequired => 'Voornaam is verplicht';
+
+  @override
+  String get errorLastNameRequired => 'Achternaam is verplicht';
+
+  @override
+  String get errorEmailRequired => 'E-mailadres is verplicht';
+
+  @override
+  String get errorInvalidEmail => 'Ongeldig e-mailadres';
+
+  @override
+  String get errorPasswordRequired => 'Wachtwoord is verplicht';
+
+  @override
+  String get errorPasswordLength => 'Wachtwoord moet minstens 6 tekens zijn';
+
+  @override
+  String get errorConfirmPasswordRequired => 'Bevestig je wachtwoord';
+
+  @override
+  String get errorPasswordMismatch => 'Wachtwoorden komen niet overeen';
+
+  @override
+  String get errorNicknameRequired => 'Nickname is verplicht';
+
+  @override
+  String get errorNicknameLength => 'Nickname moet minstens 3 tekens zijn';
+
+  @override
+  String get errorEmailInUse => 'Dit e-mailadres is al in gebruik';
+
+  @override
+  String get mapApply => 'Toepassen';
+
+  @override
+  String get mapSetTime => 'Stel doeltijd in';
+
+  @override
+  String get mapCancel => 'Annuleren';
+
+  @override
+  String get mapPlacePin => 'Plaats Pin';
+
+  @override
+  String get mapJoin => 'Ik doe mee';
+
+  @override
+  String get vibeCheckTitle => 'Hoe is de Vibe?';
+
+  @override
+  String get vibeHot => '🔥 Heet';
+
+  @override
+  String get vibeCold => '🧊 Koud';
+
+  @override
+  String get vibeCancel => 'Annuleren';
+
+  @override
+  String get vibeUpdated => 'Vibe geüpdatet! +20 VP';
+
+  @override
+  String get placeOpeningHours => 'Openingsuren';
+
+  @override
+  String get placeNoOpeningHours => 'Geen openingsuren bekend';
+
+  @override
+  String get placeNoVibes => 'Nog geen vibes vanavond';
+
+  @override
+  String get placeUpdate => 'Update';
+
+  @override
+  String get placeRoute => 'Route naar locatie';
+
+  @override
+  String get placeCheckIn => 'Check In (+10 VP)';
+
+  @override
+  String get eventsFallback => 'Event';
+
+  @override
+  String get eventsError => 'Er is een fout opgetreden';
+
+  @override
+  String get assocSearchTitle => 'Verenigingen zoeken';
+
+  @override
+  String get assocSearchHint => 'Zoek op naam...';
+
+  @override
+  String get assocPending => 'In afwachting van goedkeuring';
+
+  @override
+  String get assocActive => 'Actief lid';
+
+  @override
+  String get assocLeave => 'Verlaten';
+
+  @override
+  String get assocCancel => 'Annuleren';
+
+  @override
+  String get assocSendRequest => 'Verzoek sturen';
+
+  @override
+  String get pushTitle => 'Push Notificaties';
+
+  @override
+  String get pushEnable => 'Zet Notificaties Aan';
+
+  @override
+  String get pushReceive => 'Ontvang meldingen van Club App';
+
+  @override
+  String get pushPromos => 'Flash Promos';
+
+  @override
+  String get pushSquad => 'Squad Alerts';
+
+  @override
+  String get pushQuiet => 'Stille Uren';
+
+  @override
+  String get faqTitle => 'FAQ';
+
+  @override
+  String get accountAssoc => 'Mijn Verenigingen';
 }

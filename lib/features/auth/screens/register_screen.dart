@@ -6,6 +6,7 @@ import 'package:flutter_clubapp/core/widgets/nickname_picker.dart';
 import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/features/auth/screens/success_screen.dart';
+import 'package:flutter_clubapp/features/auth/providers/auth_form_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSuccess;
@@ -21,39 +22,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
   static const int _totalPages = 6;
-
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  DateTime? _birthday;
-  final _emailController = TextEditingController();
-  final _nicknameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
+  
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String? _firstNameError;
-  String? _lastNameError;
-  String? _birthdayError;
-  String? _emailError;
-  String? _nicknameError;
-  String? _passwordError;
-  String? _confirmPasswordError;
 
   @override
   void dispose() {
     _pageController.dispose();
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _emailController.dispose();
-    _nicknameController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   void _nextPage() {
-    if (_validateCurrentPage()) {
+    final formNotifier = ref.read(authFormProvider.notifier);
+    if (formNotifier.validateRegistrationPage(_currentPage)) {
       if (_currentPage < _totalPages - 1) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
@@ -76,144 +57,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
-  bool _validateCurrentPage() {
-    switch (_currentPage) {
-      case 0:
-        return _validateFirstName();
-      case 1:
-        return _validateLastName();
-      case 2:
-        return _validateBirthday();
-      case 3:
-        return _validateNickname();
-      case 4:
-        return _validateEmail();
-      case 5:
-        return _validatePassword();
-      default:
-        return true;
-    }
-  }
-
-  bool _validateFirstName() {
-    bool isValid = true;
-    setState(() {
-      if (_firstNameController.text.trim().isEmpty) {
-        _firstNameError = 'First name is required';
-        isValid = false;
-      } else {
-        _firstNameError = null;
-      }
-    });
-    return isValid;
-  }
-
-  bool _validateLastName() {
-    bool isValid = true;
-    setState(() {
-      if (_lastNameController.text.trim().isEmpty) {
-        _lastNameError = 'Last name is required';
-        isValid = false;
-      } else {
-        _lastNameError = null;
-      }
-    });
-    return isValid;
-  }
-
-  bool _validateBirthday() {
-    bool isValid = true;
-    setState(() {
-      if (_birthday == null) {
-        _birthdayError = 'Please select your birthday';
-        isValid = false;
-      } else {
-        _birthdayError = null;
-      }
-    });
-    return isValid;
-  }
-
-  bool _validateNickname() {
-    bool isValid = true;
-    setState(() {
-      if (_nicknameController.text.trim().isEmpty) {
-        _nicknameError = 'Nickname is required';
-        isValid = false;
-      } else if (_nicknameController.text.length < 3) {
-        _nicknameError = 'Nickname must be at least 3 characters';
-        isValid = false;
-      } else {
-        _nicknameError = null;
-      }
-    });
-    return isValid;
-  }
-
-  bool _validateEmail() {
-    bool isValid = true;
-    setState(() {
-      if (_emailController.text.trim().isEmpty) {
-        _emailError = 'Email is required';
-        isValid = false;
-      } else if (!RegExp(
-        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-      ).hasMatch(_emailController.text)) {
-        _emailError = 'Invalid email address';
-        isValid = false;
-      } else {
-        _emailError = null;
-      }
-    });
-    return isValid;
-  }
-
-  bool _validatePassword() {
-    bool isValid = true;
-    setState(() {
-      if (_passwordController.text.isEmpty) {
-        _passwordError = 'Password is required';
-        isValid = false;
-      } else if (_passwordController.text.length < 6) {
-        _passwordError = 'Password must be at least 6 characters';
-        isValid = false;
-      } else {
-        _passwordError = null;
-      }
-
-      if (_confirmPasswordController.text.isEmpty) {
-        _confirmPasswordError = 'Please confirm your password';
-        isValid = false;
-      } else if (_confirmPasswordController.text != _passwordController.text) {
-        _confirmPasswordError = 'Passwords do not match';
-        isValid = false;
-      } else {
-        _confirmPasswordError = null;
-      }
-    });
-    return isValid;
-  }
-
   Future<void> _handleRegister() async {
-    final result = await ref
-        .read(authProvider.notifier)
-        .signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          firstName: _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim(),
-          birthday: _birthday!,
-          nickname: _nicknameController.text.trim(),
-        );
+    final success = await ref.read(authFormProvider.notifier).register();
 
     if (!mounted) return;
 
-    if (result) {
+    if (success) {
+      final firstName = ref.read(authFormProvider).firstName;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => AuthSuccessScreen(
-            title: 'Welcome, ${_firstNameController.text}!',
+            title: 'Welcome, $firstName!',
             subtitle: 'Your profile has been created',
             onContinue: widget.onSuccess,
           ),
@@ -233,17 +88,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _selectBirthday() async {
     final now = DateTime.now();
+    final formState = ref.read(authFormProvider);
+    final formNotifier = ref.read(authFormProvider.notifier);
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(now.year - 18),
+      initialDate: formState.birthday ?? DateTime(now.year - 18),
       firstDate: DateTime(1900),
       lastDate: DateTime(now.year - 13),
     );
     if (picked != null) {
-      setState(() {
-        _birthday = picked;
-        _birthdayError = null;
-      });
+      formNotifier.updateBirthday(picked);
     }
   }
 
@@ -251,7 +106,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
-    final isLoading = ref.watch(authProvider).isLoading;
+    
+    final formState = ref.watch(authFormProvider);
+    final formNotifier = ref.read(authFormProvider.notifier);
+    final isLoading = formState.submissionStatus is AsyncLoading;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
@@ -308,12 +166,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   setState(() => _currentPage = index);
                 },
                 children: [
-                  _buildFirstNamePage(isDark, l10n),
-                  _buildLastNamePage(isDark, l10n),
-                  _buildBirthdayPage(isDark, l10n),
-                  _buildNicknamePage(isDark, l10n),
-                  _buildEmailPage(isDark, l10n),
-                  _buildPasswordPage(isDark, l10n),
+                  _buildFirstNamePage(isDark, l10n, formState, formNotifier),
+                  _buildLastNamePage(isDark, l10n, formState, formNotifier),
+                  _buildBirthdayPage(isDark, l10n, formState),
+                  _buildNicknamePage(isDark, l10n, formState, formNotifier),
+                  _buildEmailPage(isDark, l10n, formState, formNotifier),
+                  _buildPasswordPage(isDark, l10n, formState, formNotifier),
                 ],
               ),
             ),
@@ -359,7 +217,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildFirstNamePage(bool isDark, AppLocalizations l10n) {
+  Widget _buildFirstNamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -367,7 +225,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           const SizedBox(height: 60),
           Text(
-            'What\'s your first name?',
+            l10n.registerFirstNameTitle,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -377,7 +235,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Enter your first name to get started',
+            l10n.registerFirstNameDesc,
             style: TextStyle(
               fontSize: 16,
               color: isDark ? Colors.white70 : Colors.black54,
@@ -386,22 +244,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 48),
           AppTextField(
-            controller: _firstNameController,
+            initialValue: state.firstName,
             placeholder: l10n.accountFormFirstName,
-            errorText: _firstNameError,
+            errorText: _translateError(state.firstNameError, l10n),
             autofocus: true,
-            onChanged: (_) {
-               if (_firstNameError != null) {
-                setState(() => _firstNameError = null);
-              }
-            },
+            onChanged: notifier.updateFirstName,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLastNamePage(bool isDark, AppLocalizations l10n) {
+  Widget _buildLastNamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -409,7 +263,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           const SizedBox(height: 60),
           Text(
-            'What\'s your last name?',
+            l10n.registerLastNameTitle,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -419,7 +273,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Enter your last name to continue',
+            l10n.registerLastNameDesc,
             style: TextStyle(
               fontSize: 16,
               color: isDark ? Colors.white70 : Colors.black54,
@@ -428,22 +282,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 48),
           AppTextField(
-            controller: _lastNameController,
+            initialValue: state.lastName,
             placeholder: l10n.accountFormLastName,
-            errorText: _lastNameError,
+            errorText: _translateError(state.lastNameError, l10n),
             autofocus: true,
-            onChanged: (_) {
-               if (_lastNameError != null) {
-                setState(() => _lastNameError = null);
-              }
-            },
+            onChanged: notifier.updateLastName,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBirthdayPage(bool isDark, AppLocalizations l10n) {
+  Widget _buildBirthdayPage(bool isDark, AppLocalizations l10n, AuthFormState state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -451,7 +301,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           const SizedBox(height: 60),
           Text(
-            'When were you born?',
+            l10n.registerBirthdayTitle,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -461,7 +311,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'We need this to verify your age',
+            l10n.registerBirthdayDesc,
             style: TextStyle(
               fontSize: 16,
               color: isDark ? Colors.white70 : Colors.black54,
@@ -479,7 +329,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ? Colors.white.withValues(alpha: 0.05)
                     : Colors.black.withValues(alpha: 0.05),
                 border: Border.all(
-                  color: _birthdayError != null
+                  color: state.birthdayError != null
                       ? Colors.red
                       : (isDark ? Colors.white24 : Colors.black12),
                 ),
@@ -490,12 +340,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   Icon(Icons.calendar_today, color: Colors.grey[600], size: 24),
                   const SizedBox(width: 12),
                   Text(
-                    _birthday != null
-                        ? '${_birthday!.day}/${_birthday!.month}/${_birthday!.year}'
+                    state.birthday != null
+                        ? '${state.birthday!.day}/${state.birthday!.month}/${state.birthday!.year}'
                         : l10n.accountFormBirthdaySelect,
                     style: TextStyle(
                       fontSize: 18,
-                      color: _birthday != null
+                      color: state.birthday != null
                           ? (isDark ? Colors.white : Colors.black)
                           : Colors.grey,
                     ),
@@ -504,10 +354,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
             ),
           ),
-          if (_birthdayError != null) ...[
+          if (state.birthdayError != null) ...[
             const SizedBox(height: 8),
             Text(
-              _birthdayError!,
+              _translateError(state.birthdayError, l10n) ?? state.birthdayError!,
                style: const TextStyle(color: Colors.red, fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -517,7 +367,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildEmailPage(bool isDark, AppLocalizations l10n) {
+  Widget _buildEmailPage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -525,7 +375,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           const SizedBox(height: 60),
           Text(
-            'What\'s your email?',
+            l10n.registerEmailTitle,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -535,7 +385,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'We\'ll send you a verification link',
+            l10n.registerEmailDesc,
             style: TextStyle(
               fontSize: 16,
               color: isDark ? Colors.white70 : Colors.black54,
@@ -544,34 +394,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 48),
           AppTextField(
-            controller: _emailController,
+            initialValue: state.email,
             placeholder: l10n.loginEmail,
             keyboardType: TextInputType.emailAddress,
-            errorText: _emailError,
+            errorText: _translateError(state.emailError, l10n),
             autofocus: true,
-            onChanged: (_) {
-              if (_emailError != null) {
-                setState(() => _emailError = null);
-              }
-            },
+            onChanged: notifier.updateEmail,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildNicknamePage(bool isDark, AppLocalizations l10n) {
+  Widget _buildNicknamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
+    // Need a temporary controller for NicknamePicker as it expects one, 
+    // or modify NicknamePicker to accept initialValue and onChanged.
+    // Let's create a quick local controller just for the picker.
+    final tempController = TextEditingController(text: state.nickname);
     return NicknamePicker(
-      nicknameController: _nicknameController,
+      nicknameController: tempController,
       onGenerate: () {
-        _nicknameController.text = NicknameGenerator.generate();
-        setState(() {});
+        final generated = NicknameGenerator.generate();
+        tempController.text = generated;
+        notifier.updateNickname(generated);
       },
-      errorText: _nicknameError,
+      errorText: _translateError(state.nicknameError, l10n),
     );
   }
 
-  Widget _buildPasswordPage(bool isDark, AppLocalizations l10n) {
+  Widget _buildPasswordPage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -579,7 +430,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           const SizedBox(height: 60),
           Text(
-            'Create a password',
+            l10n.registerPasswordTitle,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -589,7 +440,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Make sure it\'s at least 6 characters',
+            l10n.registerPasswordDesc,
             style: TextStyle(
               fontSize: 16,
               color: isDark ? Colors.white70 : Colors.black54,
@@ -598,10 +449,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 48),
           AppTextField(
-            controller: _passwordController,
+            initialValue: state.password,
             placeholder: l10n.accountFormPassword,
             obscureText: _obscurePassword,
-            errorText: _passwordError,
+            errorText: _translateError(state.passwordError, l10n),
             autofocus: true,
             trailing: Icon(
               _obscurePassword
@@ -612,18 +463,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             onTrailingTap: () {
               setState(() => _obscurePassword = !_obscurePassword);
             },
-            onChanged: (_) {
-              if (_passwordError != null) {
-                setState(() => _passwordError = null);
-              }
-            },
+            onChanged: notifier.updatePassword,
           ),
           const SizedBox(height: 20),
           AppTextField(
-            controller: _confirmPasswordController,
+            initialValue: state.confirmPassword,
             placeholder: l10n.accountFormConfirmPassword,
             obscureText: _obscureConfirmPassword,
-            errorText: _confirmPasswordError,
+            errorText: _translateError(state.confirmPasswordError, l10n),
             trailing: Icon(
               _obscureConfirmPassword
                   ? Icons.visibility_outlined
@@ -635,14 +482,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 () => _obscureConfirmPassword = !_obscureConfirmPassword,
               );
             },
-            onChanged: (_) {
-              if (_confirmPasswordError != null) {
-                 setState(() => _confirmPasswordError = null);
-              }
-            },
+            onChanged: notifier.updateConfirmPassword,
           ),
         ],
       ),
     );
+  }
+
+  String? _translateError(String? key, AppLocalizations l10n) {
+    if (key == null) return null;
+    switch (key) {
+      case 'errorFirstNameRequired': return l10n.errorFirstNameRequired;
+      case 'errorLastNameRequired': return l10n.errorLastNameRequired;
+      case 'errorBirthdayRequired': return l10n.accountFormBirthdayRequired;
+      case 'errorEmailRequired': return l10n.errorEmailRequired;
+      case 'errorInvalidEmail': return l10n.errorInvalidEmail;
+      case 'errorPasswordRequired': return l10n.errorPasswordRequired;
+      case 'errorPasswordLength': return l10n.errorPasswordLength;
+      case 'errorConfirmPasswordRequired': return l10n.errorConfirmPasswordRequired;
+      case 'errorPasswordMismatch': return l10n.errorPasswordMismatch;
+      case 'errorNicknameRequired': return l10n.errorNicknameRequired;
+      case 'errorNicknameLength': return l10n.errorNicknameLength;
+      case 'errorEmailInUse': return l10n.errorEmailInUse;
+      default: return key;
+    }
   }
 }

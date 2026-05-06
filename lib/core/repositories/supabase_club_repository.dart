@@ -4,6 +4,14 @@ import '../config/supabase_client.dart';
 import '../models/place.dart';
 import 'interfaces/club_repository.dart';
 
+class RepositoryException implements Exception {
+  final String message;
+  final dynamic originalError;
+  RepositoryException(this.message, [this.originalError]);
+  @override
+  String toString() => 'RepositoryException: $message ${originalError != null ? "($originalError)" : ""}';
+}
+
 class SupabaseClubRepository implements ClubRepository {
   
   Future<List<Place>> _enrichPlaces(List<dynamic> placesList) async {
@@ -172,9 +180,9 @@ class SupabaseClubRepository implements ClubRepository {
 
       return combinedList.map((json) => Place.fromJson(json)).toList();
 
-    } catch (e) {
-      debugPrint('🚨 CRASH PREVENTED in getPlacesInViewport: $e');
-      return [];
+    } catch (e, stackTrace) {
+      debugPrint('🚨 ERROR in getPlacesInViewport: $e\n$stackTrace');
+      throw RepositoryException('Failed to fetch places in viewport', e);
     }
   }
 
@@ -202,9 +210,66 @@ class SupabaseClubRepository implements ClubRepository {
       }
 
       return enriched.take(100).toList();
-    } catch (e) {
-      debugPrint('🚨 CRASH PREVENTED in getDiscoverPlaces: $e');
-      return [];
+    } catch (e, stackTrace) {
+      debugPrint('🚨 ERROR in getDiscoverPlaces: $e\n$stackTrace');
+      throw RepositoryException('Failed to fetch discover places', e);
+    }
+  }
+
+  @override
+  Future<List<Place>> getEvents({LatLng? userLocation}) async {
+    final client = SupabaseClientProvider.client;
+
+    try {
+      final eventsResponse = await client
+          .from('events')
+          .select()
+          .gte('start_datetime', DateTime.now().toUtc().subtract(const Duration(days: 1)).toIso8601String())
+          .limit(100);
+
+      final List<Place> mappedEvents = (eventsResponse as List<dynamic>).map((row) {
+        final Map<String, dynamic> json = Map.from(row as Map<String, dynamic>);
+        return Place(
+          id: json['id'] as String,
+          name: json['title'] as String,
+          address: json['address'] as String?,
+          location: LatLng(
+            (json['latitude'] as num).toDouble(),
+            (json['longitude'] as num).toDouble(),
+          ),
+          type: LocationType.place,
+          eventName: json['title'] as String,
+          startTime: DateTime.parse(json['start_datetime'] as String),
+          genre: null,
+          tags: [],
+          organizer: null,
+          promo: null,
+          poi: null,
+          recentLikes: 0,
+          recentDislikes: 0,
+          openingHoursRaw: null,
+          openingHours: [],
+          lastVibeUpdate: null,
+          facilities: [],
+          associations: [],
+        );
+      }).toList();
+
+      if (userLocation != null) {
+        const distance = Distance();
+        mappedEvents.sort((a, b) {
+          final distA = distance.as(LengthUnit.Meter, userLocation, a.location);
+          final distB = distance.as(LengthUnit.Meter, userLocation, b.location);
+          return distA.compareTo(distB);
+        });
+      } else {
+        mappedEvents.sort((a, b) => a.startTime!.compareTo(b.startTime!));
+      }
+
+      return mappedEvents;
+    } catch (e, stackTrace) {
+      debugPrint('🚨 ERROR in getEvents: $e\n$stackTrace');
+      throw RepositoryException('Failed to fetch events', e);
     }
   }
 
@@ -224,9 +289,9 @@ class SupabaseClubRepository implements ClubRepository {
       final result = await _enrichPlaces([placeResponse]);
       return result.isNotEmpty ? result.first : null;
 
-    } catch (e) {
-      debugPrint('🚨 CRASH PREVENTED in getPlaceById: $e');
-      return null;
+    } catch (e, stackTrace) {
+      debugPrint('🚨 ERROR in getPlaceById: $e\n$stackTrace');
+      throw RepositoryException('Failed to fetch place by ID', e);
     }
   }
 }

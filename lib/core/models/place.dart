@@ -152,16 +152,23 @@ class Place {
   }
 
   static DateTime? _parseTime(String timeStr) {
+    final parsed = DateTime.tryParse(timeStr);
+    if (parsed != null) return parsed;
+
     final parts = timeStr.split(':');
     if (parts.length >= 2) {
-      final now = DateTime.now();
-      return DateTime(
-        now.year,
-        now.month,
-        now.day,
-        int.parse(parts[0]),
-        int.parse(parts[1]),
-      );
+      try {
+        final now = DateTime.now();
+        return DateTime(
+          now.year,
+          now.month,
+          now.day,
+          int.parse(parts[0]),
+          int.parse(parts[1]),
+        );
+      } catch (e) {
+        return null;
+      }
     }
     return null;
   }

@@ -12,6 +12,7 @@ class AppTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool autofocus;
   final int? maxLength;
+  final String? initialValue;
 
   const AppTextField({
     super.key,
@@ -25,6 +26,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.autofocus = false,
     this.maxLength,
+    this.initialValue,
   });
 
   @override
@@ -53,6 +55,7 @@ class AppTextField extends StatelessWidget {
                         onChanged: onChanged,
                         autofocus: autofocus,
                         maxLength: maxLength,
+                        initialValue: initialValue,
                       ),
                     ),
                     Padding(
@@ -75,6 +78,7 @@ class AppTextField extends StatelessWidget {
                   onChanged: onChanged,
                   autofocus: autofocus,
                   maxLength: maxLength,
+                  initialValue: initialValue,
                 ),
         ),
         if (errorText != null) ...[

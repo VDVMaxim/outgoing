@@ -12,6 +12,7 @@ import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/core/constants/app_constants.dart';
 import 'package:flutter_clubapp/main.dart';
 import '../../places/widgets/place_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
@@ -112,16 +113,28 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     _lastFetchCenter = currentCenter;
     _lastFetchZoom = currentZoom;
 
-    final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng, searchQuery: _searchQuery);
-    if (mounted) {
-      setState(() {
-        for (final p in places) {
-          if (p.hasValidLocation) {
-            _cachedPlaces[p.id] = p;
+    try {
+      final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng, searchQuery: _searchQuery);
+      if (mounted) {
+        setState(() {
+          for (final p in places) {
+            if (p.hasValidLocation) {
+              _cachedPlaces[p.id] = p;
+            }
           }
-        }
-        _isLoading = false;
-      });
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ShadToaster.of(context).show(
+          const ShadToast.destructive(
+            title: Text('Error loading places'),
+            description: Text('Please check your connection and try again.'),
+          ),
+        );
+      }
     }
   }
 
@@ -215,8 +228,20 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    final fullPlace = await ref.read(clubRepositoryProvider).getPlaceById(markerPlace.id);
-    
+    Place? fullPlace;
+    try {
+      fullPlace = await ref.read(clubRepositoryProvider).getPlaceById(markerPlace.id);
+    } catch (e) {
+      if (mounted) {
+        ShadToaster.of(context).show(
+          const ShadToast.destructive(
+            title: Text('Error loading details'),
+            description: Text('Could not load place details.'),
+          ),
+        );
+      }
+    }
+
     if (mounted) {
       Navigator.pop(context);
     }
@@ -230,7 +255,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => PlaceBottomSheet(place: fullPlace, userLocation: _liveUserLocation ?? widget.userLocation),
+      builder: (context) => PlaceBottomSheet(place: fullPlace!, userLocation: _liveUserLocation ?? widget.userLocation),
     );
     if (mounted) {
       setState(() => _selectedPlaceId = null);
@@ -371,7 +396,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
               FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: _liveUserLocation ?? widget.userLocation ?? const LatLng(51.0543, 3.7174),
+                  initialCenter: _liveUserLocation ?? widget.userLocation ?? AppConstants.defaultLocation,
                   initialZoom: _currentZoom,
                   onMapReady: () {
                     _fetchPlacesForCurrentBounds();

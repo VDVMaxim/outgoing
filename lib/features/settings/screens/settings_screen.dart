@@ -486,7 +486,7 @@ class _AccountSection extends ConsumerWidget {
   }
 
   Widget _buildGuestView(BuildContext context, WidgetRef ref) {
-    final profile = UserProfileService.instance;
+    final profile = ref.read(userProfileServiceProvider);
     final guestNickname = profile.nickname ?? 'Guest';
 
     return Padding(
@@ -574,7 +574,7 @@ class _AccountSection extends ConsumerWidget {
       context,
       MaterialPageRoute(
         builder: (_) => EditNicknameScreen(
-          initialNickname: nickname ?? UserProfileService.instance.nickname,
+          initialNickname: nickname ?? ref.read(userProfileServiceProvider).nickname,
           isAuthenticated: isAuthenticated,
           onSaved: () {
             onRefresh?.call();
@@ -618,7 +618,7 @@ class _SettingsListTile extends StatelessWidget {
   }
 }
 
-class EditNicknameScreen extends StatefulWidget {
+class EditNicknameScreen extends ConsumerStatefulWidget {
   final String? initialNickname;
   final bool isAuthenticated;
   final VoidCallback onSaved;
@@ -631,10 +631,10 @@ class EditNicknameScreen extends StatefulWidget {
   });
 
   @override
-  State<EditNicknameScreen> createState() => _EditNicknameScreenState();
+  ConsumerState<EditNicknameScreen> createState() => _EditNicknameScreenState();
 }
 
-class _EditNicknameScreenState extends State<EditNicknameScreen> {
+class _EditNicknameScreenState extends ConsumerState<EditNicknameScreen> {
   late TextEditingController _controller;
 
   @override
@@ -652,7 +652,7 @@ class _EditNicknameScreenState extends State<EditNicknameScreen> {
   Future<void> _handleSave() async {
     final newName = _controller.text.trim();
     if (newName.isNotEmpty && newName.length >= 3) {
-      final profile = UserProfileService.instance;
+      final profile = ref.read(userProfileServiceProvider);
       profile.nickname = newName;
       if (widget.isAuthenticated) {
         await profile.syncNicknameToProfile();

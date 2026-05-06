@@ -597,4 +597,175 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsPrivacy => 'Politique de confidentialité';
+
+  @override
+  String get loginSubtitle => 'Connectez-vous pour continuer';
+
+  @override
+  String get registerFirstNameTitle => 'Quel est votre prénom ?';
+
+  @override
+  String get registerFirstNameDesc => 'Entrez votre prénom pour commencer';
+
+  @override
+  String get registerLastNameTitle => 'Quel est votre nom de famille ?';
+
+  @override
+  String get registerLastNameDesc =>
+      'Entrez votre nom de famille pour continuer';
+
+  @override
+  String get registerBirthdayTitle => 'Quand êtes-vous né(e) ?';
+
+  @override
+  String get registerBirthdayDesc =>
+      'Nous en avons besoin pour vérifier votre âge';
+
+  @override
+  String get registerEmailTitle => 'Quelle est votre adresse e-mail ?';
+
+  @override
+  String get registerEmailDesc => 'Nous vous enverrons un lien de vérification';
+
+  @override
+  String get registerPasswordTitle => 'Créez un mot de passe';
+
+  @override
+  String get registerPasswordDesc =>
+      'Assurez-vous qu\'il contient au moins 6 caractères';
+
+  @override
+  String get errorFirstNameRequired => 'Le prénom est requis';
+
+  @override
+  String get errorLastNameRequired => 'Le nom de famille est requis';
+
+  @override
+  String get errorEmailRequired => 'L\'e-mail est requis';
+
+  @override
+  String get errorInvalidEmail => 'Adresse e-mail invalide';
+
+  @override
+  String get errorPasswordRequired => 'Le mot de passe est requis';
+
+  @override
+  String get errorPasswordLength =>
+      'Le mot de passe doit comporter au moins 6 caractères';
+
+  @override
+  String get errorConfirmPasswordRequired =>
+      'Veuillez confirmer votre mot de passe';
+
+  @override
+  String get errorPasswordMismatch => 'Les mots de passe ne correspondent pas';
+
+  @override
+  String get errorNicknameRequired => 'Le pseudo est requis';
+
+  @override
+  String get errorNicknameLength =>
+      'Le pseudo doit comporter au moins 3 caractères';
+
+  @override
+  String get errorEmailInUse => 'Cet e-mail est déjà utilisé';
+
+  @override
+  String get mapApply => 'Appliquer';
+
+  @override
+  String get mapSetTime => 'Définir l\'heure cible';
+
+  @override
+  String get mapCancel => 'Annuler';
+
+  @override
+  String get mapPlacePin => 'Placer l\'épingle';
+
+  @override
+  String get mapJoin => 'Je participe';
+
+  @override
+  String get vibeCheckTitle => 'Comment est l\'ambiance ?';
+
+  @override
+  String get vibeHot => '🔥 Chaude';
+
+  @override
+  String get vibeCold => '🧊 Froide';
+
+  @override
+  String get vibeCancel => 'Annuler';
+
+  @override
+  String get vibeUpdated => 'Ambiance mise à jour ! +20 VP';
+
+  @override
+  String get placeOpeningHours => 'Heures d\'ouverture';
+
+  @override
+  String get placeNoOpeningHours => 'Aucune heure d\'ouverture connue';
+
+  @override
+  String get placeNoVibes => 'Pas encore d\'ambiance ce soir';
+
+  @override
+  String get placeUpdate => 'Mettre à jour';
+
+  @override
+  String get placeRoute => 'Itinéraire vers le lieu';
+
+  @override
+  String get placeCheckIn => 'S\'enregistrer (+10 VP)';
+
+  @override
+  String get eventsFallback => 'Événement';
+
+  @override
+  String get eventsError => 'Une erreur s\'est produite';
+
+  @override
+  String get assocSearchTitle => 'Rechercher des associations';
+
+  @override
+  String get assocSearchHint => 'Recherche par nom...';
+
+  @override
+  String get assocPending => 'En attente d\'approbation';
+
+  @override
+  String get assocActive => 'Membre actif';
+
+  @override
+  String get assocLeave => 'Quitter';
+
+  @override
+  String get assocCancel => 'Annuler';
+
+  @override
+  String get assocSendRequest => 'Envoyer la demande';
+
+  @override
+  String get pushTitle => 'Notifications Push';
+
+  @override
+  String get pushEnable => 'Activer les notifications';
+
+  @override
+  String get pushReceive => 'Recevoir des notifications de Club App';
+
+  @override
+  String get pushPromos => 'Promos Flash';
+
+  @override
+  String get pushSquad => 'Alertes Squad';
+
+  @override
+  String get pushQuiet => 'Heures silencieuses';
+
+  @override
+  String get faqTitle => 'FAQ';
+
+  @override
+  String get accountAssoc => 'Mes Associations';
 }
