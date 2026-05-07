@@ -4,7 +4,7 @@ import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
 abstract class OnboardingStep {
   Widget build(BuildContext context, VoidCallback onStateRefresh);
-  String? validate();
+  String? validate(BuildContext context);
   VoidCallback? onNextPressed;
 
   void setOnNextCallback(VoidCallback? callback) {
@@ -20,7 +20,7 @@ class OnboardingWizard extends StatefulWidget {
   final VoidCallback onComplete;
   final bool showProgressIndicator;
   final bool Function(int currentStep, int totalSteps)?
-  showProgressIndicatorForStep;
+      showProgressIndicatorForStep;
   final bool showBackButton;
   final bool showNextButton;
   final bool Function(int currentStep, int totalSteps)? showNextButtonForStep;
@@ -43,10 +43,12 @@ class OnboardingWizard extends StatefulWidget {
   });
 
   @override
-  State<OnboardingWizard> createState() => _OnboardingWizardState();
+  // FIX: Verwijzing is nu publiek (zonder underscore)
+  State<OnboardingWizard> createState() => OnboardingWizardState(); 
 }
 
-class _OnboardingWizardState extends State<OnboardingWizard> {
+// FIX: Klasse is nu publiek gemaakt door de underscore weg te halen!
+class OnboardingWizardState extends State<OnboardingWizard> {
   late PageController _pageController;
   int _currentStep = 0;
   final bool _isLoading = false;
@@ -64,17 +66,16 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     super.dispose();
   }
 
-  void _goToNext() {
+  // FIX: Functie is nu publiek zodat de NotificationStep hem kan aanroepen
+  void goToNextPage() {
     final currentStep = widget.steps[_currentStep];
 
-    // If step has custom onNext handler, use it
     if (currentStep.onNextPressed != null) {
       currentStep.onNextPressed!();
       return;
     }
 
-    // Otherwise use default validation and navigation
-    final error = currentStep.validate();
+    final error = currentStep.validate(context);
     if (error != null) {
       setState(() => _validationError = error);
       return;
@@ -93,7 +94,8 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     }
   }
 
-  void _goToPrevious() {
+  // FIX: Functie is publiek
+  void goToPreviousPage() {
     if (_currentStep > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
@@ -105,7 +107,8 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     }
   }
 
-  void _refreshCurrentStep() {
+  // FIX: Functie is publiek
+  void refreshCurrentStep() {
     setState(() {});
   }
 
@@ -144,7 +147,6 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
       return widget.nextButtonText as String;
     }
 
-    // Default behavior: "Next" on all pages except last, which shows "Start Exploring"
     return isLastStep ? l10n.onboardingStartExploring : l10n.onboardingNext;
   }
 
@@ -165,7 +167,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
                         Icons.arrow_back,
                         color: isDark ? Colors.white : Colors.black,
                       ),
-                      onPressed: _goToPrevious,
+                      onPressed: goToPreviousPage, // Gebruik de publieke functie
                     )
                   : null,
               title: Text(
@@ -219,7 +221,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
                   setState(() => _currentStep = index);
                 },
                 children: widget.steps.map((step) {
-                  return step.build(context, _refreshCurrentStep);
+                  return step.build(context, refreshCurrentStep); // Gebruik publieke functie
                 }).toList(),
               ),
             ),
@@ -241,7 +243,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
                   width: double.infinity,
                   height: 56,
                   child: ShadButton(
-                    onPressed: _isLoading ? null : _goToNext,
+                    onPressed: _isLoading ? null : goToNextPage, // Gebruik publieke functie
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,

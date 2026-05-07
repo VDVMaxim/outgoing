@@ -1,16 +1,17 @@
-// lib/features/onboarding/screens/option_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import 'package:flutter_clubapp/features/onboarding/screens/onboarding_setup.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
 import 'package:flutter_clubapp/features/auth/screens/login_screen.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 
-class OptionScreen extends StatelessWidget {
+class OptionScreen extends ConsumerWidget {
   const OptionScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
@@ -44,14 +45,24 @@ class OptionScreen extends StatelessWidget {
                   title: l10n.optionScreenAnonymous,
                   description: l10n.optionScreenAnonymousDesc,
                   isDark: isDark,
-                  onTap: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const OnboardingSetup(),
-                      ),
-                      (route) => false,
-                    );
+                  onTap: () async {
+                    // FIX: Haal providers op vóór de await!
+                    final authService = ref.read(authServiceProvider);
+                    final authNotifier = ref.read(authProvider.notifier);
+                    
+                    // Gooi eventuele oude ghost-sessies weg zodat je ECHT anoniem bent!
+                    await authService.signOut();
+                    authNotifier.refresh();
+                    
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const OnboardingSetup(),
+                        ),
+                        (route) => false,
+                      );
+                    }
                   },
                 ),
                 const SizedBox(height: 16),

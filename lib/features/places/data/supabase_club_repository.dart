@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
-import '../config/supabase_client.dart';
-import '../models/place.dart';
-import 'interfaces/club_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_clubapp/core/models/place.dart';
+import '../domain/club_repository.dart';
 
 class RepositoryException implements Exception {
   final String message;
@@ -13,11 +13,14 @@ class RepositoryException implements Exception {
 }
 
 class SupabaseClubRepository implements ClubRepository {
-  
+  final SupabaseClient _client;
+
+  // De missende constructor is nu toegevoegd!
+  SupabaseClubRepository(this._client);
+
   Future<List<Place>> _enrichPlaces(List<dynamic> placesList) async {
     if (placesList.isEmpty) return [];
 
-    final client = SupabaseClientProvider.client;
     final placeIds = placesList.map((p) => p['id'].toString()).toList();
 
     final List<dynamic> tagsWithNames = [];
@@ -31,26 +34,26 @@ class SupabaseClubRepository implements ClubRepository {
       final end = (i + chunkSize < placeIds.length) ? i + chunkSize : placeIds.length;
       final chunk = placeIds.sublist(i, end);
 
-      final tagsChunk = await client
+      final tagsChunk = await _client
           .from('place_tags')
           .select('place_id, tags!inner(name, category)')
           .inFilter('place_id', chunk);
       tagsWithNames.addAll(tagsChunk);
 
-      final assocChunk = await client
+      final assocChunk = await _client
           .from('association_places')
           .select('place_id, associations!inner(name)')
           .inFilter('place_id', chunk);
       assocsWithNames.addAll(assocChunk);
 
-      final hoursChunk = await client
+      final hoursChunk = await _client
           .from('opening_hours')
           .select()
           .inFilter('place_id', chunk)
           .order('day_of_week', ascending: true);
       openingHoursList.addAll(hoursChunk);
 
-      final vibesChunk = await client
+      final vibesChunk = await _client
           .from('vibe_checks')
           .select('place_id, is_positive, created_at')
           .inFilter('place_id', chunk);
@@ -125,10 +128,8 @@ class SupabaseClubRepository implements ClubRepository {
 
   @override
   Future<List<Place>> getPlacesInViewport(double minLat, double minLng, double maxLat, double maxLng, {String searchQuery = ''}) async {
-    final client = SupabaseClientProvider.client;
-
     try {
-      final placesResponse = await client.rpc('get_place_markers_in_viewport', params: {
+      final placesResponse = await _client.rpc('get_place_markers_in_viewport', params: {
         'min_lat': minLat,
         'min_lng': minLng,
         'max_lat': maxLat,
@@ -136,7 +137,7 @@ class SupabaseClubRepository implements ClubRepository {
         'search_query': searchQuery,
       });
 
-      final eventsResponse = await client.rpc('get_event_markers_in_viewport', params: {
+      final eventsResponse = await _client.rpc('get_event_markers_in_viewport', params: {
         'min_lat': minLat,
         'min_lng': minLng,
         'max_lat': maxLat,
@@ -173,7 +174,7 @@ class SupabaseClubRepository implements ClubRepository {
             'location_type': 'place',
             'recent_likes': e['hotness_score'] ?? 0,
             'recent_dislikes': 0,
-            'start_time': DateTime.now().toIso8601String(), // Set a start time so it's classified as an event
+            'start_time': DateTime.now().toIso8601String(),
           });
         }
       }
@@ -188,10 +189,8 @@ class SupabaseClubRepository implements ClubRepository {
 
   @override
   Future<List<Place>> getDiscoverPlaces({LatLng? userLocation}) async {
-    final client = SupabaseClientProvider.client;
-
     try {
-      final placesResponse = await client
+      final placesResponse = await _client
           .from('places')
           .select()
           .limit(300);
@@ -218,10 +217,8 @@ class SupabaseClubRepository implements ClubRepository {
 
   @override
   Future<List<Place>> getEvents({LatLng? userLocation}) async {
-    final client = SupabaseClientProvider.client;
-
     try {
-      final eventsResponse = await client
+      final eventsResponse = await _client
           .from('events')
           .select()
           .gte('start_datetime', DateTime.now().toUtc().subtract(const Duration(days: 1)).toIso8601String())
@@ -275,10 +272,8 @@ class SupabaseClubRepository implements ClubRepository {
 
   @override
   Future<Place?> getPlaceById(String id) async {
-    final client = SupabaseClientProvider.client;
-
     try {
-      final placeResponse = await client
+      final placeResponse = await _client
           .from('places')
           .select()
           .eq('id', id)

@@ -12,6 +12,7 @@ class AppTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool autofocus;
   final int? maxLength;
+  final int? maxLines;
   final String? initialValue;
 
   const AppTextField({
@@ -26,6 +27,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.autofocus = false,
     this.maxLength,
+    this.maxLines = 1,
     this.initialValue,
   });
 
@@ -55,6 +57,7 @@ class AppTextField extends StatelessWidget {
                         onChanged: onChanged,
                         autofocus: autofocus,
                         maxLength: maxLength,
+                        maxLines: maxLines,
                         initialValue: initialValue,
                       ),
                     ),
@@ -78,6 +81,7 @@ class AppTextField extends StatelessWidget {
                   onChanged: onChanged,
                   autofocus: autofocus,
                   maxLength: maxLength,
+                  maxLines: maxLines,
                   initialValue: initialValue,
                 ),
         ),

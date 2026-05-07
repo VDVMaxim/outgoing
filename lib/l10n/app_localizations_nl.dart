@@ -15,6 +15,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get navMap => 'Kaart';
 
   @override
+  String get navDiscover => 'Ontdekken';
+
+  @override
+  String get navProfile => 'Profiel';
+
+  @override
   String get navEvents => 'Acties';
 
   @override
@@ -208,7 +214,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get squadDesc =>
-      'Zien waar je maten zijn op de kaart tot 06:00. Danana verdwijnt de Squad automatisch voor ieders privacy.';
+      'Zien waar je maten zijn op de kaart tot 06:00. Daarna verdwijnt de Squad automatisch voor ieders privacy.';
 
   @override
   String get squadCreate => 'Nieuwe Squad Maken';
@@ -298,6 +304,36 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsTitle => 'Instellingen';
 
   @override
+  String get settingsAccount => 'Account';
+
+  @override
+  String get settingsPreferences => 'Voorkeuren';
+
+  @override
+  String get settingsHelpSupport => 'Help & Support';
+
+  @override
+  String get settingsFeedback => 'Jouw mening';
+
+  @override
+  String get settingsReportBug => 'Een fout melden';
+
+  @override
+  String get settingsRateApp => 'Beoordeel de App';
+
+  @override
+  String get settingsShareApp => 'Deel de App';
+
+  @override
+  String get settingsAbout => 'Over de App';
+
+  @override
+  String get settingsTerms => 'Algemene Voorwaarden';
+
+  @override
+  String get settingsPrivacy => 'Privacybeleid';
+
+  @override
   String get settingsSquadProfile => 'Squad Profiel';
 
   @override
@@ -359,12 +395,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get settingsDelete => 'Account verwijderen';
-
-  @override
-  String get settingsAbout => 'Over Club App';
-
-  @override
-  String get settingsFeedback => 'Bugs & Feedback Rapporteren';
 
   @override
   String get settingsFeedbackSub => 'Help de app beter te maken';
@@ -574,30 +604,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsNo => 'Nee';
 
   @override
-  String get settingsAccount => 'Account';
-
-  @override
-  String get settingsHelpSupport => 'Help & Support';
-
-  @override
-  String get settingsReportBug => 'Een bug melden';
-
-  @override
-  String get settingsRateApp => 'App beoordelen';
-
-  @override
-  String get settingsShareApp => 'App delen';
-
-  @override
-  String get settingsPreferences => 'Voorkeuren';
-
-  @override
-  String get settingsTerms => 'Algemene Voorwaarden';
-
-  @override
-  String get settingsPrivacy => 'Privacy Policy';
-
-  @override
   String get loginSubtitle => 'Log in om door te gaan';
 
   @override
@@ -656,7 +662,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get errorPasswordMismatch => 'Wachtwoorden komen niet overeen';
 
   @override
-  String get errorNicknameRequired => 'Nickname is verplicht';
+  String get errorNicknameRequired => 'Vul a.u.b. een bijnaam in';
 
   @override
   String get errorNicknameLength => 'Nickname moet minstens 3 tekens zijn';
@@ -731,7 +737,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get assocActive => 'Actief lid';
 
   @override
-  String get assocLeave => 'Verlaten';
+  String get assocLeave => 'Vereniging verlaten';
 
   @override
   String get assocCancel => 'Annuleren';
@@ -774,4 +780,444 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get eventCheckIn => 'Check In (+10 VP)';
+
+  @override
+  String get editProfileTitle => 'Profiel bewerken';
+
+  @override
+  String get editProfileRemovePhoto => 'Verwijder foto';
+
+  @override
+  String get editProfileBioHint => 'Vertel iets over jezelf...';
+
+  @override
+  String get settingsAccountDetails => 'Accountgegevens';
+
+  @override
+  String get guestTitle => 'Welkom als Gast';
+
+  @override
+  String get guestSubtitle =>
+      'Maak een account aan of log in om samen met je squad te viben, VP te verdienen en je profiel aan te passen.';
+
+  @override
+  String get guestLogin => 'Inloggen';
+
+  @override
+  String get guestRegister => 'Account aanmaken';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get errorCouldNotOpenLink => 'Kon link niet openen';
+
+  @override
+  String get settingsAppStoreComingSoon => 'App store link komt binnenkort';
+
+  @override
+  String get errorCouldNotOpenEmail => 'Kon e-mail app niet openen';
+
+  @override
+  String get profilePhotoUpdated => 'Profielfoto geüpdatet';
+
+  @override
+  String get profilePhotoUploadError => 'Fout bij uploaden foto';
+
+  @override
+  String get profilePhotoRemoved => 'Profielfoto verwijderd';
+
+  @override
+  String get profilePhotoRemoveError => 'Fout bij verwijderen foto';
+
+  @override
+  String get profileSaved => 'Profiel opgeslagen';
+
+  @override
+  String get profileSaveError => 'Fout bij opslaan profiel';
+
+  @override
+  String get errorLoadingFollowers => 'Fout bij laden van volgers';
+
+  @override
+  String get errorLoadingFollowing => 'Fout bij laden van volgend';
+
+  @override
+  String get checkInSuccess => '+10 VP! Check-in bevestigd';
+
+  @override
+  String get error => 'Fout';
+
+  @override
+  String get errorLoadingProfile => 'Fout bij laden van profiel';
+
+  @override
+  String get unfollow => 'Ontvolgen';
+
+  @override
+  String get follow => 'Volgen';
+
+  @override
+  String get editProfile => 'Profiel bewerken';
+
+  @override
+  String get searchAssociations => 'Zoek Verenigingen';
+
+  @override
+  String get errorLoadingPlaces => 'Fout bij laden van locaties';
+
+  @override
+  String get errorLoadingPlacesDesc =>
+      'Controleer je verbinding en probeer opnieuw.';
+
+  @override
+  String get errorLoadingDetails => 'Fout bij laden van details';
+
+  @override
+  String get errorLoadingDetailsDesc =>
+      'Kon details van de locatie niet laden.';
+
+  @override
+  String get notNow => 'Niet nu';
+
+  @override
+  String get squads => 'Squads';
+
+  @override
+  String get cities => 'Steden';
+
+  @override
+  String get searchNicknamePlaceholder => 'Typ een bijnaam...';
+
+  @override
+  String get achievements => 'Prestaties';
+
+  @override
+  String get activity => 'Activiteit';
+
+  @override
+  String get circles => 'Kringen';
+
+  @override
+  String get followers => 'Volgers';
+
+  @override
+  String get following => 'Volgend';
+
+  @override
+  String get bioPlaceholder => 'Ik hou van techno en lange nachten...';
+
+  @override
+  String get daySun => 'Zo';
+
+  @override
+  String get dayMon => 'Ma';
+
+  @override
+  String get dayTue => 'Di';
+
+  @override
+  String get dayWed => 'Wo';
+
+  @override
+  String get dayThu => 'Do';
+
+  @override
+  String get dayFri => 'Vr';
+
+  @override
+  String get daySat => 'Za';
+
+  @override
+  String get bio => 'Bio';
+
+  @override
+  String get firstName => 'Voornaam';
+
+  @override
+  String get lastName => 'Achternaam';
+
+  @override
+  String get noFollowers => 'Nog geen volgers.';
+
+  @override
+  String get followingNone => 'Je volgt nog niemand.';
+
+  @override
+  String get remove => 'Verwijderen';
+
+  @override
+  String get userNotFound => 'Gebruiker niet gevonden';
+
+  @override
+  String guestWelcomeMessage(String nickname) {
+    return 'Hoi $nickname,\nMaak een account aan of log in om je Vibe Level, Badges en Verenigingen te ontgrendelen.';
+  }
+
+  @override
+  String get badgeVault => 'Badge Vault';
+
+  @override
+  String get badgeVaultSubtitle => 'Bekijk je verzamelde badges';
+
+  @override
+  String get leaderboard => 'Leaderboard';
+
+  @override
+  String get leaderboardSubtitle => 'Bekijk de ranglijsten';
+
+  @override
+  String get challenges => 'Challenges';
+
+  @override
+  String get challengesSubtitle => 'Voltooi missies met je squad';
+
+  @override
+  String get noRecentActivity => 'Geen recente activiteit gevonden.';
+
+  @override
+  String get checkedIn => 'Ingecheckt';
+
+  @override
+  String get vibeUpdatedTitle => 'Vibe geüpdatet';
+
+  @override
+  String get noAssociations => 'Je bent nog geen lid van een vereniging.';
+
+  @override
+  String get errorConnection =>
+      'Controleer je verbinding en probeer het opnieuw.';
+
+  @override
+  String get errorLoadingPlaceDetails => 'Kon details van locatie niet laden.';
+
+  @override
+  String get filtersTitle => 'Filters';
+
+  @override
+  String get apply => 'Toepassen';
+
+  @override
+  String get setTargetTime => 'Stel doeltijd in';
+
+  @override
+  String get placePin => 'Plaats Pin';
+
+  @override
+  String get imIn => 'Ik doe mee';
+
+  @override
+  String get notifStepTitle => 'Mis niks van de actie';
+
+  @override
+  String get notifStepDesc =>
+      'Zet je pushmeldingen aan om direct te weten wanneer je squad actief is of als er een flash promo is.';
+
+  @override
+  String get notifStepEnable => 'Meldingen aanzetten';
+
+  @override
+  String get notifStepLater => 'Misschien later';
+
+  @override
+  String get registerBioTitle => 'Wat is jouw Bio?';
+
+  @override
+  String get registerBioDesc => 'Vertel iets over jezelf (Optioneel)';
+
+  @override
+  String get registerBioHint => 'Ik hou van techno en lange nachten...';
+
+  @override
+  String registerWelcome(String firstName) {
+    return 'Welkom, $firstName!';
+  }
+
+  @override
+  String get registerProfileCreated => 'Je profiel is aangemaakt';
+
+  @override
+  String get errorRegistrationFailed => 'Registratie mislukt';
+
+  @override
+  String get badgeVaultTitle => 'Badge Vault';
+
+  @override
+  String get quickStats => 'Snelle Statistieken';
+
+  @override
+  String get explorerBadges => 'Explorer Badges';
+
+  @override
+  String get socialBadges => 'Social Badges';
+
+  @override
+  String get safetyBadges => 'Safety Badges';
+
+  @override
+  String get leaderboardTitle => 'Ranglijst';
+
+  @override
+  String get yourSquad => 'Jouw Squad';
+
+  @override
+  String get squadChallenges => 'Squad Uitdagingen';
+
+  @override
+  String get inProgress => 'In uitvoering';
+
+  @override
+  String get completed => 'Voltooid!';
+
+  @override
+  String locationsCount(int current, int required) {
+    return '$current/$required locaties';
+  }
+
+  @override
+  String get settingsHaptics => 'Haptische Feedback';
+
+  @override
+  String get settingsRateAppSoon => 'App Store link binnenkort beschikbaar';
+
+  @override
+  String settingsVersion(String version) {
+    return 'Versie $version';
+  }
+
+  @override
+  String get errorNoEmailApp =>
+      'Geen e-mail app gevonden. Mail ons op info@clubapp.be';
+
+  @override
+  String get errorEmailGeneric => 'Kon e-mail app niet openen';
+
+  @override
+  String get errorDeleteAccount => 'Er ging iets mis bij het verwijderen';
+
+  @override
+  String get pushNotificationsTitle => 'Pushmeldingen';
+
+  @override
+  String get enableNotifications => 'Meldingen inschakelen';
+
+  @override
+  String get enableNotificationsDesc => 'Ontvang meldingen van Club App';
+
+  @override
+  String get notificationTypes => 'Type meldingen';
+
+  @override
+  String get flashPromos => 'Flash Promos';
+
+  @override
+  String get flashPromosDesc => 'Krijg meldingen over last-minute deals';
+
+  @override
+  String get squadAlerts => 'Squad Alerts';
+
+  @override
+  String get squadAlertsDesc => 'Meldingen wanneer je weg bent van je Squad';
+
+  @override
+  String get chatMessages => 'Chatberichten';
+
+  @override
+  String get chatMessagesDesc => 'Nieuwe berichten van je Squad';
+
+  @override
+  String get newFeatures => 'Nieuwe functies';
+
+  @override
+  String get newFeaturesDesc => 'Updates over nieuwe app-functies';
+
+  @override
+  String get quietHours => 'Stille uren';
+
+  @override
+  String get dontDisturb => 'Niet storen';
+
+  @override
+  String get dontDisturbDesc => 'Demp meldingen tijdens ingestelde uren';
+
+  @override
+  String get from => 'Van';
+
+  @override
+  String get to => 'Tot';
+
+  @override
+  String get assocActiveMember => 'Actief lid';
+
+  @override
+  String get assocPendingRequest => 'Aanvraag in behandeling';
+
+  @override
+  String get assocAboutTitle => 'Over de vereniging';
+
+  @override
+  String get assocNoDescription =>
+      'Deze vereniging heeft nog geen beschrijving toegevoegd.';
+
+  @override
+  String get assocCancelRequest => 'Aanvraag annuleren';
+
+  @override
+  String get assocRequestMembership => 'Lidmaatschap verzoeken';
+
+  @override
+  String get allBadges => 'Alle Badges';
+
+  @override
+  String badgesUnlockedCount(int count, int total) {
+    return '$count van de $total badges ontgrendeld';
+  }
+
+  @override
+  String vpToNextLevel(int count) {
+    return '$count VP naar volgend level';
+  }
+
+  @override
+  String weekendStreakCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Weekends',
+      one: '$count Weekend',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelNewbie => 'Nieuweling';
+
+  @override
+  String get levelClubHopper => 'Club Hopper';
+
+  @override
+  String get levelVibeMaster => 'Vibe Master';
+
+  @override
+  String get levelLegend => 'Legende';
+
+  @override
+  String get locationPermissionTitle => 'Locatietoegang';
+
+  @override
+  String get locationPermissionMessage =>
+      'Locatie is nodig om Squad Mode te gebruiken en de vibe van clubs in de buurt te checken. Je locatie wordt alleen gedeeld als je in een actieve squad zit en stopt automatisch om 06:00 uur.';
+
+  @override
+  String get notificationPermissionTitle => 'Meldingen';
+
+  @override
+  String get notificationPermissionMessage =>
+      'Schakel meldingen in om Flash Promos en Squad-waarschuwingen te ontvangen wanneer je niet op je telefoon kijkt.';
+
+  @override
+  String get club => 'Club';
+
+  @override
+  String get event => 'Event';
 }

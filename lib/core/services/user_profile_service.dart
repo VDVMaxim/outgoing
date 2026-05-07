@@ -1,200 +1,285 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:math';
+import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/shared_prefs_provider.dart';
+import '../config/supabase_client.dart';
 
-class UserProfileService {
-  final SharedPreferences _prefs;
+class UserProfileState {
+  final String? authUserId;
+  final String? email; 
+  final String? nickname;
+  final String? firstName;
+  final String? lastName;
+  final String? bio;
+  final String? avatarUrl;
+  final bool hasCompletedOnboarding;
+  
+  bool get isAuthenticated => authUserId != null;
+  String? get displayName => nickname ?? firstName ?? 'Gebruiker';
+  bool get hasNickname => nickname != null && nickname!.trim().isNotEmpty;
 
-  static const String _keyUserId = 'user_id';
-  static const String _keyNickname = 'nickname';
-  static const String _keyAvatarUrl = 'avatar_url';
-  static const String _keyHasCompletedOnboarding = 'has_completed_onboarding';
-  static const String _keyFirstName = 'first_name';
-  static const String _keyLastName = 'last_name';
-  static const String _keyEmail = 'email';
+  const UserProfileState({
+    this.authUserId,
+    this.email, 
+    this.nickname,
+    this.firstName,
+    this.lastName,
+    this.bio,
+    this.avatarUrl,
+    this.hasCompletedOnboarding = false,
+  });
 
-  UserProfileService(this._prefs);
-
-  String get userId {
-    var id = _prefs.getString(_keyUserId);
-    if (id == null || id.isEmpty) {
-      id = _generateUserId();
-      _prefs.setString(_keyUserId, id);
-    }
-    return id;
-  }
-
-  String _generateUserId() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-    final random = Random().nextInt(999999).toString().padLeft(6, '0');
-    return '$timestamp$random';
-  }
-
-  String? get nickname => _prefs.getString(_keyNickname);
-
-  set nickname(String? value) {
-    if (value != null && value.isNotEmpty) {
-      _prefs.setString(_keyNickname, value);
-    } else {
-      _prefs.remove(_keyNickname);
-    }
-  }
-
-  bool get hasNickname {
-    final n = nickname;
-    return n != null && n.isNotEmpty;
-  }
-
-  String? get avatarUrl => _prefs.getString(_keyAvatarUrl);
-
-  set avatarUrl(String? value) {
-    if (value != null && value.isNotEmpty) {
-      _prefs.setString(_keyAvatarUrl, value);
-    } else {
-      _prefs.remove(_keyAvatarUrl);
-    }
-  }
-
-  bool get hasCompletedOnboarding {
-    return _prefs.getBool(_keyHasCompletedOnboarding) ?? false;
-  }
-
-  set hasCompletedOnboarding(bool value) {
-    _prefs.setBool(_keyHasCompletedOnboarding, value);
-  }
-
-  bool get isAuthenticated {
-    return Supabase.instance.client.auth.currentUser != null;
-  }
-
-  String? get authUserId => Supabase.instance.client.auth.currentUser?.id;
-
-  String? get firstName => _prefs.getString(_keyFirstName);
-
-  set firstName(String? value) {
-    if (value != null && value.isNotEmpty) {
-      _prefs.setString(_keyFirstName, value);
-    } else {
-      _prefs.remove(_keyFirstName);
-    }
-  }
-
-  String? get lastName => _prefs.getString(_keyLastName);
-
-  set lastName(String? value) {
-    if (value != null && value.isNotEmpty) {
-      _prefs.setString(_keyLastName, value);
-    } else {
-      _prefs.remove(_keyLastName);
-    }
-  }
-
-  String? get email => _prefs.getString(_keyEmail);
-
-  set email(String? value) {
-    if (value != null && value.isNotEmpty) {
-      _prefs.setString(_keyEmail, value);
-    } else {
-      _prefs.remove(_keyEmail);
-    }
-  }
-
-  String get initials {
-    final fName = firstName;
-    final lName = lastName;
-    if (fName != null &&
-        fName.isNotEmpty &&
-        lName != null &&
-        lName.isNotEmpty) {
-      return '${fName[0]}${lName[0]}'.toUpperCase();
-    }
-    final n = nickname;
-    if (n != null && n.isNotEmpty) {
-      return n.substring(0, n.length >= 2 ? 2 : 1).toUpperCase();
-    }
-    return '?';
-  }
-
-  String? get displayName {
-    if (isAuthenticated && firstName != null && firstName!.isNotEmpty) {
-      final ln = lastName;
-      return '$firstName${ln != null && ln.isNotEmpty ? ' $ln' : ''}';
-    }
-    return nickname;
-  }
-
-  void setProfileData({
+  UserProfileState copyWith({
+    String? authUserId,
+    String? email, 
+    String? nickname,
     String? firstName,
     String? lastName,
-    String? email,
-    String? nickname,
+    String? bio,
+    String? avatarUrl,
+    bool? hasCompletedOnboarding,
+    bool clearAuthUserId = false,
+    bool clearEmail = false, 
+    bool clearNickname = false,
+    bool clearFirstName = false,
+    bool clearLastName = false,
+    bool clearBio = false,
+    bool clearAvatarUrl = false,
   }) {
-    if (firstName != null) this.firstName = firstName;
-    if (lastName != null) this.lastName = lastName;
-    if (email != null) this.email = email;
-    if (nickname != null) this.nickname = nickname;
+    return UserProfileState(
+      authUserId: clearAuthUserId ? null : (authUserId ?? this.authUserId),
+      email: clearEmail ? null : (email ?? this.email), 
+      nickname: clearNickname ? null : (nickname ?? this.nickname),
+      firstName: clearFirstName ? null : (firstName ?? this.firstName),
+      lastName: clearLastName ? null : (lastName ?? this.lastName),
+      bio: clearBio ? null : (bio ?? this.bio),
+      avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
+      hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+    );
   }
+}
 
-  Future<void> syncNicknameToProfile() async {
-    if (isAuthenticated && nickname != null && authUserId != null) {
-      await Supabase.instance.client
-          .from('profiles')
-          .update({
-            'nickname': nickname,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('user_id', authUserId!);
-    }
-  }
+class UserProfileNotifier extends Notifier<UserProfileState> {
+  late SupabaseClient _supabase;
+  late SharedPreferences _prefs;
 
-  Future<String?> syncNicknameFromProfile() async {
-    if (!isAuthenticated || authUserId == null) return null;
-
-    final profile = await Supabase.instance.client
-        .from('profiles')
-        .select('nickname')
-        .eq('user_id', authUserId!)
-        .maybeSingle();
-
-    if (profile != null && profile['nickname'] != null) {
-      nickname = profile['nickname'];
-      return profile['nickname'];
-    }
-    return null;
-  }
-
-  Future<void> loadProfileFromSupabase() async {
-    if (!isAuthenticated || authUserId == null) return;
-
-    final profile = await Supabase.instance.client
-        .from('profiles')
-        .select()
-        .eq('user_id', authUserId!)
-        .maybeSingle();
-
-    if (profile != null) {
-      firstName = profile['first_name'];
-      lastName = profile['last_name'];
-      email = profile['email'];
-      nickname = profile['nickname'];
-    }
+  @override
+  UserProfileState build() {
+    _supabase = ref.watch(supabaseClientProvider);
+    _prefs = ref.watch(sharedPreferencesProvider);
+    
+    final hasCompleted = _prefs.getBool('hasCompletedOnboarding') ?? false;
+    final anonNickname = _prefs.getString('anonymous_nickname');
+    final currentUserId = _supabase.auth.currentUser?.id;
+    final currentUserEmail = _supabase.auth.currentUser?.email; 
+    
+    return UserProfileState(
+      authUserId: currentUserId,
+      email: currentUserEmail,
+      nickname: anonNickname,
+      hasCompletedOnboarding: hasCompleted,
+    );
   }
 
   void clearProfile() {
-    _prefs.remove(_keyNickname);
-    _prefs.remove(_keyAvatarUrl);
-    _prefs.remove(_keyFirstName);
-    _prefs.remove(_keyLastName);
-    _prefs.remove(_keyEmail);
+    // Behoud de nickname en onboarding status wanneer je uitlogt!
+    final savedNickname = state.nickname;
+    final completedOnboarding = state.hasCompletedOnboarding;
+    
+    state = UserProfileState(
+      nickname: savedNickname,
+      hasCompletedOnboarding: completedOnboarding,
+    );
   }
 
-  void clearAuthData() {
-    _prefs.remove(_keyFirstName);
-    _prefs.remove(_keyLastName);
-    _prefs.remove(_keyEmail);
+  Future<void> setHasCompletedOnboarding(bool value) async {
+    await _prefs.setBool('hasCompletedOnboarding', value);
+    state = state.copyWith(hasCompletedOnboarding: value);
   }
 
-  void resetOnboarding() {
-    _prefs.setBool(_keyHasCompletedOnboarding, false);
+  Future<void> setNickname(String? value) async {
+    if (value != null) {
+      await _prefs.setString('anonymous_nickname', value);
+    } else {
+      await _prefs.remove('anonymous_nickname');
+    }
+    state = state.copyWith(nickname: value, clearNickname: value == null);
+  }
+
+  Future<void> loadProfileFromSupabase() async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId != null) {
+      await loadProfile(currentUserId);
+    }
+  }
+
+  Future<void> syncNicknameToProfile() async {
+    if (state.authUserId == null || state.nickname == null) return;
+    try {
+      await _supabase.from('profiles').update({'nickname': state.nickname}).eq('user_id', state.authUserId!);
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+  }
+
+  Future<void> loadProfile(String targetUserId) async {
+    try {
+      final data = await _supabase.from('profiles').select().eq('user_id', targetUserId).maybeSingle();
+      if (data != null) {
+        final dbNickname = data['nickname'] as String?;
+        final hasCompleted = state.hasCompletedOnboarding || (dbNickname != null && dbNickname.trim().isNotEmpty);
+        
+        if (hasCompleted && !state.hasCompletedOnboarding) {
+          await _prefs.setBool('hasCompletedOnboarding', true);
+        }
+
+        // Overschrijf de lokale anonieme nickname met de account nickname zodat we die onthouden bij uitloggen
+        if (dbNickname != null && dbNickname.trim().isNotEmpty) {
+          await _prefs.setString('anonymous_nickname', dbNickname);
+        }
+
+        state = state.copyWith(
+          authUserId: targetUserId,
+          email: data['email'] ?? _supabase.auth.currentUser?.email, 
+          nickname: dbNickname ?? state.nickname, // Als dbNickname null is, behoud dan de lokale
+          firstName: data['first_name'],
+          lastName: data['last_name'],
+          bio: data['bio'],
+          avatarUrl: data['avatar_url'],
+          hasCompletedOnboarding: hasCompleted,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+  }
+
+  Future<void> updateProfile({
+    required String firstName,
+    required String lastName,
+    required String nickname,
+    String? bio,
+  }) async {
+    final targetId = state.authUserId;
+    if (targetId == null) return;
+    try {
+      await _supabase.from('profiles').update({
+        'first_name': firstName,
+        'last_name': lastName,
+        'nickname': nickname,
+        'bio': bio,
+      }).eq('user_id', targetId);
+      
+      // Update ook de lokale opslag met de nieuwe nickname
+      await _prefs.setString('anonymous_nickname', nickname);
+      
+      state = state.copyWith(
+        firstName: firstName,
+        lastName: lastName,
+        nickname: nickname,
+        bio: bio,
+        clearBio: bio == null,
+      );
+    } catch (e) {
+      debugPrint('Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<String?> uploadAvatar(File imageFile) async {
+    final targetId = state.authUserId;
+    if (targetId == null) return null;
+    try {
+      final currentAvatar = state.avatarUrl;
+      if (currentAvatar != null && currentAvatar.isNotEmpty) {
+        try {
+          final uri = Uri.parse(currentAvatar);
+          final pathSegments = uri.pathSegments;
+          final fileName = pathSegments.last;
+          await _supabase.storage.from('avatars').remove(['$targetId/$fileName']);
+        } catch (e) {
+          debugPrint('Error: $e');
+        }
+      }
+
+      final fileExtension = p.extension(imageFile.path);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}$fileExtension';
+      final filePath = '$targetId/$fileName';
+
+      await _supabase.storage.from('avatars').upload(filePath, imageFile);
+      final newAvatarUrl = _supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      await _supabase.from('profiles').update({'avatar_url': newAvatarUrl}).eq('user_id', targetId);
+      
+      state = state.copyWith(avatarUrl: newAvatarUrl);
+      return newAvatarUrl;
+    } catch (e) {
+      debugPrint('Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAvatar() async {
+    final targetId = state.authUserId;
+    final currentAvatar = state.avatarUrl;
+    if (targetId == null || currentAvatar == null) return;
+    try {
+      final uri = Uri.parse(currentAvatar);
+      final pathSegments = uri.pathSegments;
+      final fileName = pathSegments.last;
+      
+      await _supabase.storage.from('avatars').remove(['$targetId/$fileName']);
+      await _supabase.from('profiles').update({'avatar_url': null}).eq('user_id', targetId);
+      
+      state = state.copyWith(clearAvatarUrl: true);
+    } catch (e) {
+      debugPrint('Error: $e');
+      rethrow;
+    }
   }
 }
+
+final userProfileProvider = NotifierProvider<UserProfileNotifier, UserProfileState>(() {
+  return UserProfileNotifier();
+});
+
+// --- Legacy Wrapper voor UI Compatibiliteit in Fase 2 ---
+class UserProfileService {
+  final Ref _ref;
+  UserProfileService(this._ref);
+
+  UserProfileState get _state => _ref.read(userProfileProvider);
+  UserProfileNotifier get _notifier => _ref.read(userProfileProvider.notifier);
+
+  String? get authUserId => _state.authUserId;
+  String? get email => _state.email; 
+  String? get nickname => _state.nickname;
+  String? get firstName => _state.firstName;
+  String? get lastName => _state.lastName;
+  String? get bio => _state.bio;
+  String? get avatarUrl => _state.avatarUrl;
+  
+  String? get userId => _state.authUserId;
+  bool get isAuthenticated => _state.isAuthenticated;
+  String? get displayName => _state.displayName;
+  bool get hasNickname => _state.hasNickname;
+  bool get hasCompletedOnboarding => _state.hasCompletedOnboarding;
+
+  set hasCompletedOnboarding(bool value) => _notifier.setHasCompletedOnboarding(value);
+  set nickname(String? value) => _notifier.setNickname(value);
+
+  void clearProfile() => _notifier.clearProfile();
+  Future<void> loadProfileFromSupabase() => _notifier.loadProfileFromSupabase();
+  Future<void> syncNicknameToProfile() => _notifier.syncNicknameToProfile();
+  Future<void> loadProfile(String targetUserId) => _notifier.loadProfile(targetUserId);
+  Future<void> updateProfile({required String firstName, required String lastName, required String nickname, String? bio}) => _notifier.updateProfile(firstName: firstName, lastName: lastName, nickname: nickname, bio: bio);
+  Future<String?> uploadAvatar(File imageFile) => _notifier.uploadAvatar(imageFile);
+  Future<void> deleteAvatar() => _notifier.deleteAvatar();
+}
+
+final userProfileServiceProvider = Provider<UserProfileService>((ref) {
+  return UserProfileService(ref);
+});

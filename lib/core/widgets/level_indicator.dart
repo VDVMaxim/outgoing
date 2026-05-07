@@ -1,9 +1,10 @@
 // lib/core/widgets/level_indicator.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/vibe_provider.dart';
+import 'package:flutter_clubapp/features/vibe/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
-export '../providers/vibe_provider.dart' show VibeDisplayData;
+export 'package:flutter_clubapp/features/vibe/providers/vibe_provider.dart' show VibeDisplayData;
 
 class LevelIndicator extends ConsumerWidget {
   final bool showProgress;
@@ -20,10 +21,10 @@ class LevelIndicator extends ConsumerWidget {
     final rawVpData = ref.watch(vpDisplayProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    final vpData = rawVpData ?? const VibeDisplayData(
+    final vpData = rawVpData ?? VibeDisplayData(
       totalVp: 0,
       level: 1,
-      levelName: 'Newbie',
+      levelName: AppLocalizations.of(context)!.levelNewbie,
       streak: 0,
       progress: 0.0,
       vpForNextLevel: 100,
@@ -33,7 +34,7 @@ class LevelIndicator extends ConsumerWidget {
     final progressColor = _getLevelColor(vpData.level);
 
     if (compact) {
-      return _buildCompact(vpData, progressColor);
+      return _buildCompact(context, vpData, progressColor);
     }
 
     return Column(
@@ -51,7 +52,7 @@ class LevelIndicator extends ConsumerWidget {
                   Row(
                     children: [
                       Text(
-                        vpData.levelName,
+                        _translateLevelName(vpData.level, context),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -87,7 +88,7 @@ class LevelIndicator extends ConsumerWidget {
                   const SizedBox(height: 2),
                   if (vpData.vpForNextLevel > 0)
                     Text(
-                      '${vpData.vpForNextLevel} VP to next level',
+                      AppLocalizations.of(context)!.vpToNextLevel(vpData.vpForNextLevel),
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? Colors.white54 : Colors.black54,
@@ -114,7 +115,7 @@ class LevelIndicator extends ConsumerWidget {
     );
   }
 
-  Widget _buildCompact(VibeDisplayData vpData, Color progressColor) {
+  Widget _buildCompact(BuildContext context, VibeDisplayData vpData, Color progressColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -142,7 +143,7 @@ class LevelIndicator extends ConsumerWidget {
           Icon(_getLevelIcon(vpData.level), size: 16, color: progressColor),
           const SizedBox(width: 4),
           Text(
-            vpData.levelName,
+            _translateLevelName(vpData.level, context),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -221,6 +222,21 @@ class LevelIndicator extends ConsumerWidget {
         return Icons.person_outline;
     }
   }
+  String _translateLevelName(int level, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (level) {
+      case 1:
+        return l10n.levelNewbie;
+      case 2:
+        return l10n.levelClubHopper;
+      case 3:
+        return l10n.levelVibeMaster;
+      case 4:
+        return l10n.levelLegend;
+      default:
+        return l10n.levelNewbie;
+    }
+  }
 }
 
 class StreakIndicator extends ConsumerWidget {
@@ -261,7 +277,7 @@ class StreakIndicator extends ConsumerWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            '${vpData.streak} Weekend${vpData.streak > 1 ? 's' : ''}',
+            AppLocalizations.of(context)!.weekendStreakCount(vpData.streak),
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,

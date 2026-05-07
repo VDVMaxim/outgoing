@@ -1,5 +1,5 @@
 import 'package:latlong2/latlong.dart';
-import '../../models/place.dart';
+import 'package:flutter_clubapp/core/models/place.dart';
 
 abstract class ClubRepository {
   Future<List<Place>> getPlacesInViewport(double minLat, double minLng, double maxLat, double maxLng, {String searchQuery = ''});

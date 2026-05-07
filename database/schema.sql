@@ -63,7 +63,17 @@ CREATE TABLE place_tags (
 CREATE TABLE associations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    logo_url TEXT,
+    banner_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE association_tags (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    association_id UUID NOT NULL REFERENCES associations(id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    UNIQUE(association_id, tag_id)
 );
 
 CREATE TABLE association_places (
@@ -76,7 +86,7 @@ CREATE TABLE association_places (
 CREATE TABLE association_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     association_id UUID NOT NULL REFERENCES associations(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     role TEXT NOT NULL DEFAULT 'member',
     joined_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(association_id, user_id)
@@ -95,6 +105,7 @@ CREATE TABLE events (
     end_datetime TIMESTAMPTZ,
     image_url TEXT,
     place_id UUID REFERENCES places(id) ON DELETE SET NULL,
+    association_id UUID REFERENCES associations(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -104,7 +115,7 @@ CREATE TABLE vibe_checks (
     place_id UUID REFERENCES places(id) ON DELETE CASCADE,
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     is_positive BOOLEAN NOT NULL DEFAULT true,
-    user_id UUID,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -116,18 +127,17 @@ CREATE TABLE user_event_saves (
 );
 CREATE UNIQUE INDEX idx_user_event_saves_event ON user_event_saves(user_id, event_id) WHERE event_id IS NOT NULL;
 
-
 CREATE TABLE squads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pin TEXT UNIQUE NOT NULL,
-    created_by TEXT NOT NULL,
+    created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE squad_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     nickname TEXT NOT NULL,
     latitude FLOAT8 NOT NULL,
     longitude FLOAT8 NOT NULL,
@@ -138,7 +148,7 @@ CREATE TABLE squad_members (
 CREATE TABLE squad_pins (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     squad_id UUID NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
-    creator_id TEXT NOT NULL,
+    creator_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     latitude FLOAT8 NOT NULL,
     longitude FLOAT8 NOT NULL,
     target_time TIMESTAMPTZ NOT NULL,
@@ -148,7 +158,7 @@ CREATE TABLE squad_pins (
 
 CREATE TABLE squad_pin_joins (
     pin_id UUID NOT NULL REFERENCES squad_pins(id) ON DELETE CASCADE,
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     joined_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (pin_id, user_id)
 );
@@ -159,12 +169,30 @@ CREATE TABLE profiles (
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     email TEXT NOT NULL,
-    birthday DATE NOT NULL,
     nickname TEXT NOT NULL,
     avatar_url TEXT,
+    bio TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(user_id)
+);
+
+CREATE TABLE user_followers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    follower_id UUID NOT NULL REFERENCES profiles(user_id) ON DELETE CASCADE,
+    following_id UUID NOT NULL REFERENCES profiles(user_id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(follower_id, following_id)
+);
+
+CREATE TABLE user_push_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    platform TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, token)
 );
 
 CREATE TABLE vibe_profiles (
@@ -192,7 +220,7 @@ CREATE TABLE vibe_actions (
 
 CREATE TABLE user_badges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     badge_type TEXT NOT NULL,
     unlocked_at TIMESTAMPTZ DEFAULT NOW(),
     xp_earned INTEGER DEFAULT 0,
@@ -212,7 +240,7 @@ CREATE TABLE squad_challenges (
 
 CREATE TABLE safety_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     checked_in_at TIMESTAMPTZ DEFAULT NOW(),
     location_lat DOUBLE PRECISION,
     location_lng DOUBLE PRECISION
@@ -220,7 +248,7 @@ CREATE TABLE safety_sessions (
 
 CREATE TABLE app_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     event_name TEXT NOT NULL,
     event_data JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -257,6 +285,7 @@ CREATE INDEX idx_osm_places_location ON places USING GIST(location);
 CREATE INDEX idx_place_overrides_place_id_time ON place_overrides(place_id, created_at DESC);
 CREATE INDEX idx_opening_hours_place_id ON opening_hours(place_id);
 CREATE INDEX idx_place_tags_place_id ON place_tags(place_id);
+CREATE INDEX idx_association_tags_association_id ON association_tags(association_id);
 CREATE INDEX idx_association_places_place_id ON association_places(place_id);
 CREATE INDEX idx_association_members_association_id ON association_members(association_id);
 CREATE INDEX idx_association_members_user_id ON association_members(user_id);
@@ -266,6 +295,9 @@ CREATE INDEX idx_vibe_checks_place_id ON vibe_checks(place_id);
 CREATE INDEX idx_vibe_checks_event_id ON vibe_checks(event_id);
 CREATE INDEX idx_squad_members_squad_id ON squad_members(squad_id);
 CREATE INDEX idx_squad_pins_squad_id ON squad_pins(squad_id);
+CREATE INDEX idx_user_followers_follower ON user_followers(follower_id);
+CREATE INDEX idx_user_followers_following ON user_followers(following_id);
+CREATE INDEX idx_user_push_tokens_user ON user_push_tokens(user_id);
 
 ALTER TABLE places ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_overrides ENABLE ROW LEVEL SECURITY;
@@ -273,6 +305,7 @@ ALTER TABLE opening_hours ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE place_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE associations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE association_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE association_places ENABLE ROW LEVEL SECURITY;
 ALTER TABLE association_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
@@ -289,6 +322,8 @@ ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE squad_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE safety_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_followers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_push_tokens ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public read access" ON places FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON place_overrides FOR SELECT USING (true);
@@ -296,6 +331,7 @@ CREATE POLICY "Public read access" ON opening_hours FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON tags FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON place_tags FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON associations FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON association_tags FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON association_places FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON association_members FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON events FOR SELECT USING (true);
@@ -305,6 +341,11 @@ CREATE POLICY "Public read access" ON squad_members FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON squad_pins FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON squad_pin_joins FOR SELECT USING (true);
 
+CREATE POLICY "Public read access on followers" ON user_followers FOR SELECT USING (true);
+CREATE POLICY "Users can follow others" ON user_followers FOR INSERT WITH CHECK (auth.uid() = follower_id);
+CREATE POLICY "Users can unfollow" ON user_followers FOR DELETE USING (auth.uid() = follower_id);
+
+CREATE POLICY "Users can manage own push tokens" ON user_push_tokens FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their saves" ON user_event_saves FOR ALL USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert events" ON events FOR INSERT WITH CHECK (auth.uid() = created_by);
@@ -325,14 +366,19 @@ CREATE POLICY "Allow deletes" ON squad_pin_joins FOR DELETE USING (true);
 CREATE POLICY "Users can update own squad_member" ON squad_members FOR UPDATE USING (true);
 CREATE POLICY "Users can delete own squad_member" ON squad_members FOR DELETE USING (true);
 
-CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Public read access on profiles" ON profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own profile" ON profiles FOR DELETE USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can own vibe_profile" ON vibe_profiles FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can own vibe_actions" ON vibe_actions FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can own user_badges" ON user_badges FOR ALL USING (user_id::text = auth.uid()::text);
+CREATE POLICY "Public read access on vibe_profiles" ON vibe_profiles FOR SELECT USING (true);
+CREATE POLICY "Users can manage own vibe_profile" ON vibe_profiles FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Public read access on vibe_actions" ON vibe_actions FOR SELECT USING (true);
+CREATE POLICY "Users can manage own vibe_actions" ON vibe_actions FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Public read access on user_badges" ON user_badges FOR SELECT USING (true);
+CREATE POLICY "Users can manage own user_badges" ON user_badges FOR ALL USING (user_id = auth.uid());
 
 DO $$ BEGIN
     CREATE PUBLICATION supabase_realtime;
@@ -346,6 +392,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE squad_pins;
 ALTER PUBLICATION supabase_realtime ADD TABLE squad_pin_joins;
 ALTER PUBLICATION supabase_realtime ADD TABLE events;
 ALTER PUBLICATION supabase_realtime ADD TABLE user_event_saves;
+ALTER PUBLICATION supabase_realtime ADD TABLE user_followers;
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -381,7 +428,11 @@ CREATE TRIGGER update_squad_members_updated_at
     BEFORE UPDATE ON squad_members
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE OR REPLACE FUNCTION create_squad(p_user_id TEXT, p_nickname TEXT, p_lat FLOAT8, p_lng FLOAT8)
+CREATE TRIGGER update_push_tokens_updated_at
+    BEFORE UPDATE ON user_push_tokens
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE FUNCTION create_squad(p_user_id UUID, p_nickname TEXT, p_lat FLOAT8, p_lng FLOAT8)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -476,3 +527,15 @@ GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true) ON CONFLICT DO NOTHING;
+
+DROP POLICY IF EXISTS "Avatar images are publicly accessible." ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload their own avatar." ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatar." ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own avatar." ON storage.objects;
+
+CREATE POLICY "Avatar images are publicly accessible." ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+CREATE POLICY "Users can upload their own avatar." ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars' AND auth.uid() = owner);
+CREATE POLICY "Users can update their own avatar." ON storage.objects FOR UPDATE USING (bucket_id = 'avatars' AND auth.uid() = owner);
+CREATE POLICY "Users can delete their own avatar." ON storage.objects FOR DELETE USING (bucket_id = 'avatars' AND auth.uid() = owner);

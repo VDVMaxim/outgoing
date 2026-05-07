@@ -11,7 +11,6 @@ import 'package:flutter_clubapp/core/models/squad_member.dart' as models;
 import 'package:flutter_clubapp/core/models/squad_pin.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:flutter_clubapp/core/repositories/interfaces/squad_repository.dart';
 import 'package:flutter_clubapp/core/services/settings_service.dart';
 import 'package:flutter_clubapp/core/services/user_profile_service.dart';
 import 'package:flutter_clubapp/core/services/location_service.dart';
@@ -614,7 +613,7 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
         final currentPosition = LatLng(position.latitude, position.longitude);
 
         if (_shouldSendPositionUpdate(currentPosition)) {
-          
+           
           final posMsg = jsonEncode({
             'type': 'pos',
             'lat': currentPosition.latitude,
@@ -676,7 +675,6 @@ class SquadNotifier extends StateNotifier<SquadProviderState> {
       return SquadMemberDisplay(
         id: m.id,
         odmemberId: m.userId,
-     
         nickname: m.nickname,
         avatarUrl: null,
         position: pos,

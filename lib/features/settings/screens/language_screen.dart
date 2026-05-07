@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/main.dart';
+import 'package:flutter_clubapp/core/services/settings_service.dart';
 
-class LanguageScreen extends StatelessWidget {
+class LanguageScreen extends ConsumerWidget {
   const LanguageScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
@@ -60,7 +61,7 @@ class LanguageScreen extends StatelessWidget {
   }
 }
 
-class _LanguageOption extends StatelessWidget {
+class _LanguageOption extends ConsumerWidget {
   final String flag;
   final String name;
   final Locale locale;
@@ -74,16 +75,17 @@ class _LanguageOption extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocale = ref.watch(localeProvider);
     final isSelected =
-        localeNotifier.value?.languageCode == locale.languageCode ||
-        (localeNotifier.value == null &&
+        currentLocale?.languageCode == locale.languageCode ||
+        (currentLocale == null &&
             Localizations.localeOf(context).languageCode ==
                 locale.languageCode);
 
     return GestureDetector(
       onTap: () {
-        localeNotifier.value = locale;
+        ref.read(localeProvider.notifier).setLocale(locale);
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -113,7 +115,7 @@ class _LanguageOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, color: Colors.blueAccent, size: 28),
+              const Icon(Icons.check_circle, color: Colors.blueAccent, size: 28),
           ],
         ),
       ),

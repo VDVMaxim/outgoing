@@ -1,6 +1,8 @@
+// lib/features/auth/screens/success_screen.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
 class AuthSuccessScreen extends StatefulWidget {
   final String title;
@@ -68,6 +70,7 @@ class _AuthSuccessScreenState extends State<AuthSuccessScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
@@ -148,18 +151,21 @@ class _AuthSuccessScreenState extends State<AuthSuccessScreen>
                     ),
                   ),
                   const SizedBox(height: 48),
-                  if (widget.onContinue != null)
-                    TextButton(
-                      onPressed: widget.onContinue,
-                      child: Text(
-                        'Continue',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.blueAccent,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  
+                  // De knop is nu ALTIJD zichtbaar, met een fallback als widget.onContinue null is
+                  TextButton(
+                    onPressed: widget.onContinue ?? () {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                    child: Text(
+                      l10n.accountSuccessContinue,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

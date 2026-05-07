@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/features/vibe/providers/vibe_provider.dart';
 import 'vibe_check_dialog.dart';
 
 class PlaceBottomSheet extends ConsumerWidget {
@@ -58,12 +58,21 @@ class PlaceBottomSheet extends ConsumerWidget {
   }
 
   Widget _buildOpeningHours(BuildContext context, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     if (place.openingHours.isNotEmpty) {
-      final days = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
+      final days = [
+        l10n.daySun,
+        l10n.dayMon,
+        l10n.dayTue,
+        l10n.dayWed,
+        l10n.dayThu,
+        l10n.dayFri,
+        l10n.daySat
+      ];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Openingsuren', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(l10n.placeOpeningHours, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 8),
           ...place.openingHours.map((oh) => Padding(
             padding: const EdgeInsets.only(bottom: 4),
@@ -81,13 +90,13 @@ class PlaceBottomSheet extends ConsumerWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Openingsuren', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(l10n.placeOpeningHours, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 4),
           Text(place.openingHoursRaw!, style: const TextStyle(color: Colors.grey, fontSize: 14)),
         ],
       );
     }
-    return const Text('Geen openingsuren bekend', style: TextStyle(color: Colors.grey, fontSize: 14));
+    return Text(l10n.placeNoOpeningHours, style: const TextStyle(color: Colors.grey, fontSize: 14));
   }
 
   @override
@@ -147,7 +156,7 @@ class PlaceBottomSheet extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          place.recentLikes > 0 ? '🔥 ${place.recentLikes} Vibes' : 'Nog geen vibes vanavond',
+                          place.recentLikes > 0 ? '🔥 ${place.recentLikes} Vibes' : AppLocalizations.of(context)!.placeNoVibes,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.black,
@@ -157,7 +166,7 @@ class PlaceBottomSheet extends ConsumerWidget {
                       ShadButton(
                         size: ShadButtonSize.sm,
                         onPressed: () => _openVibeCheck(context),
-                        child: const Text('Update'),
+                        child: Text(AppLocalizations.of(context)!.placeUpdate),
                       ),
                     ],
                   ),
@@ -173,12 +182,12 @@ class PlaceBottomSheet extends ConsumerWidget {
                   width: double.infinity,
                   child: ShadButton.secondary(
                     onPressed: _launchMaps,
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.directions),
-                        SizedBox(width: 8),
-                        Text('Route naar locatie'),
+                        const Icon(Icons.directions),
+                        const SizedBox(width: 8),
+                        Text(AppLocalizations.of(context)!.placeRoute),
                       ],
                     ),
                   ),
@@ -214,17 +223,18 @@ class _CheckInButton extends ConsumerWidget {
         onPressed: () async {
           await ref.read(vibeProvider.notifier).checkIn(place.id);
           if (context.mounted) {
+            final l10n = AppLocalizations.of(context)!;
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('+10 VP! Check-in bevestigd'), backgroundColor: Colors.purple),
+              SnackBar(content: Text(l10n.checkInSuccess), backgroundColor: Colors.purple),
             );
           }
         },
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bolt, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('Check In (+10 VP)'),
+            const Icon(Icons.bolt, color: Colors.amber),
+            const SizedBox(width: 8),
+            Text(AppLocalizations.of(context)!.placeCheckIn),
           ],
         ),
       ),

@@ -12,8 +12,8 @@ import 'package:flutter_clubapp/core/models.dart';
 import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/constants/app_constants.dart';
-import 'package:flutter_clubapp/main.dart';
 import 'package:flutter_clubapp/core/widgets/permission_rationale_sheet.dart';
+import 'package:flutter_clubapp/core/services/settings_service.dart';
 import '../../places/widgets/place_bottom_sheet.dart';
 import '../../squad/widgets/squad_bottom_sheet.dart';
 import '../../squad/providers/squad_provider.dart';
@@ -26,22 +26,22 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProviderStateMixin {
+class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final MapController _mapController = MapController();
   final Map<String, Place> _cachedPlaces = {};
   bool _isLoading = true;
   bool _hasLocationPermission = false;
   final Set<String> _selectedFilters = {};
   String _searchQuery = '';
-
   double _currentZoom = 14.0;
   LatLng? _liveUserLocation;
   StreamSubscription<Position>? _locationSubscription;
   StreamSubscription<CompassEvent>? _compassSubscription;
+  StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
+  
   bool _isFollowingUser = false;
   bool _isCompassMode = false;
   Timer? _debounce;
-  
   LatLng? _lastFetchCenter;
   double? _lastFetchZoom;
 
@@ -54,29 +54,54 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     _liveUserLocation = widget.userLocation;
-    
     _fabAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    
+    WidgetsBinding.instance.addObserver(this);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(analyticsServiceProvider).logEvent('opened_map');
       _checkInitialPermission();
     });
+    
     _setupSquadPulse();
     _startCompassTracking();
+
+    _serviceStatusSubscription = Geolocator.getServiceStatusStream().listen((status) {
+      if (status == ServiceStatus.enabled) {
+        _checkInitialPermission();
+      } else {
+        if (mounted && _hasLocationPermission) {
+          setState(() => _hasLocationPermission = false);
+        }
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkInitialPermission();
+    }
   }
 
   Future<void> _checkInitialPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
-    
+    if (!serviceEnabled) {
+      if (mounted && _hasLocationPermission) setState(() => _hasLocationPermission = false);
+      return;
+    }
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-      if (mounted) {
+      if (!mounted) return;
+      if (!_hasLocationPermission) {
         setState(() => _hasLocationPermission = true);
         _startLocationTracking();
       }
+    } else {
+      if (mounted && _hasLocationPermission) setState(() => _hasLocationPermission = false);
     }
   }
 
@@ -85,7 +110,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     _debounce?.cancel();
     _locationSubscription?.cancel();
     _compassSubscription?.cancel();
+    _serviceStatusSubscription?.cancel();
     _fabAnimController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -129,26 +156,25 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
 
     try {
       final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng, searchQuery: _searchQuery);
-      if (mounted) {
-        setState(() {
-          for (final p in places) {
-            if (p.hasValidLocation) {
-              _cachedPlaces[p.id] = p;
-            }
+      if (!mounted) return;
+      setState(() {
+        for (final p in places) {
+          if (p.hasValidLocation) {
+            _cachedPlaces[p.id] = p;
           }
-          _isLoading = false;
-        });
-      }
+        }
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ShadToaster.of(context).show(
-          const ShadToast.destructive(
-            title: Text('Error loading places'),
-            description: Text('Please check your connection and try again.'),
-          ),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      if (!context.mounted) return;
+      ShadToaster.of(context).show(
+        ShadToast.destructive(
+          title: Text(AppLocalizations.of(context)!.errorLoadingPlaces),
+          description: Text(AppLocalizations.of(context)!.errorConnection),
+        ),
+      );
     }
   }
 
@@ -162,11 +188,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       primaryButtonText: l10n.onboardingLocationAllow,
       onPrimary: () async {
         final permission = await Geolocator.requestPermission();
+        if (!mounted) return;
         if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-          if (mounted) {
-            setState(() => _hasLocationPermission = true);
-            _startLocationTracking();
-          }
+          setState(() => _hasLocationPermission = true);
+          _startLocationTracking();
         }
       },
       onSecondary: () {},
@@ -181,6 +206,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       return;
     }
 
+    _locationSubscription?.cancel();
     _locationSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
     ).listen((Position position) {
@@ -243,7 +269,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       if (_currentZoom < 10.5) {
         final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || place.status == ClubStatus.event;
         if (!isHot) {
-          return false;
+           return false;
         }
       }
 
@@ -262,36 +288,36 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
-
+    
     Place? fullPlace;
     try {
       fullPlace = await ref.read(clubRepositoryProvider).getPlaceById(markerPlace.id);
     } catch (e) {
-      if (mounted) {
-        ShadToaster.of(context).show(
-          const ShadToast.destructive(
-            title: Text('Error loading details'),
-            description: Text('Could not load place details.'),
-          ),
-        );
-      }
+      if (!context.mounted) return;
+      ShadToaster.of(context).show(
+        ShadToast.destructive(
+          title: Text(AppLocalizations.of(context)!.error),
+          description: Text(AppLocalizations.of(context)!.errorLoadingPlaceDetails),
+        ),
+      );
     }
 
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (!context.mounted) return;
+    Navigator.pop(context);
 
     if (fullPlace == null) {
-      setState(() => _selectedPlaceId = null);
+      if (mounted) setState(() => _selectedPlaceId = null);
       return;
     }
     
+    if (!context.mounted) return;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => PlaceBottomSheet(place: fullPlace!, userLocation: _liveUserLocation ?? widget.userLocation),
     );
+    
     if (mounted) {
       setState(() => _selectedPlaceId = null);
     }
@@ -327,7 +353,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                     ),
                   ),
                   Text(
-                    'Filters',
+                    AppLocalizations.of(context)!.filtersTitle,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -339,8 +365,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildSheetFilterChip('club', 'Clubs', isDark, setSheetState),
-                      _buildSheetFilterChip('event', 'Events', isDark, setSheetState),
+                      _buildSheetFilterChip('club', AppLocalizations.of(context)!.club, isDark, setSheetState),
+                      _buildSheetFilterChip('event', AppLocalizations.of(context)!.event, isDark, setSheetState),
                     ],
                   ),
                   const SizedBox(height: 32),
@@ -348,7 +374,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                     width: double.infinity,
                     child: ShadButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Toepassen'),
+                      child: Text(AppLocalizations.of(context)!.apply),
                     ),
                   )
                 ],
@@ -475,7 +501,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                   ],
                 ),
               ),
-            ),
+           ),
           ],
         ),
       ),
@@ -486,324 +512,322 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final squadState = ref.watch(squadProvider);
-    final settings = ref.watch(settingsServiceProvider);
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, currentMode, _) {
-        final currentIsDark = currentMode == ThemeMode.dark ||
-            (currentMode == ThemeMode.system &&
-                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-                
-        return Scaffold(
-          body: !_hasLocationPermission
-            ? _buildLocationFallback(currentIsDark, l10n)
-            : Stack(
+    final settings = ref.watch(settingsProvider);
+    
+    final currentMode = ref.watch(themeProvider);
+    final currentIsDark = currentMode == ThemeMode.dark ||
+        (currentMode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+            
+    return Scaffold(
+      body: !_hasLocationPermission
+        ? _buildLocationFallback(currentIsDark, l10n)
+        : Stack(
             children: [
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _liveUserLocation ?? widget.userLocation ?? AppConstants.defaultLocation,
-                  initialZoom: _currentZoom,
-                  onMapReady: () {
-                    _fetchPlacesForCurrentBounds();
-                  },
-                  onPositionChanged: (camera, hasGesture) {
-                    if (hasGesture && _isFollowingUser) {
-                      setState(() {
-                        _isFollowingUser = false;
-                      });
-                    }
-                    if (camera.zoom != _currentZoom) {
-                      setState(() => _currentZoom = camera.zoom);
-                    }
-                    _debounce?.cancel();
-                    _debounce = Timer(const Duration(milliseconds: 300), () {
-                      _fetchPlacesForCurrentBounds(camera: camera);
-                    });
-                  },
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate: currentIsDark 
-                        ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
-                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.jouwnaam.flutter_clubapp', 
-                  ),
-                  MarkerLayer(markers: _buildMarkers(squadState, currentIsDark)),
-                ],
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _liveUserLocation ?? widget.userLocation ?? AppConstants.defaultLocation,
+              initialZoom: _currentZoom,
+              onMapReady: () {
+                _fetchPlacesForCurrentBounds();
+              },
+              onPositionChanged: (camera, hasGesture) {
+                if (hasGesture && _isFollowingUser) {
+                  setState(() {
+                    _isFollowingUser = false;
+                  });
+                }
+                if (camera.zoom != _currentZoom) {
+                  setState(() => _currentZoom = camera.zoom);
+                }
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 300), () {
+                  _fetchPlacesForCurrentBounds(camera: camera);
+                });
+              },
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: currentIsDark 
+                    ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.jouwnaam.flutter_clubapp', 
               ),
-              IgnorePointer(
-                ignoring: true,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200),
-                  opacity: _isPlacingPin ? 1.0 : 0.0,
-                  child: const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(bottom: 40.0),
-                      child: Icon(Icons.push_pin, size: 48, color: Colors.blueAccent),
-                    ),
-                  ),
-                ),
-              ),
-              if (!_isPlacingPin)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: currentIsDark 
-                              ? const Color(0xFF18181B).withValues(alpha: 0.9) 
-                              : Colors.white.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          cursorColor: currentIsDark ? Colors.white : Colors.black,
-                          style: TextStyle(color: currentIsDark ? Colors.white : Colors.black),
-                          decoration: InputDecoration(
-                            hintText: l10n.eventsSearchHint,
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                Icons.tune, 
-                                color: _selectedFilters.isNotEmpty 
-                                    ? Colors.blueAccent 
-                                    : (currentIsDark ? Colors.white70 : Colors.black87),
-                              ),
-                              onPressed: () => _showFilterSheet(context, currentIsDark),
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          ),
-                          onChanged: (val) {
-                            setState(() => _searchQuery = val);
-                            _debounce?.cancel();
-                            _debounce = Timer(const Duration(milliseconds: 300), () {
-                              _fetchPlacesForCurrentBounds(clearCache: true);
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (_isLoading && !_isPlacingPin)
-                Positioned(
-                  top: 90,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: currentIsDark ? Colors.black87 : Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                      ),
-                      child: const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  ),
-                ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOutCubic,
-                bottom: _isPlacingPin ? 16 : -300, 
-                left: 16,
-                right: 16,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 250),
-                  opacity: _isPlacingPin ? 1.0 : 0.0,
-                  child: SafeArea(
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: currentIsDark ? const Color(0xFF18181B) : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(0, 5))],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Stel doeltijd in', 
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: currentIsDark ? Colors.white : Colors.black)),
-                          const SizedBox(height: 16),
-                          GestureDetector(
-                            onTap: () async {
-                              final picked = await showTimePicker(
-                                context: context,
-                                initialTime: TimeOfDay.fromDateTime(_pinTargetTime),
-                              );
-                              if (picked != null) {
-                                final now = DateTime.now();
-                                setState(() {
-                                  _pinTargetTime = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
-                                  if (_pinTargetTime.isBefore(now)) {
-                                    _pinTargetTime = _pinTargetTime.add(const Duration(days: 1));
-                                  }
-                                });
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.blueAccent.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3), width: 2),
-                              ),
-                              child: Text(
-                                '${_pinTargetTime.hour.toString().padLeft(2, '0')}:${_pinTargetTime.minute.toString().padLeft(2, '0')}',
-                                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.blueAccent, letterSpacing: 2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ShadButton.ghost(
-                                  onPressed: () {
-                                    _fabAnimController.reverse();
-                                    setState(() => _isPlacingPin = false);
-                                  },
-                                  child: const Text('Annuleren'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ShadButton(
-                                  onPressed: () {
-                                    final center = _mapController.camera.center;
-                                    ref.read(squadProvider.notifier).createPin(center, _pinTargetTime);
-                                    _fabAnimController.reverse();
-                                    setState(() => _isPlacingPin = false);
-                                  },
-                                  child: const Text('Plaats Pin'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ]
+              MarkerLayer(markers: _buildMarkers(squadState, currentIsDark)),
+            ],
           ),
-          floatingActionButton: IgnorePointer(
-            ignoring: _isPlacingPin,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (squadState.isInSquad) ...[
-                  _buildAnimatedFab(
-                    FloatingActionButton(
-                      heroTag: 'place_pin_fab',
-                      onPressed: () {
-                        _fabAnimController.forward();
-                        setState(() {
-                          _isPlacingPin = true;
-                          _pinTargetTime = DateTime.now().add(const Duration(minutes: 30));
+          IgnorePointer(
+            ignoring: true,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _isPlacingPin ? 1.0 : 0.0,
+               child: const Center(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 40.0),
+                  child: Icon(Icons.push_pin, size: 48, color: Colors.blueAccent),
+                ),
+              ),
+            ),
+          ),
+          if (!_isPlacingPin)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: currentIsDark 
+                          ? const Color(0xFF18181B).withValues(alpha: 0.9) 
+                          : Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                     ),
+                    child: TextField(
+                      cursorColor: currentIsDark ? Colors.white : Colors.black,
+                      style: TextStyle(color: currentIsDark ? Colors.white : Colors.black),
+                      decoration: InputDecoration(
+                        hintText: l10n.eventsSearchHint,
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            Icons.tune, 
+                            color: _selectedFilters.isNotEmpty 
+                                ? Colors.blueAccent 
+                                 : (currentIsDark ? Colors.white70 : Colors.black87),
+                          ),
+                          onPressed: () => _showFilterSheet(context, currentIsDark),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                      onChanged: (val) {
+                        setState(() => _searchQuery = val);
+                        _debounce?.cancel();
+                        _debounce = Timer(const Duration(milliseconds: 300), () {
+                          _fetchPlacesForCurrentBounds(clearCache: true);
                         });
                       },
-                      backgroundColor: currentIsDark ? const Color(0xFF18181B) : Colors.white,
-                      child: const Icon(Icons.push_pin, color: Colors.blueAccent),
-                    ),
-                    0, 
-                  ),
-                  const SizedBox(height: 12),
-                  _buildAnimatedFab(
-                    GestureDetector(
-                      onTapDown: (_) {
-                        if (settings.hapticsEnabled) HapticFeedback.mediumImpact();
-                        ref.read(squadProvider.notifier).setMute(false);
-                      },
-                      onTapUp: (_) {
-                        if (settings.hapticsEnabled) HapticFeedback.lightImpact();
-                        ref.read(squadProvider.notifier).setMute(true);
-                      },
-                      onTapCancel: () {
-                        if (!squadState.isMuted) {
-                          if (settings.hapticsEnabled) HapticFeedback.lightImpact();
-                          ref.read(squadProvider.notifier).setMute(true);
-                        }
-                      },
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16), 
-                          color: squadState.isMuted ? Colors.redAccent : Colors.green,
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
-                          ],
-                        ),
-                        child: Icon(
-                          squadState.isMuted ? Icons.mic_off : Icons.mic,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                    1, 
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (_liveUserLocation != null) ...[
-                  _buildAnimatedFab(
-                    FloatingActionButton(
-                      heroTag: 'my_location_fab',
-                      onPressed: _onMyLocationTapped,
-                      backgroundColor: _isCompassMode 
-                          ? Colors.blueAccent 
-                          : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
-                      child: Icon(
-                        _isCompassMode ? Icons.explore : (_isFollowingUser ? Icons.my_location : Icons.location_searching), 
-                        color: _isCompassMode ? Colors.white : (currentIsDark ? Colors.white : Colors.black)
-                      ),
-                    ),
-                    2, 
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                _buildAnimatedFab(
-                  FloatingActionButton(
-                    heroTag: 'squad_fab',
-                    onPressed: () {
-                      showSquadSheet(context);
-                    },
-                    backgroundColor: squadState.isInSquad
-                      ? Colors.blueAccent
-                        : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
-                    child: Icon(
-                      Icons.groups,
-                      color: squadState.isInSquad
-                          ? Colors.white
-                          : (currentIsDark ? Colors.white : Colors.black),
                     ),
                   ),
-                  3, 
                 ),
-              ]
+              ),
             ),
-          )
-        );
-      }
+          if (_isLoading && !_isPlacingPin)
+            Positioned(
+              top: 90,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: currentIsDark ? Colors.black87 : Colors.white,
+                    shape: BoxShape.circle,
+                     boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                  ),
+                  child: const SizedBox(
+                    width: 20,
+                     height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            ),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            bottom: _isPlacingPin ? 16 : -300, 
+            left: 16,
+            right: 16,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 250),
+              opacity: _isPlacingPin ? 1.0 : 0.0,
+               child: SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: currentIsDark ? const Color(0xFF18181B) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(0, 5))],
+                  ),
+                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(AppLocalizations.of(context)!.setTargetTime, 
+                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: currentIsDark ? Colors.white : Colors.black)),
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(_pinTargetTime),
+                          );
+                          if (!mounted) return;
+                          if (picked != null) {
+                            final now = DateTime.now();
+                            setState(() {
+                              _pinTargetTime = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                              if (_pinTargetTime.isBefore(now)) {
+                                _pinTargetTime = _pinTargetTime.add(const Duration(days: 1));
+                              }
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3), width: 2),
+                          ),
+                          child: Text(
+                            '${_pinTargetTime.hour.toString().padLeft(2, '0')}:${_pinTargetTime.minute.toString().padLeft(2, '0')}',
+                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.blueAccent, letterSpacing: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ShadButton.ghost(
+                              onPressed: () {
+                                _fabAnimController.reverse();
+                                setState(() => _isPlacingPin = false);
+                              },
+                              child: Text(AppLocalizations.of(context)!.mapCancel),
+                            ),
+                          ),
+                           const SizedBox(width: 12),
+                          Expanded(
+                            child: ShadButton(
+                              onPressed: () {
+                                final center = _mapController.camera.center;
+                                ref.read(squadProvider.notifier).createPin(center, _pinTargetTime);
+                                _fabAnimController.reverse();
+                                setState(() => _isPlacingPin = false);
+                              },
+                              child: Text(AppLocalizations.of(context)!.placePin),
+                            ),
+                           ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ]
+       ),
+      floatingActionButton: IgnorePointer(
+        ignoring: _isPlacingPin,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (squadState.isInSquad) ...[
+              _buildAnimatedFab(
+                FloatingActionButton(
+                  heroTag: 'place_pin_fab',
+                  onPressed: () {
+                    _fabAnimController.forward();
+                    setState(() {
+                      _isPlacingPin = true;
+                      _pinTargetTime = DateTime.now().add(const Duration(minutes: 30));
+                    });
+                  },
+                  backgroundColor: currentIsDark ? const Color(0xFF18181B) : Colors.white,
+                  child: const Icon(Icons.push_pin, color: Colors.blueAccent),
+                ),
+                0, 
+              ),
+              const SizedBox(height: 12),
+              _buildAnimatedFab(
+                GestureDetector(
+                  onTapDown: (_) {
+                    if (settings.hapticsEnabled) HapticFeedback.mediumImpact();
+                    ref.read(squadProvider.notifier).setMute(false);
+                  },
+                  onTapUp: (_) {
+                    if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                    ref.read(squadProvider.notifier).setMute(true);
+                  },
+                  onTapCancel: () {
+                    if (!squadState.isMuted) {
+                      if (settings.hapticsEnabled) HapticFeedback.lightImpact();
+                      ref.read(squadProvider.notifier).setMute(true);
+                    }
+                  },
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16), 
+                      color: squadState.isMuted ? Colors.redAccent : Colors.green,
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
+                      ],
+                    ),
+                    child: Icon(
+                      squadState.isMuted ? Icons.mic_off : Icons.mic,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                1, 
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_liveUserLocation != null) ...[
+              _buildAnimatedFab(
+                FloatingActionButton(
+                  heroTag: 'my_location_fab',
+                  onPressed: _onMyLocationTapped,
+                  backgroundColor: _isCompassMode 
+                      ? Colors.blueAccent 
+                      : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                  child: Icon(
+                    _isCompassMode ? Icons.explore : (_isFollowingUser ? Icons.my_location : Icons.location_searching), 
+                    color: _isCompassMode ? Colors.white : (currentIsDark ? Colors.white : Colors.black)
+                  ),
+                ),
+                2, 
+              ),
+              const SizedBox(height: 12),
+            ],
+            _buildAnimatedFab(
+              FloatingActionButton(
+                heroTag: 'squad_fab',
+                onPressed: () {
+                  showSquadSheet(context);
+                },
+                backgroundColor: squadState.isInSquad
+                    ? Colors.blueAccent
+                    : (currentIsDark ? const Color(0xFF18181B) : Colors.white),
+                child: Icon(
+                  Icons.groups,
+                  color: squadState.isInSquad
+                      ? Colors.white
+                      : (currentIsDark ? Colors.white : Colors.black),
+                ),
+              ),
+              3, 
+            ),
+          ]
+        ),
+      )
     );
   }
 
@@ -811,7 +835,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
     final markers = <Marker>[];
     final activePlaces = _filteredPlaces.toList();
     activePlaces.sort((a, b) => a.hotnessScore.compareTo(b.hotnessScore));
-
     final double scale = (_currentZoom / 15.0).clamp(0.35, 1.15);
     final double baseSize = 54.0 * scale;
     final double iconSize = 26.0 * scale;
@@ -826,7 +849,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
       final isFood = place.type == LocationType.food || place.name.toLowerCase().contains('food');
       final isEvent = place.status == ClubStatus.event;
       final isHot = place.hotnessScore >= 5 || place.isFlashPromoActive || isEvent;
-
       if (!isHot && _currentZoom < 15.5) {
         final Color dotColor = isFood ? Colors.orange.withValues(alpha: 0.6) : Colors.blueAccent.withValues(alpha: 0.6);
         markers.add(
@@ -937,7 +959,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
 
       final currentMember = squadState.members.where((m) => m.isCurrentUser).firstOrNull;
       final currentUserId = currentMember?.odmemberId;
-
       for (final pin in squadState.pins) {
         final joinedMembers = squadState.members.where((m) => pin.joinedUserIds.contains(m.odmemberId)).toList();
         final hasJoined = currentUserId != null && pin.joinedUserIds.contains(currentUserId);
@@ -1005,7 +1026,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with SingleTickerProvider
                       const SizedBox(width: 12),
                       GestureDetector(
                         onTap: () => ref.read(squadProvider.notifier).joinPin(pin.id),
-                        child: const Text('Ik doe mee', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueAccent)),
+                        child: Text(AppLocalizations.of(context)!.imIn, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueAccent)),
                       ),
                     ],
                   ],

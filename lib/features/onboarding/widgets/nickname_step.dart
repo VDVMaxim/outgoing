@@ -17,7 +17,7 @@ class NicknameStep implements OnboardingStep {
   }
 
   @override
-  String? validate() {
+  String? validate(BuildContext context) {
     final nickname = nicknameController.text.trim();
     if (nickname.isEmpty) {
       return null;

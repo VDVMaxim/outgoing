@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
+import 'package:flutter_clubapp/features/profile/screens/public_profile_screen.dart';
 import '../providers/squad_provider.dart';
 
 class SquadScreen extends ConsumerStatefulWidget {
@@ -44,7 +45,6 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
         ],
       ),
     );
-
     if (result == true && mounted) {
       await ref.read(squadProvider.notifier).requestLocationPermission();
     }
@@ -53,7 +53,6 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
   Future<void> _handleCreateSquad() async {
     final l10n = AppLocalizations.of(context)!;
     final userProfile = ref.read(userProfileServiceProvider);
-
     if (!userProfile.hasNickname) {
       _showNicknameRequiredDialog();
       return;
@@ -80,7 +79,6 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
     setState(() => _isLoading = true);
     final result = await squadNotifier.createSquad();
     setState(() => _isLoading = false);
-
     if (result.status == SquadConnectionStatus.error && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -93,7 +91,6 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
 
   Future<void> _handleJoinSquad() async {
     final l10n = AppLocalizations.of(context)!;
-
     if (_pinController.text.length != 6) {
       ShadSonner.of(context).show(
         ShadToast.raw(
@@ -113,7 +110,6 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
 
     final squadNotifier = ref.read(squadProvider.notifier);
     final hasPermission = await squadNotifier.checkLocationPermission();
-
     if (!hasPermission) {
       await _showLocationRationaleDialog();
       if (!await squadNotifier.checkLocationPermission()) {
@@ -132,7 +128,6 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
     setState(() => _isLoading = true);
     final result = await squadNotifier.joinSquad(_pinController.text);
     setState(() => _isLoading = false);
-
     if (result.status == SquadConnectionStatus.error && mounted) {
       ShadSonner.of(context).show(
         ShadToast.raw(
@@ -167,9 +162,7 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     
-    // We luisteren hier naar de state via Riverpod!
     final squadState = ref.watch(squadProvider);
-
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
       appBar: AppBar(
@@ -285,7 +278,6 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
     AppLocalizations l10n,
   ) {
     final members = state.members;
-
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -338,6 +330,16 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
               itemBuilder: (context, index) {
                 final member = members[index];
                 return ListTile(
+                  onTap: () {
+                    if (!member.isCurrentUser && member.odmemberId.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(userId: member.odmemberId),
+                        ),
+                      );
+                    }
+                  },
                   leading: UserAvatar(
                     name: member.nickname,
                     imageUrl: member.avatarUrl,

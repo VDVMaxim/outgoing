@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/core/models/badge.dart' as app_badge;
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
 class BadgeVaultWidget extends ConsumerWidget {
   final bool compact;
@@ -22,7 +23,7 @@ class BadgeVaultWidget extends ConsumerWidget {
       return _buildCompact(allBadges.length, isDark);
     }
 
-    return _buildFull(allBadges, isDark, showLocked);
+    return _buildFull(context, allBadges, isDark, showLocked);
   }
 
   Widget _buildCompact(int totalCount, bool isDark) {
@@ -51,6 +52,7 @@ class BadgeVaultWidget extends ConsumerWidget {
   }
 
   Widget _buildFull(
+    BuildContext context,
     List<app_badge.BadgeType> allBadges,
     bool isDark,
     bool showLocked,
@@ -58,10 +60,10 @@ class BadgeVaultWidget extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildProgressHeader(allBadges.length, isDark),
+        _buildProgressHeader(context, allBadges.length, isDark),
         const SizedBox(height: 16),
         Text(
-          'All Badges',
+          AppLocalizations.of(context)!.allBadges,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -74,7 +76,7 @@ class BadgeVaultWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildProgressHeader(int totalCount, bool isDark) {
+  Widget _buildProgressHeader(BuildContext context, int totalCount, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -92,7 +94,7 @@ class BadgeVaultWidget extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Badge Vault',
+                  AppLocalizations.of(context)!.badgeVaultTitle,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -101,7 +103,7 @@ class BadgeVaultWidget extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '0 of $totalCount badges unlocked',
+                  AppLocalizations.of(context)!.badgesUnlockedCount(0, totalCount),
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white54 : Colors.black45,
@@ -230,7 +232,7 @@ class _BadgeItemWidget extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
+              AppLocalizations.of(context)!.settingsCancel,
               style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
             ),
           ),

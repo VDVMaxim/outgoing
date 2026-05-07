@@ -1,19 +1,21 @@
-import '../config/supabase_client.dart';
-import '../models/vibe_check.dart';
-import 'interfaces/vibe_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_clubapp/core/models/vibe_check.dart';
+import '../domain/vibe_repository.dart';
 
 class SupabaseVibeRepository implements VibeRepository {
+  final SupabaseClient _client;
+
+  SupabaseVibeRepository(this._client);
+
   @override
   Future<void> submitVibeCheck({
     required String placeId,
     required bool isPositive,
   }) async {
-    final client = SupabaseClientProvider.client;
-
-    await client.from('vibe_checks').insert({
+    await _client.from('vibe_checks').insert({
       'place_id': placeId,
       'is_positive': isPositive,
-      'user_id': client.auth.currentUser?.id,
+      'user_id': _client.auth.currentUser?.id,
     });
   }
 
@@ -22,9 +24,7 @@ class SupabaseVibeRepository implements VibeRepository {
     String placeId, {
     int limit = 10,
   }) async {
-    final client = SupabaseClientProvider.client;
-
-    final response = await client
+    final response = await _client
         .from('vibe_checks')
         .select()
         .eq('place_id', placeId)

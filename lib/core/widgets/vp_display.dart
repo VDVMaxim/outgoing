@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/vibe_provider.dart';
+import 'package:flutter_clubapp/features/vibe/providers/vibe_provider.dart';
 
 class VpDisplay extends ConsumerWidget {
   final bool showStreak;
@@ -101,7 +101,7 @@ class VpDisplayCompact extends ConsumerWidget {
 
     return Text(
       '${vpData.totalVp}',
-      style: TextStyle(
+      style: const TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.bold,
         color: Colors.amber,

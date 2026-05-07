@@ -3,6 +3,7 @@ import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import 'package:flutter_clubapp/core/widgets/badge_vault.dart';
 import 'package:flutter_clubapp/core/widgets/level_indicator.dart';
 import 'package:flutter_clubapp/core/widgets/vp_display.dart';
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
 class BadgeVaultScreen extends StatelessWidget {
   const BadgeVaultScreen({super.key});
@@ -18,7 +19,7 @@ class BadgeVaultScreen extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
-            'Badge Vault',
+            AppLocalizations.of(context)!.badgeVaultTitle,
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black87,
               fontWeight: FontWeight.bold,
@@ -44,7 +45,7 @@ class BadgeVaultScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 const BadgeVaultWidget(compact: false, showLocked: true),
                 const SizedBox(height: 24),
-                _buildQuickStats(isDark),
+                _buildQuickStats(context, isDark),
               ],
             ),
           ),
@@ -53,7 +54,8 @@ class BadgeVaultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickStats(bool isDark) {
+  Widget _buildQuickStats(BuildContext context, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -66,7 +68,7 @@ class BadgeVaultScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Quick Stats',
+            l10n.quickStats,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -74,15 +76,15 @@ class BadgeVaultScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _buildStatRow(Icons.explore, 'Explorer Badges', '0/4', isDark),
-          _buildStatRow(Icons.people, 'Social Badges', '0/5', isDark),
+          _buildStatRow(Icons.explore, l10n.explorerBadges, '0/4', isDark),
+          _buildStatRow(Icons.people, l10n.socialBadges, '0/5', isDark),
           _buildStatRow(
             Icons.health_and_safety,
-            'Safety Badges',
+            l10n.safetyBadges,
             '0/2',
             isDark,
           ),
-          _buildStatRow(Icons.military_tech, 'Achievements', '0/2', isDark),
+          _buildStatRow(Icons.military_tech, l10n.achievements, '0/2', isDark),
         ],
       ),
     );
@@ -148,7 +150,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
-            'Leaderboard',
+            AppLocalizations.of(context)!.leaderboardTitle,
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black87,
               fontWeight: FontWeight.bold,
@@ -166,9 +168,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             indicatorColor: Colors.amber,
             labelColor: Colors.amber,
             unselectedLabelColor: isDark ? Colors.white54 : Colors.black45,
-            tabs: const [
-              Tab(text: 'Squads'),
-              Tab(text: 'Cities'),
+            tabs: [
+              Tab(text: AppLocalizations.of(context)!.squads),
+              Tab(text: AppLocalizations.of(context)!.cities),
             ],
           ),
         ),
@@ -228,7 +230,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                           : index == 1
                           ? '🔥 The Night Owls'
                           : index == 2
-                          ? '⭐ Your Squad'
+                          ? AppLocalizations.of(context)!.yourSquad
                           : 'Squad ${index + 1}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -336,7 +338,7 @@ class ChallengesScreen extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
-            'Squad Challenges',
+            AppLocalizations.of(context)!.squadChallenges,
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black87,
               fontWeight: FontWeight.bold,
@@ -355,6 +357,7 @@ class ChallengesScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _buildChallengeCard(
+                context,
                 'The Pub Crawl',
                 'Check in at 3 different places with your Squad in one night',
                 Icons.local_bar,
@@ -364,6 +367,7 @@ class ChallengesScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _buildChallengeCard(
+                context,
                 'No Man Left Behind',
                 'Stay within 50m of your Squad until 03:00',
                 Icons.group,
@@ -373,6 +377,7 @@ class ChallengesScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _buildChallengeCard(
+                context,
                 'Trendsetters',
                 'Be the first Squad to check in at a trending place',
                 Icons.trending_up,
@@ -388,6 +393,7 @@ class ChallengesScreen extends StatelessWidget {
   }
 
   Widget _buildChallengeCard(
+    BuildContext context,
     String title,
     String description,
     IconData icon,
@@ -461,7 +467,7 @@ class ChallengesScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                current < required ? 'In Progress' : 'Completed!',
+                current < required ? AppLocalizations.of(context)!.inProgress : AppLocalizations.of(context)!.completed,
                 style: TextStyle(
                   color: current >= required ? Colors.green : Colors.purple,
                   fontWeight: FontWeight.bold,
@@ -475,7 +481,7 @@ class ChallengesScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '$current/$required locations',
+                AppLocalizations.of(context)!.locationsCount(current, required),
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? Colors.white54 : Colors.black45,

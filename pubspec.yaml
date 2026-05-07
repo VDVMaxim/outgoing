@@ -59,6 +59,9 @@ dependencies:
   flutter_compass: ^0.8.1
   lottie: ^3.3.3
   flutter_webrtc: ^1.4.1
+  onesignal_flutter: ^5.5.4
+  image_picker: ^1.2.2
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

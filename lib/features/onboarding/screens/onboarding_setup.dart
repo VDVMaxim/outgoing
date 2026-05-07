@@ -5,6 +5,7 @@ import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker_with_button.dart';
 import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.dart';
+import 'package:flutter_clubapp/features/onboarding/widgets/notification_step.dart';
 import 'package:flutter_clubapp/features/navigation/screens/main_navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
@@ -18,7 +19,8 @@ class OnboardingSetup extends ConsumerStatefulWidget {
 
 class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   final TextEditingController _nicknameController = TextEditingController();
-  bool _hasRegistrationCompleted = false;
+  final GlobalKey<OnboardingWizardState> _wizardKey = GlobalKey<OnboardingWizardState>();
+  
   bool _isInitialized = false;
   bool _hasNickname = false;
 
@@ -50,7 +52,13 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
 
   Future<void> _finishOnboarding() async {
     final profile = ref.read(userProfileServiceProvider);
+    
+    if (!_hasNickname && _nicknameController.text.trim().isNotEmpty) {
+      profile.nickname = _nicknameController.text.trim();
+    }
+    
     profile.hasCompletedOnboarding = true;
+
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         PageRouteBuilder(
@@ -63,10 +71,6 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
         (route) => false,
       );
     }
-  }
-
-  void _onRegistrationComplete() {
-    setState(() => _hasRegistrationCompleted = true);
   }
 
   void _onCompletePressed() {
@@ -88,6 +92,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
 
     final steps = skipNickname
         ? [
+            NotificationStep(wizardKey: _wizardKey),
             _CompleteWizardStep(
               hasRegistrationCompleted: true,
               onComplete: _onCompletePressed,
@@ -96,16 +101,17 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
         : [
             _NicknameWizardStep(
               controller: _nicknameController,
-              onRegistrationComplete: _onRegistrationComplete,
             ),
+            NotificationStep(wizardKey: _wizardKey),
             _CompleteWizardStep(
-              hasRegistrationCompleted: _hasRegistrationCompleted,
+              hasRegistrationCompleted: true, // Fix voor de infinite spinner!
               onComplete: _onCompletePressed,
             ),
           ];
 
     return AnimatedBlurBackground(
       child: OnboardingWizard(
+        key: _wizardKey,
         steps: steps,
         onComplete: _finishOnboarding,
         showBackButton: false,
@@ -115,7 +121,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
           return !skipNickname && currentStep == 0;
         },
         nextButtonText: (context, currentStep, totalSteps) {
-          if (!skipNickname && currentStep == 0) return 'Next';
+          if (!skipNickname && currentStep == 0) return AppLocalizations.of(context)!.accountFormNext;
           return '';
         },
       ),
@@ -125,26 +131,25 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
 
 class _NicknameWizardStep implements OnboardingStep {
   final TextEditingController controller;
-  final VoidCallback onRegistrationComplete;
 
   _NicknameWizardStep({
     required this.controller,
-    required this.onRegistrationComplete,
   });
 
   @override
   Widget build(BuildContext context, VoidCallback onStateRefresh) {
-    return _NicknameContent(
-      controller: controller,
-      onRegistrationComplete: onRegistrationComplete,
+    return NicknamePickerWithButton(
+      nicknameController: controller,
+      onStateRefresh: onStateRefresh,
+      showGenerateButton: true,
     );
   }
 
   @override
-  String? validate() {
+  String? validate(BuildContext context) {
     final nickname = controller.text.trim();
     if (nickname.isEmpty) {
-      return 'Please enter a nickname';
+      return AppLocalizations.of(context)!.errorNicknameRequired;
     }
     return null;
   }
@@ -155,46 +160,6 @@ class _NicknameWizardStep implements OnboardingStep {
   @override
   void setOnNextCallback(VoidCallback? callback) {
     onNextPressed = callback;
-  }
-}
-
-class _NicknameContent extends ConsumerStatefulWidget {
-  final TextEditingController controller;
-  final VoidCallback onRegistrationComplete;
-
-  const _NicknameContent({
-    required this.controller,
-    required this.onRegistrationComplete,
-  });
-
-  @override
-  ConsumerState<_NicknameContent> createState() => _NicknameContentState();
-}
-
-class _NicknameContentState extends ConsumerState<_NicknameContent> {
-  @override
-  void initState() {
-    super.initState();
-    _loadNickname();
-  }
-
-  Future<void> _loadNickname() async {
-    final profile = ref.read(userProfileServiceProvider);
-    if (profile.hasNickname && mounted) {
-      setState(() {
-        widget.controller.text = profile.nickname!;
-      });
-      widget.onRegistrationComplete();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return NicknamePickerWithButton(
-      nicknameController: widget.controller,
-      onStateRefresh: () {},
-      showGenerateButton: true,
-    );
   }
 }
 
@@ -216,7 +181,7 @@ class _CompleteWizardStep implements OnboardingStep {
   }
 
   @override
-  String? validate() => null;
+  String? validate(BuildContext context) => null;
 
   @override
   VoidCallback? onNextPressed;

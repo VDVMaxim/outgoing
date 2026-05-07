@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
 class PermissionRationaleSheet extends StatefulWidget {
   final IconData icon;
@@ -117,7 +118,7 @@ class _PermissionRationaleSheetState extends State<PermissionRationaleSheet> {
                   width: double.infinity,
                   child: ShadButton.ghost(
                     onPressed: _isLoading ? null : widget.onSecondary,
-                    child: const Text('Not now'),
+                    child: Text(AppLocalizations.of(context)!.notNow),
                   ),
                 ),
               ],

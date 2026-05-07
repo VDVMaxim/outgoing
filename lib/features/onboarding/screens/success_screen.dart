@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/services/user_profile_service.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
 import 'package:flutter_clubapp/features/onboarding/screens/onboarding_screen.dart';
 
-class SuccessScreen extends StatefulWidget {
+class SuccessScreen extends ConsumerStatefulWidget {
   final String firstName;
   final VoidCallback? onSuccess;
 
   const SuccessScreen({super.key, required this.firstName, this.onSuccess});
 
   @override
-  State<SuccessScreen> createState() => _SuccessScreenState();
+  ConsumerState<SuccessScreen> createState() => _SuccessScreenState();
 }
 
-class _SuccessScreenState extends State<SuccessScreen>
+class _SuccessScreenState extends ConsumerState<SuccessScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -48,8 +49,8 @@ class _SuccessScreenState extends State<SuccessScreen>
     super.dispose();
   }
 
-  void _continue() async {
-    final userProfile = await UserProfileService.getInstance();
+  void _continue() {
+    final userProfile = ref.read(userProfileServiceProvider);
     userProfile.hasCompletedOnboarding = true;
 
     if (mounted) {

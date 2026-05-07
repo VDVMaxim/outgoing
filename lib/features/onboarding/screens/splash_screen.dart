@@ -3,16 +3,18 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/services/app_startup.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/navigation/screens/main_navigation.dart';
 import 'onboarding_intro_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entrance;
   late final Animation<double> _entranceFade;
@@ -40,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _runStartup());
   }
 
-Future<void> _runStartup() async {
+  Future<void> _runStartup() async {
     final t0 = DateTime.now();
     final result = await AppStartup.verify(ProviderScope.containerOf(context));
     
@@ -67,9 +69,13 @@ Future<void> _runStartup() async {
   }
 
   void _goOnboarding() {
+    final hasCompleted = ref.read(userProfileServiceProvider).hasCompletedOnboarding;
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
-        pageBuilder: (context, a1, a2) => const OnboardingIntroScreen(),
+        pageBuilder: (context, a1, a2) => hasCompleted 
+              ? const MainNavigation()
+            : const OnboardingIntroScreen(),
         transitionsBuilder: (context, a1, a2, child) =>
             FadeTransition(opacity: a1, child: child),
         transitionDuration: const Duration(milliseconds: 500),

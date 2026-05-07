@@ -1,3 +1,4 @@
+// lib/features/auth/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
@@ -34,6 +35,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _nextPage() {
     final formNotifier = ref.read(authFormProvider.notifier);
+
     if (formNotifier.validateRegistrationPage(_currentPage)) {
       if (_currentPage < _totalPages - 1) {
         _pageController.nextPage(
@@ -64,12 +66,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     if (success) {
       final firstName = ref.read(authFormProvider).firstName;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => AuthSuccessScreen(
-            title: 'Welcome, $firstName!',
-            subtitle: 'Your profile has been created',
+            title: AppLocalizations.of(context)!.registerWelcome(firstName),
+            subtitle: AppLocalizations.of(context)!.registerProfileCreated,
             onContinue: widget.onSuccess,
           ),
         ),
@@ -78,27 +81,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            ref.read(authProvider).errorMessage ?? 'Registration failed',
+            ref.read(authProvider).errorMessage ?? AppLocalizations.of(context)!.errorRegistrationFailed,
           ),
           backgroundColor: Colors.red,
         ),
       );
-    }
-  }
-
-  Future<void> _selectBirthday() async {
-    final now = DateTime.now();
-    final formState = ref.read(authFormProvider);
-    final formNotifier = ref.read(authFormProvider.notifier);
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: formState.birthday ?? DateTime(now.year - 18),
-      firstDate: DateTime(1900),
-      lastDate: DateTime(now.year - 13),
-    );
-    if (picked != null) {
-      formNotifier.updateBirthday(picked);
     }
   }
 
@@ -141,6 +128,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: List.generate(_totalPages, (index) {
                   final isCompleted = index < _currentPage;
                   final isCurrent = index == _currentPage;
+
                   return Expanded(
                     child: Container(
                       height: 4,
@@ -168,8 +156,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   _buildFirstNamePage(isDark, l10n, formState, formNotifier),
                   _buildLastNamePage(isDark, l10n, formState, formNotifier),
-                  _buildBirthdayPage(isDark, l10n, formState),
                   _buildNicknamePage(isDark, l10n, formState, formNotifier),
+                  _buildBioPage(isDark, formState, formNotifier),
                   _buildEmailPage(isDark, l10n, formState, formNotifier),
                   _buildPasswordPage(isDark, l10n, formState, formNotifier),
                 ],
@@ -293,15 +281,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildBirthdayPage(bool isDark, AppLocalizations l10n, AuthFormState state) {
+  Widget _buildNicknamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
+    final tempController = TextEditingController(text: state.nickname);
+
+    return NicknamePicker(
+      nicknameController: tempController,
+      onGenerate: () {
+        final generated = NicknameGenerator.generate();
+        tempController.text = generated;
+        notifier.updateNickname(generated);
+      },
+      errorText: _translateError(state.nicknameError, l10n),
+    );
+  }
+
+  Widget _buildBioPage(bool isDark, AuthFormState state, AuthFormNotifier notifier) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 60),
           Text(
-            l10n.registerBirthdayTitle,
+            AppLocalizations.of(context)!.registerBioTitle,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -311,7 +313,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            l10n.registerBirthdayDesc,
+            AppLocalizations.of(context)!.registerBioDesc,
             style: TextStyle(
               fontSize: 16,
               color: isDark ? Colors.white70 : Colors.black54,
@@ -319,49 +321,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 48),
-          GestureDetector(
-            onTap: _selectBirthday,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.black.withValues(alpha: 0.05),
-                border: Border.all(
-                  color: state.birthdayError != null
-                      ? Colors.red
-                      : (isDark ? Colors.white24 : Colors.black12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.calendar_today, color: Colors.grey[600], size: 24),
-                  const SizedBox(width: 12),
-                  Text(
-                    state.birthday != null
-                        ? '${state.birthday!.day}/${state.birthday!.month}/${state.birthday!.year}'
-                        : l10n.accountFormBirthdaySelect,
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: state.birthday != null
-                          ? (isDark ? Colors.white : Colors.black)
-                          : Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          AppTextField(
+            initialValue: state.bio,
+            placeholder: AppLocalizations.of(context)!.registerBioHint,
+            maxLines: 4,
+            maxLength: 150,
+            autofocus: true,
+            onChanged: notifier.updateBio,
           ),
-          if (state.birthdayError != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _translateError(state.birthdayError, l10n) ?? state.birthdayError!,
-               style: const TextStyle(color: Colors.red, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ],
       ),
     );
@@ -403,22 +370,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildNicknamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
-    // Need a temporary controller for NicknamePicker as it expects one, 
-    // or modify NicknamePicker to accept initialValue and onChanged.
-    // Let's create a quick local controller just for the picker.
-    final tempController = TextEditingController(text: state.nickname);
-    return NicknamePicker(
-      nicknameController: tempController,
-      onGenerate: () {
-        final generated = NicknameGenerator.generate();
-        tempController.text = generated;
-        notifier.updateNickname(generated);
-      },
-      errorText: _translateError(state.nicknameError, l10n),
     );
   }
 
@@ -494,7 +445,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     switch (key) {
       case 'errorFirstNameRequired': return l10n.errorFirstNameRequired;
       case 'errorLastNameRequired': return l10n.errorLastNameRequired;
-      case 'errorBirthdayRequired': return l10n.accountFormBirthdayRequired;
       case 'errorEmailRequired': return l10n.errorEmailRequired;
       case 'errorInvalidEmail': return l10n.errorInvalidEmail;
       case 'errorPasswordRequired': return l10n.errorPasswordRequired;

@@ -5,16 +5,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_clubapp/core/models/squad.dart';
 import 'package:flutter_clubapp/core/models/squad_member.dart';
 import 'package:flutter_clubapp/core/models/squad_pin.dart';
-import 'package:flutter_clubapp/core/repositories/interfaces/squad_repository.dart';
+import '../domain/squad_repository.dart';
 
 class SupabaseSquadRepository implements SquadRepository {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
   
   RealtimeChannel? _squadChannel;
   final _squadMembersController = StreamController<List<SquadMember>>.broadcast();
 
   RealtimeChannel? _pinsChannel;
   final _pinsController = StreamController<List<SquadPin>>.broadcast();
+
+  SupabaseSquadRepository(this._supabase);
 
   String get _currentUserId {
     return _supabase.auth.currentUser?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
@@ -79,7 +81,7 @@ class SupabaseSquadRepository implements SquadRepository {
 
   @override
   Future<void> leaveSquad(String squadId, String userId) async {
-      await _supabase
+    await _supabase
         .from('squad_members')
         .delete()
         .eq('squad_id', squadId)

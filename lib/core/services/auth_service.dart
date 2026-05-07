@@ -12,7 +12,7 @@ class AuthResult {
 class AuthService {
   final SupabaseClient _supabase;
   
-  AuthService(this._supabase);
+  AuthService(this._supabase); 
 
   bool get isAuthenticated => _supabase.auth.currentUser != null;
   String? get userId => _supabase.auth.currentUser?.id;
@@ -22,8 +22,8 @@ class AuthService {
     required String password,
     required String firstName,
     required String lastName,
-    required DateTime birthday,
     required String nickname,
+    String? bio,
   }) async {
     try {
       final response = await _supabase.auth.signUp(
@@ -36,8 +36,8 @@ class AuthService {
           'first_name': firstName,
           'last_name': lastName,
           'email': email,
-          'birthday': birthday.toIso8601String().split('T')[0],
           'nickname': nickname,
+          if (bio != null && bio.isNotEmpty) 'bio': bio,
         });
         return AuthResult(status: AuthResultStatus.success);
       }
@@ -108,6 +108,7 @@ class AuthService {
         .select('nickname')
         .eq('user_id', userId)
         .maybeSingle();
+
     return profile?['nickname'];
   }
 
@@ -120,6 +121,7 @@ class AuthService {
         .select()
         .eq('user_id', userId)
         .maybeSingle();
+
     return profile;
   }
 }

@@ -1,19 +1,22 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class FavoritesProvider extends ValueNotifier<Set<String>> {
-  static final FavoritesProvider instance = FavoritesProvider._internal();
-
-  FavoritesProvider._internal() : super({});
-
-  void toggleFavorite(String eventId) {
-    final newSet = Set<String>.from(value);
-    if (newSet.contains(eventId)) {
-      newSet.remove(eventId);
-    } else {
-      newSet.add(eventId);
-    }
-    value = newSet;
+class FavoritesNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() {
+    return {};
   }
 
-  bool isFavorite(String eventId) => value.contains(eventId);
+  void toggleFavorite(String eventId) {
+    if (state.contains(eventId)) {
+      state = {...state}..remove(eventId);
+    } else {
+      state = {...state, eventId};
+    }
+  }
+
+  bool isFavorite(String eventId) => state.contains(eventId);
 }
+
+final favoritesProvider = NotifierProvider<FavoritesNotifier, Set<String>>(() {
+  return FavoritesNotifier();
+});

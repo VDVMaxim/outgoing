@@ -1,27 +1,31 @@
-// lib/core/providers/service_providers.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
-import '../services/settings_service.dart';
 import '../services/user_profile_service.dart';
 import '../services/analytics_service.dart';
+import '../services/follow_service.dart';
+import '../services/push_notification_service.dart';
 
-final userProfileServiceProvider = Provider<UserProfileService>((ref) {
-  throw UnimplementedError('userProfileServiceProvider must be overridden in main.dart');
-});
+export '../services/user_profile_service.dart' show userProfileServiceProvider;
+
+// OPMERKING: instellingen zijn nu verplaatst, vandaar is deze export tijdelijk weggehaald 
+// We gebruiken ref.watch(settingsProvider) direct in de bestanden.
 
 final locationServiceProvider = Provider<LocationService>((ref) {
   return LocationService();
 });
 
-// Veranderd naar ChangeNotifierProvider om te kunnen luisteren naar haptics/darkmode veranderingen
-final settingsServiceProvider = ChangeNotifierProvider<SettingsService>((ref) {
-  throw UnimplementedError('settingsServiceProvider moet in main.dart worden overschreven');
-});
-
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   return AnalyticsService(ref.read(userProfileServiceProvider));
+});
+
+final followServiceProvider = Provider<FollowService>((ref) {
+  return FollowService();
+});
+
+final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  return PushNotificationService();
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -39,6 +43,7 @@ class AuthState {
   final String? email;
   final String? displayName;
   final String? errorMessage;
+  final String? userId;
 
   const AuthState({
     this.isAuthenticated = false,
@@ -47,6 +52,7 @@ class AuthState {
     this.email,
     this.displayName,
     this.errorMessage,
+    this.userId,
   });
 
   AuthState copyWith({
@@ -56,6 +62,7 @@ class AuthState {
     String? email,
     String? displayName,
     String? errorMessage,
+    String? userId,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
@@ -64,6 +71,7 @@ class AuthState {
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       errorMessage: errorMessage,
+      userId: userId ?? this.userId,
     );
   }
 }
@@ -81,8 +89,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     Supabase.instance.client.auth.onAuthStateChange.listen((event) async {
        final p = _ref.read(userProfileServiceProvider);
-       await p.loadProfileFromSupabase();
-      _updateFromProfile(p);
+       
+       if (event.event == AuthChangeEvent.signedOut) {
+         p.clearProfile();
+       } else if (event.session != null) {
+         await p.loadProfileFromSupabase();
+       }
+       
+       _updateFromProfile(p);
     });
   }
 
@@ -93,11 +107,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
       nickname: profile.nickname,
       email: profile.email,
       displayName: profile.displayName,
+      userId: profile.authUserId,
     );
+
+    final pushService = _ref.read(pushNotificationServiceProvider);
+    if (profile.isAuthenticated && profile.authUserId != null) {
+      pushService.login(profile.authUserId!);
+    } else {
+      pushService.logout();
+    }
   }
 
   Future<bool> signIn({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+
     final result = await _ref.read(authServiceProvider).signIn(email: email, password: password);
 
     if (result.status == AuthResultStatus.success) {
@@ -118,19 +141,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String password,
     required String firstName,
     required String lastName,
-    required DateTime birthday,
     required String nickname,
+    String? bio,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+
     final result = await _ref.read(authServiceProvider).signUp(
       email: email,
       password: password,
       firstName: firstName,
       lastName: lastName,
-      birthday: birthday,
       nickname: nickname,
+      bio: bio,
     );
-
     if (result.status == AuthResultStatus.success) {
       final profile = _ref.read(userProfileServiceProvider);
       await profile.loadProfileFromSupabase();

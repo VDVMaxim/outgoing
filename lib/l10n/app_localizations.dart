@@ -112,6 +112,18 @@ abstract class AppLocalizations {
   /// **'Kaart'**
   String get navMap;
 
+  /// No description provided for @navDiscover.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ontdekken'**
+  String get navDiscover;
+
+  /// No description provided for @navProfile.
+  ///
+  /// In nl, this message translates to:
+  /// **'Profiel'**
+  String get navProfile;
+
   /// No description provided for @navEvents.
   ///
   /// In nl, this message translates to:
@@ -463,7 +475,7 @@ abstract class AppLocalizations {
   /// No description provided for @squadDesc.
   ///
   /// In nl, this message translates to:
-  /// **'Zien waar je maten zijn op de kaart tot 06:00. Danana verdwijnt de Squad automatisch voor ieders privacy.'**
+  /// **'Zien waar je maten zijn op de kaart tot 06:00. Daarna verdwijnt de Squad automatisch voor ieders privacy.'**
   String get squadDesc;
 
   /// No description provided for @squadCreate.
@@ -628,6 +640,66 @@ abstract class AppLocalizations {
   /// **'Instellingen'**
   String get settingsTitle;
 
+  /// No description provided for @settingsAccount.
+  ///
+  /// In nl, this message translates to:
+  /// **'Account'**
+  String get settingsAccount;
+
+  /// No description provided for @settingsPreferences.
+  ///
+  /// In nl, this message translates to:
+  /// **'Voorkeuren'**
+  String get settingsPreferences;
+
+  /// No description provided for @settingsHelpSupport.
+  ///
+  /// In nl, this message translates to:
+  /// **'Help & Support'**
+  String get settingsHelpSupport;
+
+  /// No description provided for @settingsFeedback.
+  ///
+  /// In nl, this message translates to:
+  /// **'Jouw mening'**
+  String get settingsFeedback;
+
+  /// No description provided for @settingsReportBug.
+  ///
+  /// In nl, this message translates to:
+  /// **'Een fout melden'**
+  String get settingsReportBug;
+
+  /// No description provided for @settingsRateApp.
+  ///
+  /// In nl, this message translates to:
+  /// **'Beoordeel de App'**
+  String get settingsRateApp;
+
+  /// No description provided for @settingsShareApp.
+  ///
+  /// In nl, this message translates to:
+  /// **'Deel de App'**
+  String get settingsShareApp;
+
+  /// No description provided for @settingsAbout.
+  ///
+  /// In nl, this message translates to:
+  /// **'Over de App'**
+  String get settingsAbout;
+
+  /// No description provided for @settingsTerms.
+  ///
+  /// In nl, this message translates to:
+  /// **'Algemene Voorwaarden'**
+  String get settingsTerms;
+
+  /// No description provided for @settingsPrivacy.
+  ///
+  /// In nl, this message translates to:
+  /// **'Privacybeleid'**
+  String get settingsPrivacy;
+
   /// No description provided for @settingsSquadProfile.
   ///
   /// In nl, this message translates to:
@@ -747,18 +819,6 @@ abstract class AppLocalizations {
   /// In nl, this message translates to:
   /// **'Account verwijderen'**
   String get settingsDelete;
-
-  /// No description provided for @settingsAbout.
-  ///
-  /// In nl, this message translates to:
-  /// **'Over Club App'**
-  String get settingsAbout;
-
-  /// No description provided for @settingsFeedback.
-  ///
-  /// In nl, this message translates to:
-  /// **'Bugs & Feedback Rapporteren'**
-  String get settingsFeedback;
 
   /// No description provided for @settingsFeedbackSub.
   ///
@@ -1150,54 +1210,6 @@ abstract class AppLocalizations {
   /// **'Nee'**
   String get settingsNo;
 
-  /// No description provided for @settingsAccount.
-  ///
-  /// In nl, this message translates to:
-  /// **'Account'**
-  String get settingsAccount;
-
-  /// No description provided for @settingsHelpSupport.
-  ///
-  /// In nl, this message translates to:
-  /// **'Help & Support'**
-  String get settingsHelpSupport;
-
-  /// No description provided for @settingsReportBug.
-  ///
-  /// In nl, this message translates to:
-  /// **'Een bug melden'**
-  String get settingsReportBug;
-
-  /// No description provided for @settingsRateApp.
-  ///
-  /// In nl, this message translates to:
-  /// **'App beoordelen'**
-  String get settingsRateApp;
-
-  /// No description provided for @settingsShareApp.
-  ///
-  /// In nl, this message translates to:
-  /// **'App delen'**
-  String get settingsShareApp;
-
-  /// No description provided for @settingsPreferences.
-  ///
-  /// In nl, this message translates to:
-  /// **'Voorkeuren'**
-  String get settingsPreferences;
-
-  /// No description provided for @settingsTerms.
-  ///
-  /// In nl, this message translates to:
-  /// **'Algemene Voorwaarden'**
-  String get settingsTerms;
-
-  /// No description provided for @settingsPrivacy.
-  ///
-  /// In nl, this message translates to:
-  /// **'Privacy Policy'**
-  String get settingsPrivacy;
-
   /// No description provided for @loginSubtitle.
   ///
   /// In nl, this message translates to:
@@ -1315,7 +1327,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorNicknameRequired.
   ///
   /// In nl, this message translates to:
-  /// **'Nickname is verplicht'**
+  /// **'Vul a.u.b. een bijnaam in'**
   String get errorNicknameRequired;
 
   /// No description provided for @errorNicknameLength.
@@ -1465,7 +1477,7 @@ abstract class AppLocalizations {
   /// No description provided for @assocLeave.
   ///
   /// In nl, this message translates to:
-  /// **'Verlaten'**
+  /// **'Vereniging verlaten'**
   String get assocLeave;
 
   /// No description provided for @assocCancel.
@@ -1551,6 +1563,828 @@ abstract class AppLocalizations {
   /// In nl, this message translates to:
   /// **'Check In (+10 VP)'**
   String get eventCheckIn;
+
+  /// No description provided for @editProfileTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Profiel bewerken'**
+  String get editProfileTitle;
+
+  /// No description provided for @editProfileRemovePhoto.
+  ///
+  /// In nl, this message translates to:
+  /// **'Verwijder foto'**
+  String get editProfileRemovePhoto;
+
+  /// No description provided for @editProfileBioHint.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vertel iets over jezelf...'**
+  String get editProfileBioHint;
+
+  /// No description provided for @settingsAccountDetails.
+  ///
+  /// In nl, this message translates to:
+  /// **'Accountgegevens'**
+  String get settingsAccountDetails;
+
+  /// No description provided for @guestTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Welkom als Gast'**
+  String get guestTitle;
+
+  /// No description provided for @guestSubtitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Maak een account aan of log in om samen met je squad te viben, VP te verdienen en je profiel aan te passen.'**
+  String get guestSubtitle;
+
+  /// No description provided for @guestLogin.
+  ///
+  /// In nl, this message translates to:
+  /// **'Inloggen'**
+  String get guestLogin;
+
+  /// No description provided for @guestRegister.
+  ///
+  /// In nl, this message translates to:
+  /// **'Account aanmaken'**
+  String get guestRegister;
+
+  /// No description provided for @ok.
+  ///
+  /// In nl, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @errorCouldNotOpenLink.
+  ///
+  /// In nl, this message translates to:
+  /// **'Kon link niet openen'**
+  String get errorCouldNotOpenLink;
+
+  /// No description provided for @settingsAppStoreComingSoon.
+  ///
+  /// In nl, this message translates to:
+  /// **'App store link komt binnenkort'**
+  String get settingsAppStoreComingSoon;
+
+  /// No description provided for @errorCouldNotOpenEmail.
+  ///
+  /// In nl, this message translates to:
+  /// **'Kon e-mail app niet openen'**
+  String get errorCouldNotOpenEmail;
+
+  /// No description provided for @profilePhotoUpdated.
+  ///
+  /// In nl, this message translates to:
+  /// **'Profielfoto geüpdatet'**
+  String get profilePhotoUpdated;
+
+  /// No description provided for @profilePhotoUploadError.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij uploaden foto'**
+  String get profilePhotoUploadError;
+
+  /// No description provided for @profilePhotoRemoved.
+  ///
+  /// In nl, this message translates to:
+  /// **'Profielfoto verwijderd'**
+  String get profilePhotoRemoved;
+
+  /// No description provided for @profilePhotoRemoveError.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij verwijderen foto'**
+  String get profilePhotoRemoveError;
+
+  /// No description provided for @profileSaved.
+  ///
+  /// In nl, this message translates to:
+  /// **'Profiel opgeslagen'**
+  String get profileSaved;
+
+  /// No description provided for @profileSaveError.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij opslaan profiel'**
+  String get profileSaveError;
+
+  /// No description provided for @errorLoadingFollowers.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij laden van volgers'**
+  String get errorLoadingFollowers;
+
+  /// No description provided for @errorLoadingFollowing.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij laden van volgend'**
+  String get errorLoadingFollowing;
+
+  /// No description provided for @checkInSuccess.
+  ///
+  /// In nl, this message translates to:
+  /// **'+10 VP! Check-in bevestigd'**
+  String get checkInSuccess;
+
+  /// No description provided for @error.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout'**
+  String get error;
+
+  /// No description provided for @errorLoadingProfile.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij laden van profiel'**
+  String get errorLoadingProfile;
+
+  /// No description provided for @unfollow.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ontvolgen'**
+  String get unfollow;
+
+  /// No description provided for @follow.
+  ///
+  /// In nl, this message translates to:
+  /// **'Volgen'**
+  String get follow;
+
+  /// No description provided for @editProfile.
+  ///
+  /// In nl, this message translates to:
+  /// **'Profiel bewerken'**
+  String get editProfile;
+
+  /// No description provided for @searchAssociations.
+  ///
+  /// In nl, this message translates to:
+  /// **'Zoek Verenigingen'**
+  String get searchAssociations;
+
+  /// No description provided for @errorLoadingPlaces.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij laden van locaties'**
+  String get errorLoadingPlaces;
+
+  /// No description provided for @errorLoadingPlacesDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Controleer je verbinding en probeer opnieuw.'**
+  String get errorLoadingPlacesDesc;
+
+  /// No description provided for @errorLoadingDetails.
+  ///
+  /// In nl, this message translates to:
+  /// **'Fout bij laden van details'**
+  String get errorLoadingDetails;
+
+  /// No description provided for @errorLoadingDetailsDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Kon details van de locatie niet laden.'**
+  String get errorLoadingDetailsDesc;
+
+  /// No description provided for @notNow.
+  ///
+  /// In nl, this message translates to:
+  /// **'Niet nu'**
+  String get notNow;
+
+  /// No description provided for @squads.
+  ///
+  /// In nl, this message translates to:
+  /// **'Squads'**
+  String get squads;
+
+  /// No description provided for @cities.
+  ///
+  /// In nl, this message translates to:
+  /// **'Steden'**
+  String get cities;
+
+  /// No description provided for @searchNicknamePlaceholder.
+  ///
+  /// In nl, this message translates to:
+  /// **'Typ een bijnaam...'**
+  String get searchNicknamePlaceholder;
+
+  /// No description provided for @achievements.
+  ///
+  /// In nl, this message translates to:
+  /// **'Prestaties'**
+  String get achievements;
+
+  /// No description provided for @activity.
+  ///
+  /// In nl, this message translates to:
+  /// **'Activiteit'**
+  String get activity;
+
+  /// No description provided for @circles.
+  ///
+  /// In nl, this message translates to:
+  /// **'Kringen'**
+  String get circles;
+
+  /// No description provided for @followers.
+  ///
+  /// In nl, this message translates to:
+  /// **'Volgers'**
+  String get followers;
+
+  /// No description provided for @following.
+  ///
+  /// In nl, this message translates to:
+  /// **'Volgend'**
+  String get following;
+
+  /// No description provided for @bioPlaceholder.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ik hou van techno en lange nachten...'**
+  String get bioPlaceholder;
+
+  /// No description provided for @daySun.
+  ///
+  /// In nl, this message translates to:
+  /// **'Zo'**
+  String get daySun;
+
+  /// No description provided for @dayMon.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ma'**
+  String get dayMon;
+
+  /// No description provided for @dayTue.
+  ///
+  /// In nl, this message translates to:
+  /// **'Di'**
+  String get dayTue;
+
+  /// No description provided for @dayWed.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wo'**
+  String get dayWed;
+
+  /// No description provided for @dayThu.
+  ///
+  /// In nl, this message translates to:
+  /// **'Do'**
+  String get dayThu;
+
+  /// No description provided for @dayFri.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vr'**
+  String get dayFri;
+
+  /// No description provided for @daySat.
+  ///
+  /// In nl, this message translates to:
+  /// **'Za'**
+  String get daySat;
+
+  /// No description provided for @bio.
+  ///
+  /// In nl, this message translates to:
+  /// **'Bio'**
+  String get bio;
+
+  /// No description provided for @firstName.
+  ///
+  /// In nl, this message translates to:
+  /// **'Voornaam'**
+  String get firstName;
+
+  /// No description provided for @lastName.
+  ///
+  /// In nl, this message translates to:
+  /// **'Achternaam'**
+  String get lastName;
+
+  /// No description provided for @noFollowers.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nog geen volgers.'**
+  String get noFollowers;
+
+  /// No description provided for @followingNone.
+  ///
+  /// In nl, this message translates to:
+  /// **'Je volgt nog niemand.'**
+  String get followingNone;
+
+  /// No description provided for @remove.
+  ///
+  /// In nl, this message translates to:
+  /// **'Verwijderen'**
+  String get remove;
+
+  /// No description provided for @userNotFound.
+  ///
+  /// In nl, this message translates to:
+  /// **'Gebruiker niet gevonden'**
+  String get userNotFound;
+
+  /// No description provided for @guestWelcomeMessage.
+  ///
+  /// In nl, this message translates to:
+  /// **'Hoi {nickname},\nMaak een account aan of log in om je Vibe Level, Badges en Verenigingen te ontgrendelen.'**
+  String guestWelcomeMessage(String nickname);
+
+  /// No description provided for @badgeVault.
+  ///
+  /// In nl, this message translates to:
+  /// **'Badge Vault'**
+  String get badgeVault;
+
+  /// No description provided for @badgeVaultSubtitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Bekijk je verzamelde badges'**
+  String get badgeVaultSubtitle;
+
+  /// No description provided for @leaderboard.
+  ///
+  /// In nl, this message translates to:
+  /// **'Leaderboard'**
+  String get leaderboard;
+
+  /// No description provided for @leaderboardSubtitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Bekijk de ranglijsten'**
+  String get leaderboardSubtitle;
+
+  /// No description provided for @challenges.
+  ///
+  /// In nl, this message translates to:
+  /// **'Challenges'**
+  String get challenges;
+
+  /// No description provided for @challengesSubtitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Voltooi missies met je squad'**
+  String get challengesSubtitle;
+
+  /// No description provided for @noRecentActivity.
+  ///
+  /// In nl, this message translates to:
+  /// **'Geen recente activiteit gevonden.'**
+  String get noRecentActivity;
+
+  /// No description provided for @checkedIn.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ingecheckt'**
+  String get checkedIn;
+
+  /// No description provided for @vibeUpdatedTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vibe geüpdatet'**
+  String get vibeUpdatedTitle;
+
+  /// No description provided for @noAssociations.
+  ///
+  /// In nl, this message translates to:
+  /// **'Je bent nog geen lid van een vereniging.'**
+  String get noAssociations;
+
+  /// No description provided for @errorConnection.
+  ///
+  /// In nl, this message translates to:
+  /// **'Controleer je verbinding en probeer het opnieuw.'**
+  String get errorConnection;
+
+  /// No description provided for @errorLoadingPlaceDetails.
+  ///
+  /// In nl, this message translates to:
+  /// **'Kon details van locatie niet laden.'**
+  String get errorLoadingPlaceDetails;
+
+  /// No description provided for @filtersTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Filters'**
+  String get filtersTitle;
+
+  /// No description provided for @apply.
+  ///
+  /// In nl, this message translates to:
+  /// **'Toepassen'**
+  String get apply;
+
+  /// No description provided for @setTargetTime.
+  ///
+  /// In nl, this message translates to:
+  /// **'Stel doeltijd in'**
+  String get setTargetTime;
+
+  /// No description provided for @placePin.
+  ///
+  /// In nl, this message translates to:
+  /// **'Plaats Pin'**
+  String get placePin;
+
+  /// No description provided for @imIn.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ik doe mee'**
+  String get imIn;
+
+  /// No description provided for @notifStepTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Mis niks van de actie'**
+  String get notifStepTitle;
+
+  /// No description provided for @notifStepDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Zet je pushmeldingen aan om direct te weten wanneer je squad actief is of als er een flash promo is.'**
+  String get notifStepDesc;
+
+  /// No description provided for @notifStepEnable.
+  ///
+  /// In nl, this message translates to:
+  /// **'Meldingen aanzetten'**
+  String get notifStepEnable;
+
+  /// No description provided for @notifStepLater.
+  ///
+  /// In nl, this message translates to:
+  /// **'Misschien later'**
+  String get notifStepLater;
+
+  /// No description provided for @registerBioTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Wat is jouw Bio?'**
+  String get registerBioTitle;
+
+  /// No description provided for @registerBioDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vertel iets over jezelf (Optioneel)'**
+  String get registerBioDesc;
+
+  /// No description provided for @registerBioHint.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ik hou van techno en lange nachten...'**
+  String get registerBioHint;
+
+  /// No description provided for @registerWelcome.
+  ///
+  /// In nl, this message translates to:
+  /// **'Welkom, {firstName}!'**
+  String registerWelcome(String firstName);
+
+  /// No description provided for @registerProfileCreated.
+  ///
+  /// In nl, this message translates to:
+  /// **'Je profiel is aangemaakt'**
+  String get registerProfileCreated;
+
+  /// No description provided for @errorRegistrationFailed.
+  ///
+  /// In nl, this message translates to:
+  /// **'Registratie mislukt'**
+  String get errorRegistrationFailed;
+
+  /// No description provided for @badgeVaultTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Badge Vault'**
+  String get badgeVaultTitle;
+
+  /// No description provided for @quickStats.
+  ///
+  /// In nl, this message translates to:
+  /// **'Snelle Statistieken'**
+  String get quickStats;
+
+  /// No description provided for @explorerBadges.
+  ///
+  /// In nl, this message translates to:
+  /// **'Explorer Badges'**
+  String get explorerBadges;
+
+  /// No description provided for @socialBadges.
+  ///
+  /// In nl, this message translates to:
+  /// **'Social Badges'**
+  String get socialBadges;
+
+  /// No description provided for @safetyBadges.
+  ///
+  /// In nl, this message translates to:
+  /// **'Safety Badges'**
+  String get safetyBadges;
+
+  /// No description provided for @leaderboardTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ranglijst'**
+  String get leaderboardTitle;
+
+  /// No description provided for @yourSquad.
+  ///
+  /// In nl, this message translates to:
+  /// **'Jouw Squad'**
+  String get yourSquad;
+
+  /// No description provided for @squadChallenges.
+  ///
+  /// In nl, this message translates to:
+  /// **'Squad Uitdagingen'**
+  String get squadChallenges;
+
+  /// No description provided for @inProgress.
+  ///
+  /// In nl, this message translates to:
+  /// **'In uitvoering'**
+  String get inProgress;
+
+  /// No description provided for @completed.
+  ///
+  /// In nl, this message translates to:
+  /// **'Voltooid!'**
+  String get completed;
+
+  /// No description provided for @locationsCount.
+  ///
+  /// In nl, this message translates to:
+  /// **'{current}/{required} locaties'**
+  String locationsCount(int current, int required);
+
+  /// No description provided for @settingsHaptics.
+  ///
+  /// In nl, this message translates to:
+  /// **'Haptische Feedback'**
+  String get settingsHaptics;
+
+  /// No description provided for @settingsRateAppSoon.
+  ///
+  /// In nl, this message translates to:
+  /// **'App Store link binnenkort beschikbaar'**
+  String get settingsRateAppSoon;
+
+  /// No description provided for @settingsVersion.
+  ///
+  /// In nl, this message translates to:
+  /// **'Versie {version}'**
+  String settingsVersion(String version);
+
+  /// No description provided for @errorNoEmailApp.
+  ///
+  /// In nl, this message translates to:
+  /// **'Geen e-mail app gevonden. Mail ons op info@clubapp.be'**
+  String get errorNoEmailApp;
+
+  /// No description provided for @errorEmailGeneric.
+  ///
+  /// In nl, this message translates to:
+  /// **'Kon e-mail app niet openen'**
+  String get errorEmailGeneric;
+
+  /// No description provided for @errorDeleteAccount.
+  ///
+  /// In nl, this message translates to:
+  /// **'Er ging iets mis bij het verwijderen'**
+  String get errorDeleteAccount;
+
+  /// No description provided for @pushNotificationsTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Pushmeldingen'**
+  String get pushNotificationsTitle;
+
+  /// No description provided for @enableNotifications.
+  ///
+  /// In nl, this message translates to:
+  /// **'Meldingen inschakelen'**
+  String get enableNotifications;
+
+  /// No description provided for @enableNotificationsDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Ontvang meldingen van Club App'**
+  String get enableNotificationsDesc;
+
+  /// No description provided for @notificationTypes.
+  ///
+  /// In nl, this message translates to:
+  /// **'Type meldingen'**
+  String get notificationTypes;
+
+  /// No description provided for @flashPromos.
+  ///
+  /// In nl, this message translates to:
+  /// **'Flash Promos'**
+  String get flashPromos;
+
+  /// No description provided for @flashPromosDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Krijg meldingen over last-minute deals'**
+  String get flashPromosDesc;
+
+  /// No description provided for @squadAlerts.
+  ///
+  /// In nl, this message translates to:
+  /// **'Squad Alerts'**
+  String get squadAlerts;
+
+  /// No description provided for @squadAlertsDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Meldingen wanneer je weg bent van je Squad'**
+  String get squadAlertsDesc;
+
+  /// No description provided for @chatMessages.
+  ///
+  /// In nl, this message translates to:
+  /// **'Chatberichten'**
+  String get chatMessages;
+
+  /// No description provided for @chatMessagesDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nieuwe berichten van je Squad'**
+  String get chatMessagesDesc;
+
+  /// No description provided for @newFeatures.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nieuwe functies'**
+  String get newFeatures;
+
+  /// No description provided for @newFeaturesDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Updates over nieuwe app-functies'**
+  String get newFeaturesDesc;
+
+  /// No description provided for @quietHours.
+  ///
+  /// In nl, this message translates to:
+  /// **'Stille uren'**
+  String get quietHours;
+
+  /// No description provided for @dontDisturb.
+  ///
+  /// In nl, this message translates to:
+  /// **'Niet storen'**
+  String get dontDisturb;
+
+  /// No description provided for @dontDisturbDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Demp meldingen tijdens ingestelde uren'**
+  String get dontDisturbDesc;
+
+  /// No description provided for @from.
+  ///
+  /// In nl, this message translates to:
+  /// **'Van'**
+  String get from;
+
+  /// No description provided for @to.
+  ///
+  /// In nl, this message translates to:
+  /// **'Tot'**
+  String get to;
+
+  /// No description provided for @assocActiveMember.
+  ///
+  /// In nl, this message translates to:
+  /// **'Actief lid'**
+  String get assocActiveMember;
+
+  /// No description provided for @assocPendingRequest.
+  ///
+  /// In nl, this message translates to:
+  /// **'Aanvraag in behandeling'**
+  String get assocPendingRequest;
+
+  /// No description provided for @assocAboutTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Over de vereniging'**
+  String get assocAboutTitle;
+
+  /// No description provided for @assocNoDescription.
+  ///
+  /// In nl, this message translates to:
+  /// **'Deze vereniging heeft nog geen beschrijving toegevoegd.'**
+  String get assocNoDescription;
+
+  /// No description provided for @assocCancelRequest.
+  ///
+  /// In nl, this message translates to:
+  /// **'Aanvraag annuleren'**
+  String get assocCancelRequest;
+
+  /// No description provided for @assocRequestMembership.
+  ///
+  /// In nl, this message translates to:
+  /// **'Lidmaatschap verzoeken'**
+  String get assocRequestMembership;
+
+  /// No description provided for @allBadges.
+  ///
+  /// In nl, this message translates to:
+  /// **'Alle Badges'**
+  String get allBadges;
+
+  /// No description provided for @badgesUnlockedCount.
+  ///
+  /// In nl, this message translates to:
+  /// **'{count} van de {total} badges ontgrendeld'**
+  String badgesUnlockedCount(int count, int total);
+
+  /// No description provided for @vpToNextLevel.
+  ///
+  /// In nl, this message translates to:
+  /// **'{count} VP naar volgend level'**
+  String vpToNextLevel(int count);
+
+  /// No description provided for @weekendStreakCount.
+  ///
+  /// In nl, this message translates to:
+  /// **'{count, plural, =1{{count} Weekend} other{{count} Weekends}}'**
+  String weekendStreakCount(int count);
+
+  /// No description provided for @levelNewbie.
+  ///
+  /// In nl, this message translates to:
+  /// **'Nieuweling'**
+  String get levelNewbie;
+
+  /// No description provided for @levelClubHopper.
+  ///
+  /// In nl, this message translates to:
+  /// **'Club Hopper'**
+  String get levelClubHopper;
+
+  /// No description provided for @levelVibeMaster.
+  ///
+  /// In nl, this message translates to:
+  /// **'Vibe Master'**
+  String get levelVibeMaster;
+
+  /// No description provided for @levelLegend.
+  ///
+  /// In nl, this message translates to:
+  /// **'Legende'**
+  String get levelLegend;
+
+  /// No description provided for @locationPermissionTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Locatietoegang'**
+  String get locationPermissionTitle;
+
+  /// No description provided for @locationPermissionMessage.
+  ///
+  /// In nl, this message translates to:
+  /// **'Locatie is nodig om Squad Mode te gebruiken en de vibe van clubs in de buurt te checken. Je locatie wordt alleen gedeeld als je in een actieve squad zit en stopt automatisch om 06:00 uur.'**
+  String get locationPermissionMessage;
+
+  /// No description provided for @notificationPermissionTitle.
+  ///
+  /// In nl, this message translates to:
+  /// **'Meldingen'**
+  String get notificationPermissionTitle;
+
+  /// No description provided for @notificationPermissionMessage.
+  ///
+  /// In nl, this message translates to:
+  /// **'Schakel meldingen in om Flash Promos en Squad-waarschuwingen te ontvangen wanneer je niet op je telefoon kijkt.'**
+  String get notificationPermissionMessage;
+
+  /// No description provided for @club.
+  ///
+  /// In nl, this message translates to:
+  /// **'Club'**
+  String get club;
+
+  /// No description provided for @event.
+  ///
+  /// In nl, this message translates to:
+  /// **'Event'**
+  String get event;
 }
 
 class _AppLocalizationsDelegate

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/profile/screens/public_profile_screen.dart';
 import '../providers/squad_provider.dart';
 
 void showSquadSheet(BuildContext context) {
@@ -48,7 +49,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
   Future<void> _handleCreateSquad() async {
     final l10n = AppLocalizations.of(context)!;
     final userProfile = ref.read(userProfileServiceProvider);
-
     if (!userProfile.hasNickname) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -62,7 +62,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
     final squadNotifier = ref.read(squadProvider.notifier);
     final hasPermission = await squadNotifier.checkLocationPermission();
-
     if (!hasPermission) {
       final granted = await squadNotifier.requestLocationPermission();
       if (!granted) {
@@ -83,7 +82,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     
     if (!mounted) return;
     setState(() => _isLoading = false);
-
     if (result.status == SquadConnectionStatus.error) {
       if (!mounted) return;
       showDialog(
@@ -105,7 +103,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
   Future<void> _handleJoinSquad() async {
     final l10n = AppLocalizations.of(context)!;
     final pin = _pinController.text.trim();
-
     if (pin.length != 6) {
       if (!mounted) return;
       ShadSonner.of(context).show(
@@ -132,7 +129,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
     final squadNotifier = ref.read(squadProvider.notifier);
     final hasPermission = await squadNotifier.checkLocationPermission();
-
     if (!hasPermission) {
       final granted = await squadNotifier.requestLocationPermission();
       if (!granted) {
@@ -153,7 +149,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     
     if (!mounted) return;
     setState(() => _isLoading = false);
-
     if (result.status == SquadConnectionStatus.error) {
       if (!mounted) return;
       ShadSonner.of(context).show(
@@ -177,7 +172,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
     final l10n = AppLocalizations.of(context)!;
     final squadState = ref.watch(squadProvider);
     final inSquad = squadState.isInSquad;
-
     return Stack(
       children: [
         Container(
@@ -308,6 +302,16 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
             const SizedBox(height: 12),
             ...members.map(
               (m) => ListTile(
+                onTap: () {
+                  if (!m.isCurrentUser && m.odmemberId.isNotEmpty) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PublicProfileScreen(userId: m.odmemberId),
+                      ),
+                    );
+                  }
+                },
                 contentPadding: EdgeInsets.zero,
                 leading: UserAvatar(
                   name: m.nickname,
@@ -315,7 +319,7 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
                   size: 48,
                   showStatus: true,
                   isOnline: m.isOnline,
-                  isSpeaking: m.isSpeaking, // FIX: Glow-status wordt nu meegegeven!
+                  isSpeaking: m.isSpeaking,
                 ),
                 title: Text(m.nickname, style: TextStyle(color: textColor)),
                 subtitle: Text(
@@ -371,7 +375,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
   Widget _buildCreateTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -424,7 +427,6 @@ class _SquadBottomSheetState extends ConsumerState<SquadBottomSheet>
 
   Widget _buildJoinTab(bool isDark, AppLocalizations l10n) {
     final textColor = isDark ? Colors.white : Colors.black;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(

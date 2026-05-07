@@ -1,12 +1,18 @@
-import '../config/supabase_client.dart';
-import '../models/association.dart';
-import 'interfaces/association_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_clubapp/core/models/association.dart';
+import '../domain/association_repository.dart';
 
 class SupabaseAssociationRepository implements AssociationRepository {
+  final SupabaseClient _client;
+
+  SupabaseAssociationRepository(this._client);
+
   @override
   Future<List<Association>> getAllAssociations() async {
-    final client = SupabaseClientProvider.client;
-    final response = await client.from('associations').select().order('name');
+    final response = await _client
+        .from('associations')
+        .select('*, association_tags(tags(name))')
+        .order('name');
     
     return (response as List)
         .map((json) => Association.fromJson(json))
@@ -15,12 +21,11 @@ class SupabaseAssociationRepository implements AssociationRepository {
 
   @override
   Future<List<AssociationMember>> getUserAssociations(String userId) async {
-    final client = SupabaseClientProvider.client;
-    final response = await client
+    final response = await _client
         .from('association_members')
-        .select('*, associations(*)')
+        .select('*, associations(*, association_tags(tags(name)))')
         .eq('user_id', userId);
-        
+
     return (response as List)
         .map((json) => AssociationMember.fromJson(json))
         .toList();
@@ -28,8 +33,7 @@ class SupabaseAssociationRepository implements AssociationRepository {
 
   @override
   Future<void> joinAssociation(String associationId, String userId) async {
-    final client = SupabaseClientProvider.client;
-    await client.from('association_members').insert({
+    await _client.from('association_members').insert({
       'association_id': associationId,
       'user_id': userId,
       'role': 'pending'
@@ -38,8 +42,7 @@ class SupabaseAssociationRepository implements AssociationRepository {
 
   @override
   Future<void> leaveAssociation(String associationId, String userId) async {
-    final client = SupabaseClientProvider.client;
-    await client
+    await _client
         .from('association_members')
         .delete()
         .eq('association_id', associationId)

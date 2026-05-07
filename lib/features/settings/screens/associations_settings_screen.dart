@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../providers/association_provider.dart';
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
+import 'package:flutter_clubapp/core/services/settings_service.dart';
+import 'package:flutter_clubapp/features/associations/providers/association_provider.dart';
+import 'association_details_screen.dart';
 
 class AssociationsSettingsScreen extends ConsumerStatefulWidget {
   const AssociationsSettingsScreen({super.key});
@@ -15,14 +18,6 @@ class _AssociationsSettingsScreenState extends ConsumerState<AssociationsSetting
   final TextEditingController _searchController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(associationProvider.notifier).loadData();
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -30,14 +25,14 @@ class _AssociationsSettingsScreenState extends ConsumerState<AssociationsSetting
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final state = ref.watch(associationProvider);
-    final textColor = isDark ? Colors.white : Colors.black;
-
-    // Filter de lijst op basis van de zoekopdracht
-    final filteredAssociations = state.allAssociations.where((assoc) {
-      return assoc.name.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
+    final currentMode = ref.watch(themeProvider);
+    final isDark = currentMode == ThemeMode.dark ||
+        (currentMode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+            
+    final l10n = AppLocalizations.of(context)!;
+    final associationsAsync = ref.watch(associationProvider);
+    final textColor = isDark ? Colors.white : Colors.black87;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
@@ -49,22 +44,19 @@ class _AssociationsSettingsScreenState extends ConsumerState<AssociationsSetting
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Verenigingen zoeken',
+          l10n.assocSearchTitle,
           style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
-        centerTitle: true,
       ),
       body: Column(
         children: [
-          // Zoekbalk sectie
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
               style: TextStyle(color: textColor),
-              cursorColor: textColor,
               decoration: InputDecoration(
-                hintText: 'Zoek op naam...',
+                hintText: l10n.assocSearchHint,
                 hintStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 filled: true,
@@ -73,103 +65,90 @@ class _AssociationsSettingsScreenState extends ConsumerState<AssociationsSetting
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                });
+              onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+            ),
+          ),
+          Expanded(
+            child: associationsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text(l10n.eventsError, style: TextStyle(color: textColor))),
+              data: (state) {
+                final filteredList = state.associations.where((assoc) {
+                  return assoc.name.toLowerCase().contains(_searchQuery);
+                }).toList();
+
+                if (filteredList.isEmpty) {
+                  return Center(
+                    child: Text(
+                      l10n.assocSearchHint,
+                      style: TextStyle(color: isDark ? Colors.white54 : Colors.black54),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredList.length,
+                  itemBuilder: (context, index) {
+                    final assoc = filteredList[index];
+                    final isUserMember = state.userAssociations.any((m) => m.associationId == assoc.id);
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context, 
+                          MaterialPageRoute(builder: (_) => AssociationDetailsScreen(association: assoc))
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.03),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.blueAccent.withValues(alpha: 0.2),
+                            backgroundImage: assoc.logoUrl != null ? NetworkImage(assoc.logoUrl!) : null,
+                            child: assoc.logoUrl == null 
+                                ? Text(assoc.name.substring(0, 1).toUpperCase(), style: const TextStyle(color: Colors.blueAccent))
+                                : null,
+                          ),
+                          title: Text(
+                            assoc.name,
+                            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            isUserMember ? l10n.assocActive : l10n.assocSearchHint,
+                            style: TextStyle(color: isUserMember ? Colors.green : Colors.grey),
+                          ),
+                          trailing: ShadButton.outline(
+                            size: ShadButtonSize.sm,
+                            onPressed: () {
+                              if (isUserMember) {
+                                ref.read(associationProvider.notifier).leaveAssociation(assoc.id);
+                              } else {
+                                ref.read(associationProvider.notifier).joinAssociation(assoc.id);
+                              }
+                            },
+                            child: Text(
+                              isUserMember ? l10n.assocLeave : l10n.assocSendRequest,
+                              style: TextStyle(
+                                color: isUserMember ? Colors.redAccent : textColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
               },
             ),
           ),
-          
-          Expanded(
-            child: state.isLoading && state.allAssociations.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: filteredAssociations.length,
-                    itemBuilder: (context, index) {
-                      final association = filteredAssociations[index];
-                      
-                      // Controleer de lidmaatschapsstatus (veiligere methode via iterable)
-                      final membership = state.userAssociations
-                          .where((m) => m.associationId == association.id)
-                          .firstOrNull;
-
-                      final isMember = membership != null && membership.role == 'member';
-                      final isPending = membership != null && membership.role == 'pending';
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(12),
-                          border: isMember 
-                            ? Border.all(color: Colors.blueAccent, width: 1.5)
-                            : (isPending ? Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 1) : null),
-                        ),
-                        child: ListTile(
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isMember 
-                                  ? Colors.blueAccent.withValues(alpha: 0.2)
-                                  : (isPending ? Colors.amber.withValues(alpha: 0.1) : (isDark ? Colors.white10 : Colors.grey[200])),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isMember ? Icons.verified : (isPending ? Icons.hourglass_empty : Icons.shield),
-                              color: isMember 
-                                  ? Colors.blueAccent 
-                                  : (isPending ? Colors.amber : (isDark ? Colors.white54 : Colors.black54)),
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            association.name,
-                            style: TextStyle(
-                              color: textColor,
-                              fontWeight: isMember ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                          subtitle: isPending 
-                            ? const Text('In afwachting van goedkeuring', style: TextStyle(color: Colors.amber, fontSize: 11))
-                            : (isMember ? const Text('Actief lid', style: TextStyle(color: Colors.blueAccent, fontSize: 11)) : null),
-                          trailing: _buildActionButton(association.id, isMember, isPending, state.isLoading),
-                        ),
-                      );
-                    },
-                  ),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButton(String associationId, bool isMember, bool isPending, bool isLoading) {
-    if (isMember) {
-      return ShadButton.destructive(
-        size: ShadButtonSize.sm,
-        onPressed: isLoading ? null : () => ref.read(associationProvider.notifier).leaveAssociation(associationId),
-        child: const Text('Verlaten'),
-      );
-    }
-
-    if (isPending) {
-      return ShadButton.outline(
-        size: ShadButtonSize.sm,
-        onPressed: isLoading ? null : () => ref.read(associationProvider.notifier).leaveAssociation(associationId),
-        child: const Text('Annuleren'),
-      );
-    }
-
-    return ShadButton(
-      size: ShadButtonSize.sm,
-      backgroundColor: Colors.blueAccent,
-      onPressed: isLoading ? null : () => ref.read(associationProvider.notifier).joinAssociation(associationId),
-      child: const Text('Verzoek sturen'),
     );
   }
 }

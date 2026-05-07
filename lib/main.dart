@@ -1,20 +1,17 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/constants/env.dart';
 import 'features/onboarding/screens/splash_screen.dart';
-import 'core/config/supabase_config.dart';
-import 'core/config/supabase_client.dart';
 import 'core/providers/service_providers.dart';
-import 'core/services/user_profile_service.dart';
+import 'core/providers/shared_prefs_provider.dart';
 import 'core/services/settings_service.dart';
+import 'core/services/push_notification_service.dart'; 
 
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-final ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
 const Color _kSplashSurface = Color(0xFF09090B);
 
 ThemeData _appThemeForBrightness(Brightness brightness) {
@@ -31,91 +28,86 @@ ThemeData _appThemeForBrightness(Brightness brightness) {
 }
 
 Future<void> _initializeSupabase() async {
-  if (!await SupabaseConfig.hasCredentials()) {
-    await SupabaseConfig.setUrl(Env.supabaseUrl);
-    await SupabaseConfig.setAnonKey(Env.supabaseAnonKey);
-  }
-  await SupabaseClientProvider.initialize();
+  await Supabase.initialize(
+    url: Env.supabaseUrl,
+    anonKey: Env.supabaseAnonKey,
+  );
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   await _initializeSupabase();
   
+  // Laad SharedPreferences zodat onze Notifiers er synchroon aan kunnen
   final prefs = await SharedPreferences.getInstance();
-  final userProfileService = UserProfileService(prefs);
-  final ingeladenSettingsService = await SettingsService.init();
+
+  final pushService = PushNotificationService();
+  pushService.initialize();
 
   runApp(
     ProviderScope(
       overrides: [
-        userProfileServiceProvider.overrideWith((ref) => userProfileService),
-        settingsServiceProvider.overrideWith((ref) => ingeladenSettingsService),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        pushNotificationServiceProvider.overrideWithValue(pushService),
       ],
       child: const ClubApp(),
     ),
   );
 }
 
-class ClubApp extends StatelessWidget {
+class ClubApp extends ConsumerWidget {
   const ClubApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, currentMode, _) {
-        return ValueListenableBuilder<Locale?>(
-          valueListenable: localeNotifier,
-          builder: (context, locale, _) {
-            return ShadApp(
-              debugShowCheckedModeBanner: false,
-              themeMode: currentMode,
-              locale: locale,
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [
-                Locale('nl'),
-                Locale('en'),
-                Locale('fr'),
-              ],
-              localeResolutionCallback: (deviceLocale, supportedLocales) {
-                if (locale != null) return locale;
-                if (deviceLocale == null) return const Locale('en');
-                for (final supported in supportedLocales) {
-                  if (supported.languageCode == deviceLocale.languageCode) {
-                    return supported;
-                  }
-                }
-                return const Locale('en');
-              },
-              builder: (context, child) {
-                final brightness = currentMode == ThemeMode.system
-                    ? MediaQuery.platformBrightnessOf(context)
-                    : (currentMode == ThemeMode.dark
-                          ? Brightness.dark
-                          : Brightness.light);
-                return ShadTheme(
-                  data: ShadThemeData(brightness: brightness),
-                  child: ShadSonner(
-                    child: ScaffoldMessenger(
-                      child: Theme(
-                        data: _appThemeForBrightness(brightness),
-                        child: child!,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              home: const SplashScreen(),
-            );
-          },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentMode = ref.watch(themeProvider);
+    final locale = ref.watch(localeProvider);
+
+    return ShadApp(
+      debugShowCheckedModeBanner: false,
+      themeMode: currentMode,
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('nl'),
+        Locale('en'),
+        Locale('fr'),
+      ],
+      localeResolutionCallback: (deviceLocale, supportedLocales) {
+        if (locale != null) return locale;
+        if (deviceLocale == null) return const Locale('en');
+        for (final supported in supportedLocales) {
+          if (supported.languageCode == deviceLocale.languageCode) {
+            return supported;
+          }
+        }
+        return const Locale('en');
+      },
+      builder: (context, child) {
+        final brightness = currentMode == ThemeMode.system
+            ? MediaQuery.platformBrightnessOf(context)
+            : (currentMode == ThemeMode.dark
+                  ? Brightness.dark
+                  : Brightness.light);
+        return ShadTheme(
+          data: ShadThemeData(brightness: brightness),
+          child: ShadSonner(
+            child: ScaffoldMessenger(
+              child: Theme(
+                data: _appThemeForBrightness(brightness),
+                child: child!,
+              ),
+            ),
+          ),
         );
       },
+      home: const SplashScreen(),
     );
   }
 }

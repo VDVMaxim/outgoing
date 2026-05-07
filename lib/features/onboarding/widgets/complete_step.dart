@@ -88,7 +88,7 @@ class CompleteStep implements OnboardingStep {
   }
 
   @override
-  String? validate() => null;
+  String? validate(BuildContext context) => null;
 
   @override
   VoidCallback? onNextPressed;

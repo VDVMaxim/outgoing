@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/features/vibe/providers/vibe_provider.dart';
 import 'package:flutter_clubapp/core/providers/service_providers.dart';
 
 class VibeCheckDialog extends ConsumerStatefulWidget {
@@ -27,10 +28,11 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
     });
 
     if (mounted) {
+      final l10n = AppLocalizations.of(context)!;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vibe geüpdatet! +20 VP'),
+        SnackBar(
+          content: Text(l10n.vibeUpdated),
           backgroundColor: Colors.green,
         ),
       );
@@ -49,7 +51,7 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Hoe is de Vibe?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(AppLocalizations.of(context)!.vibeCheckTitle, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
             if (_isLoading)
               const CircularProgressIndicator()
@@ -60,14 +62,14 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
                     child: ShadButton(
                       backgroundColor: Colors.orange,
                       onPressed: () => _submit(true),
-                      child: const Text('🔥 Heet'),
+                      child: Text(AppLocalizations.of(context)!.vibeHot),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ShadButton.secondary(
                       onPressed: () => _submit(false),
-                      child: const Text('🧊 Koud'),
+                      child: Text(AppLocalizations.of(context)!.vibeCold),
                     ),
                   ),
                 ],
@@ -76,7 +78,7 @@ class _VibeCheckDialogState extends ConsumerState<VibeCheckDialog> {
             const SizedBox(height: 16),
             ShadButton.ghost(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuleren'),
+              child: Text(AppLocalizations.of(context)!.vibeCancel),
             ),
           ],
         ),

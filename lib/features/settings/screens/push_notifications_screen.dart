@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_clubapp/l10n/app_localizations.dart';
 
 class PushNotificationsScreen extends StatefulWidget {
   const PushNotificationsScreen({super.key});
@@ -35,7 +36,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Push Notifications',
+          AppLocalizations.of(context)!.pushNotificationsTitle,
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black,
             fontWeight: FontWeight.bold,
@@ -51,14 +52,14 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
             children: [
               SwitchListTile(
                 title: Text(
-                  'Enable Notifications',
+                  AppLocalizations.of(context)!.enableNotifications,
                   style: TextStyle(
                     color: isDark ? Colors.white : Colors.black,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 subtitle: Text(
-                  'Receive notifications from Club App',
+                  AppLocalizations.of(context)!.enableNotificationsDesc,
                   style: TextStyle(color: Colors.grey[600], fontSize: 13),
                 ),
                 secondary: Icon(
@@ -74,7 +75,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
           ),
           if (_notificationsEnabled) ...[
             const SizedBox(height: 24),
-            _buildSectionHeader('Notification Types'),
+            _buildSectionHeader(AppLocalizations.of(context)!.notificationTypes),
             const SizedBox(height: 8),
             _buildSection(
               isDark,
@@ -89,7 +90,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Flash Promos',
+                        AppLocalizations.of(context)!.flashPromos,
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black,
                         ),
@@ -99,7 +100,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                   subtitle: Padding(
                     padding: const EdgeInsets.only(left: 32),
                     child: Text(
-                      'Get notified about last-minute deals',
+                      AppLocalizations.of(context)!.flashPromosDesc,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ),
@@ -115,7 +116,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                       Icon(Icons.group, color: Colors.purple, size: 20),
                       const SizedBox(width: 12),
                       Text(
-                        'Squad Alerts',
+                        AppLocalizations.of(context)!.squadAlerts,
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black,
                         ),
@@ -125,7 +126,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                   subtitle: Padding(
                     padding: const EdgeInsets.only(left: 32),
                     child: Text(
-                      'Notifications when you\'re away from your Squad',
+                      AppLocalizations.of(context)!.squadAlertsDesc,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ),
@@ -145,7 +146,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Chat Messages',
+                        AppLocalizations.of(context)!.chatMessages,
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black,
                         ),
@@ -155,7 +156,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                   subtitle: Padding(
                     padding: const EdgeInsets.only(left: 32),
                     child: Text(
-                      'New messages from your Squad',
+                      AppLocalizations.of(context)!.chatMessagesDesc,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ),
@@ -171,7 +172,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                       Icon(Icons.auto_awesome, color: Colors.pink, size: 20),
                       const SizedBox(width: 12),
                       Text(
-                        'New Features',
+                        AppLocalizations.of(context)!.newFeatures,
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black,
                         ),
@@ -181,7 +182,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                   subtitle: Padding(
                     padding: const EdgeInsets.only(left: 32),
                     child: Text(
-                      'Updates about new app features',
+                      AppLocalizations.of(context)!.newFeaturesDesc,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ),
@@ -193,7 +194,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            _buildSectionHeader('Quiet Hours'),
+            _buildSectionHeader(AppLocalizations.of(context)!.quietHours),
             const SizedBox(height: 8),
             _buildSection(
               isDark,
@@ -204,7 +205,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                       Icon(Icons.volume_off, color: Colors.grey, size: 20),
                       const SizedBox(width: 12),
                       Text(
-                        "Don't disturb",
+                        AppLocalizations.of(context)!.dontDisturb,
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black,
                         ),
@@ -214,7 +215,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                   subtitle: Padding(
                     padding: const EdgeInsets.only(left: 32),
                     child: Text(
-                      'Silence notifications during set hours',
+                      AppLocalizations.of(context)!.dontDisturbDesc,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ),
@@ -232,7 +233,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                         Expanded(
                           child: _buildTimePicker(
                             isDark,
-                            'From',
+                            AppLocalizations.of(context)!.from,
                             _quietHoursFrom,
                             (time) {
                               setState(() => _quietHoursFrom = time);
@@ -241,7 +242,7 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildTimePicker(isDark, 'To', _quietHoursTo, (
+                          child: _buildTimePicker(isDark, AppLocalizations.of(context)!.to, _quietHoursTo, (
                             time,
                           ) {
                             setState(() => _quietHoursTo = time);

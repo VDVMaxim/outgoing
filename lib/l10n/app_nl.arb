@@ -3,6 +3,8 @@
   "appName": "Club App",
 
   "navMap": "Kaart",
+  "navDiscover": "Ontdekken",
+  "navProfile": "Profiel",
   "navEvents": "Acties",
   "navFeed": "Feed",
   "navSettings": "Instellingen",
@@ -93,7 +95,7 @@
 
   "squadTitle": "Squad Mode",
   "squadSubtitle": "Verlies elkaar niet uit het oog.",
-  "squadDesc": "Zien waar je maten zijn op de kaart tot 06:00. Danana verdwijnt de Squad automatisch voor ieders privacy.",
+  "squadDesc": "Zien waar je maten zijn op de kaart tot 06:00. Daarna verdwijnt de Squad automatisch voor ieders privacy.",
   "squadCreate": "Nieuwe Squad Maken",
   "squadJoin": "Deelnemen",
   "squadOr": "OF DEELNEMEN",
@@ -127,6 +129,16 @@
   "squadLocationRequiredToast": "Locatie toestemming is nodig voor squad modus",
 
   "settingsTitle": "Instellingen",
+  "settingsAccount": "Account",
+  "settingsPreferences": "Voorkeuren",
+  "settingsHelpSupport": "Help & Support",
+  "settingsFeedback": "Jouw mening",
+  "settingsReportBug": "Een fout melden",
+  "settingsRateApp": "Beoordeel de App",
+  "settingsShareApp": "Deel de App",
+  "settingsAbout": "Over de App",
+  "settingsTerms": "Algemene Voorwaarden",
+  "settingsPrivacy": "Privacybeleid",
   "settingsSquadProfile": "Squad Profiel",
   "settingsNickname": "Nickname",
   "settingsNoNickname": "Geen nickname ingesteld",
@@ -152,8 +164,6 @@
   "settingsDestroySessionDesc": "Dit wist je anonieme sessie. Je bent momenteel nergens permanent ingelogd.",
   "settingsCancel": "Annuleren",
   "settingsDelete": "Account verwijderen",
-  "settingsAbout": "Over Club App",
-  "settingsFeedback": "Bugs & Feedback Rapporteren",
   "settingsFeedbackSub": "Help de app beter te maken",
   "settingsLanguage": "Taal",
   "settingsLanguageNl": "Nederlands",
@@ -232,14 +242,6 @@
   "settingsYes": "Ja",
   "settingsNo": "Nee",
 
-  "settingsAccount": "Account",
-  "settingsHelpSupport": "Help & Support",
-  "settingsReportBug": "Een bug melden",
-  "settingsRateApp": "App beoordelen",
-  "settingsShareApp": "App delen",
-  "settingsPreferences": "Voorkeuren",
-  "settingsTerms": "Algemene Voorwaarden",
-  "settingsPrivacy": "Privacy Policy",
   "loginSubtitle": "Log in om door te gaan",
   "registerFirstNameTitle": "Wat is je voornaam?",
   "registerFirstNameDesc": "Vul je voornaam in om te beginnen",
@@ -251,6 +253,7 @@
   "registerEmailDesc": "We sturen je een verificatielink",
   "registerPasswordTitle": "Maak een wachtwoord",
   "registerPasswordDesc": "Zorg dat het minstens 6 tekens lang is",
+  
   "errorFirstNameRequired": "Voornaam is verplicht",
   "errorLastNameRequired": "Achternaam is verplicht",
   "errorEmailRequired": "E-mailadres is verplicht",
@@ -262,24 +265,29 @@
   "errorNicknameRequired": "Nickname is verplicht",
   "errorNicknameLength": "Nickname moet minstens 3 tekens zijn",
   "errorEmailInUse": "Dit e-mailadres is al in gebruik",
+
   "mapApply": "Toepassen",
   "mapSetTime": "Stel doeltijd in",
   "mapCancel": "Annuleren",
   "mapPlacePin": "Plaats Pin",
   "mapJoin": "Ik doe mee",
+  
   "vibeCheckTitle": "Hoe is de Vibe?",
   "vibeHot": "🔥 Heet",
   "vibeCold": "🧊 Koud",
   "vibeCancel": "Annuleren",
   "vibeUpdated": "Vibe geüpdatet! +20 VP",
+  
   "placeOpeningHours": "Openingsuren",
   "placeNoOpeningHours": "Geen openingsuren bekend",
   "placeNoVibes": "Nog geen vibes vanavond",
   "placeUpdate": "Update",
   "placeRoute": "Route naar locatie",
   "placeCheckIn": "Check In (+10 VP)",
+  
   "eventsFallback": "Event",
   "eventsError": "Er is een fout opgetreden",
+  
   "assocSearchTitle": "Verenigingen zoeken",
   "assocSearchHint": "Zoek op naam...",
   "assocPending": "In afwachting van goedkeuring",
@@ -287,16 +295,220 @@
   "assocLeave": "Verlaten",
   "assocCancel": "Annuleren",
   "assocSendRequest": "Verzoek sturen",
+  
   "pushTitle": "Push Notificaties",
   "pushEnable": "Zet Notificaties Aan",
   "pushReceive": "Ontvang meldingen van Club App",
   "pushPromos": "Flash Promos",
   "pushSquad": "Squad Alerts",
   "pushQuiet": "Stille Uren",
+  
   "faqTitle": "FAQ",
+  
   "accountAssoc": "Mijn Verenigingen",
   "eventHostedBy": "Georganiseerd door",
   "eventStartsAt": "Begint om",
   "eventRoute": "Route naar locatie",
-  "eventCheckIn": "Check In (+10 VP)"
+  "eventCheckIn": "Check In (+10 VP)",
+  
+  "editProfileTitle": "Profiel bewerken",
+  "editProfileRemovePhoto": "Verwijder foto",
+  "editProfileBioHint": "Vertel iets over jezelf...",
+  
+  "settingsAccountDetails": "Accountgegevens",
+
+  "guestTitle": "Welkom als Gast",
+  "guestSubtitle": "Maak een account aan of log in om samen met je squad te viben, VP te verdienen en je profiel aan te passen.",
+  "guestLogin": "Inloggen",
+  "guestRegister": "Account aanmaken",
+
+  "ok": "OK",
+  "errorCouldNotOpenLink": "Kon link niet openen",
+  "settingsAppStoreComingSoon": "App store link komt binnenkort",
+  "errorCouldNotOpenEmail": "Kon e-mail app niet openen",
+  "profilePhotoUpdated": "Profielfoto geüpdatet",
+  "profilePhotoUploadError": "Fout bij uploaden foto",
+  "profilePhotoRemoved": "Profielfoto verwijderd",
+  "profilePhotoRemoveError": "Fout bij verwijderen foto",
+  "profileSaved": "Profiel opgeslagen",
+  "profileSaveError": "Fout bij opslaan profiel",
+  "errorLoadingFollowers": "Fout bij laden van volgers",
+  "errorLoadingFollowing": "Fout bij laden van volgend",
+  "checkInSuccess": "+10 VP! Check-in bevestigd",
+  "error": "Fout",
+  "errorLoadingProfile": "Fout bij laden van profiel",
+  "unfollow": "Ontvolgen",
+  "follow": "Volgen",
+  "editProfile": "Profiel bewerken",
+  "searchAssociations": "Zoek Verenigingen",
+  "errorLoadingPlaces": "Fout bij laden van locaties",
+  "errorLoadingPlacesDesc": "Controleer je verbinding en probeer opnieuw.",
+  "errorLoadingDetails": "Fout bij laden van details",
+  "errorLoadingDetailsDesc": "Kon details van de locatie niet laden.",
+  "notNow": "Niet nu",
+  "squads": "Squads",
+  "cities": "Steden",
+  "searchNicknamePlaceholder": "Typ een bijnaam...",
+  "achievements": "Prestaties",
+  "activity": "Activiteit",
+  "circles": "Kringen",
+  "followers": "Volgers",
+  "following": "Volgend",
+  "bioPlaceholder": "Ik hou van techno en lange nachten...",
+  "daySun": "Zo",
+  "dayMon": "Ma",
+  "dayTue": "Di",
+  "dayWed": "Wo",
+  "dayThu": "Do",
+  "dayFri": "Vr",
+  "daySat": "Za",
+  "bio": "Bio",
+  "firstName": "Voornaam",
+  "lastName": "Achternaam",
+  "noFollowers": "Nog geen volgers.",
+  "followingNone": "Je volgt nog niemand.",
+  "remove": "Verwijderen",
+  "userNotFound": "Gebruiker niet gevonden",
+  "guestWelcomeMessage": "Hoi {nickname},\nMaak een account aan of log in om je Vibe Level, Badges en Verenigingen te ontgrendelen.",
+  "@guestWelcomeMessage": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "badgeVault": "Badge Vault",
+  "badgeVaultSubtitle": "Bekijk je verzamelde badges",
+  "leaderboard": "Leaderboard",
+  "leaderboardSubtitle": "Bekijk de ranglijsten",
+  "challenges": "Challenges",
+  "challengesSubtitle": "Voltooi missies met je squad",
+  "noRecentActivity": "Geen recente activiteit gevonden.",
+  "checkedIn": "Ingecheckt",
+  "vibeUpdatedTitle": "Vibe geüpdatet",
+  "noAssociations": "Je bent nog geen lid van een vereniging.",
+  "errorConnection": "Controleer je verbinding en probeer het opnieuw.",
+  "errorLoadingPlaceDetails": "Kon details van locatie niet laden.",
+  "filtersTitle": "Filters",
+  "apply": "Toepassen",
+  "setTargetTime": "Stel doeltijd in",
+  "placePin": "Plaats Pin",
+  "imIn": "Ik doe mee",
+  "errorLoadingPlaces": "Fout bij laden van locaties",
+  "errorNicknameRequired": "Vul a.u.b. een bijnaam in",
+  "notifStepTitle": "Mis niks van de actie",
+  "notifStepDesc": "Zet je pushmeldingen aan om direct te weten wanneer je squad actief is of als er een flash promo is.",
+  "notifStepEnable": "Meldingen aanzetten",
+  "notifStepLater": "Misschien later",
+  "registerBioTitle": "Wat is jouw Bio?",
+  "registerBioDesc": "Vertel iets over jezelf (Optioneel)",
+  "registerBioHint": "Ik hou van techno en lange nachten...",
+  "registerWelcome": "Welkom, {firstName}!",
+  "@registerWelcome": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "registerProfileCreated": "Je profiel is aangemaakt",
+  "errorRegistrationFailed": "Registratie mislukt",
+  "badgeVaultTitle": "Badge Vault",
+  "quickStats": "Snelle Statistieken",
+  "explorerBadges": "Explorer Badges",
+  "socialBadges": "Social Badges",
+  "safetyBadges": "Safety Badges",
+  "achievements": "Prestaties",
+  "leaderboardTitle": "Ranglijst",
+  "squads": "Squads",
+  "cities": "Steden",
+  "yourSquad": "Jouw Squad",
+  "squadChallenges": "Squad Uitdagingen",
+  "inProgress": "In uitvoering",
+  "completed": "Voltooid!",
+  "locationsCount": "{current}/{required} locaties",
+  "@locationsCount": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "required": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsHaptics": "Haptische Feedback",
+  "settingsRateAppSoon": "App Store link binnenkort beschikbaar",
+  "settingsVersion": "Versie {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "errorNoEmailApp": "Geen e-mail app gevonden. Mail ons op info@clubapp.be",
+  "errorEmailGeneric": "Kon e-mail app niet openen",
+  "errorDeleteAccount": "Er ging iets mis bij het verwijderen",
+  "pushNotificationsTitle": "Pushmeldingen",
+  "enableNotifications": "Meldingen inschakelen",
+  "enableNotificationsDesc": "Ontvang meldingen van Club App",
+  "notificationTypes": "Type meldingen",
+  "flashPromos": "Flash Promos",
+  "flashPromosDesc": "Krijg meldingen over last-minute deals",
+  "squadAlerts": "Squad Alerts",
+  "squadAlertsDesc": "Meldingen wanneer je weg bent van je Squad",
+  "chatMessages": "Chatberichten",
+  "chatMessagesDesc": "Nieuwe berichten van je Squad",
+  "newFeatures": "Nieuwe functies",
+  "newFeaturesDesc": "Updates over nieuwe app-functies",
+  "quietHours": "Stille uren",
+  "dontDisturb": "Niet storen",
+  "dontDisturbDesc": "Demp meldingen tijdens ingestelde uren",
+  "from": "Van",
+  "to": "Tot",
+  "assocActiveMember": "Actief lid",
+  "assocPendingRequest": "Aanvraag in behandeling",
+  "assocAboutTitle": "Over de vereniging",
+  "assocNoDescription": "Deze vereniging heeft nog geen beschrijving toegevoegd.",
+  "assocLeave": "Vereniging verlaten",
+  "assocCancelRequest": "Aanvraag annuleren",
+  "assocRequestMembership": "Lidmaatschap verzoeken",
+  "allBadges": "Alle Badges",
+  "badgesUnlockedCount": "{count} van de {total} badges ontgrendeld",
+  "@badgesUnlockedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "vpToNextLevel": "{count} VP naar volgend level",
+  "@vpToNextLevel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "weekendStreakCount": "{count, plural, =1{{count} Weekend} other{{count} Weekends}}",
+  "@weekendStreakCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelNewbie": "Nieuweling",
+  "levelClubHopper": "Club Hopper",
+  "levelVibeMaster": "Vibe Master",
+  "levelLegend": "Legende",
+  "notNow": "Niet nu",
+  "locationPermissionTitle": "Locatietoegang",
+  "locationPermissionMessage": "Locatie is nodig om Squad Mode te gebruiken en de vibe van clubs in de buurt te checken. Je locatie wordt alleen gedeeld als je in een actieve squad zit en stopt automatisch om 06:00 uur.",
+  "notificationPermissionTitle": "Meldingen",
+  "notificationPermissionMessage": "Schakel meldingen in om Flash Promos en Squad-waarschuwingen te ontvangen wanneer je niet op je telefoon kijkt.",
+  "club": "Club",
+  "event": "Event"
 }

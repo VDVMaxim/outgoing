@@ -1,7 +1,7 @@
 import 'package:latlong2/latlong.dart';
-import '../../models/squad.dart';
-import '../../models/squad_member.dart';
-import '../../models/squad_pin.dart';
+import 'package:flutter_clubapp/core/models/squad.dart';
+import 'package:flutter_clubapp/core/models/squad_member.dart';
+import 'package:flutter_clubapp/core/models/squad_pin.dart';
 
 abstract class SquadRepository {
   Future<Map<String, dynamic>> createSquadWithMember(String nickname, LatLng position);
