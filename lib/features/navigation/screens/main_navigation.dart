@@ -4,7 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import 'package:flutter_clubapp/core/services/settings_service.dart';
-import '../../map/screens/map_screen.dart';
+import '../../map/presentation/screens/map_screen.dart';
 import '../../feed/screens/feed_screen.dart';
 import '../../profile/screens/profile_tab_screen.dart';
 
