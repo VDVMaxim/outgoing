@@ -57,7 +57,6 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
     final userId = authState.userId ?? profileService.authUserId;
     final profileStatsAsync = userId != null ? ref.watch(profileStatsProvider(userId)) : null;
 
-    // Fallback is nu NIET 'Guest' maar de lokaal bewaarde anonieme nickname
     final nickname = isAuth 
         ? (profileStatsAsync?.valueOrNull?.nickname ?? profileService.nickname ?? AppLocalizations.of(context)!.eventsUnknownCrowd) 
         : (profileService.nickname ?? AppLocalizations.of(context)!.settingsAnonymous);
@@ -77,6 +76,22 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
             Text(
               nickname,
               style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditNicknameScreen(
+                      initialNickname: profileService.nickname,
+                      isAuthenticated: isAuth,
+                      onSaved: () {},
+                    ),
+                  ),
+                );
+              },
+              child: const Icon(Icons.edit, color: Colors.blueAccent, size: 18),
             ),
           ],
         ),
@@ -111,14 +126,14 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
                     return [
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
                                   UserAvatar(name: nickname, imageUrl: profileService.avatarUrl, size: 80),
-                                  const SizedBox(width: 24),
+                                  const SizedBox(width: 16),
                                   Expanded(
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -140,18 +155,8 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 24),
-                              if (profileService.firstName != null && profileService.firstName!.isNotEmpty)
-                                Text(
-                                  '${profileService.firstName} ${profileService.lastName ?? ''}',
-                                  style: TextStyle(
-                                    fontSize: 18, 
-                                    fontWeight: FontWeight.bold, 
-                                    color: textColor
-                                  ),
-                                ),
                               if (bio != null && bio.isNotEmpty) ...[
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 16),
                                 Text(
                                   bio,
                                   style: TextStyle(
@@ -161,7 +166,7 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
                                   ),
                                 ),
                               ],
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 16),
                               SizedBox(
                                 width: double.infinity,
                                 child: ShadButton.outline(
@@ -204,17 +209,17 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
               ),
             )
           : ListView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               children: [
                 Row(
                   children: [
                     UserAvatar(name: nickname, size: 80),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 16),
                   ],
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 24),
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(16),

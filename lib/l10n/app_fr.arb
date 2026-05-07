@@ -316,6 +316,7 @@
   "editProfileBioHint": "Parle un peu de toi...",
   
   "settingsAccountDetails": "Informations du compte",
+  "editProfilePrivateDataDesc": "Ces informations sont privées et ne sont utilisées que pour la communication.",
 
   "guestTitle": "Bienvenue en tant qu'invité",
   "guestSubtitle": "Crée un compte ou connecte-toi pour vibrer avec ta squad, gagner des VP et personnaliser ton profil.",

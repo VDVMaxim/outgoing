@@ -88,7 +88,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       await ref.read(userProfileServiceProvider).updateProfile(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        nickname: ref.read(userProfileServiceProvider).nickname ?? '', // Behoudt huidige nickname
+        nickname: ref.read(userProfileServiceProvider).nickname ?? '', 
         bio: _bioController.text.trim(),
       );
       if (mounted) {
@@ -155,32 +155,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         onPressed: _removeImage,
                         child: Text(AppLocalizations.of(context)!.editProfileRemovePhoto, style: const TextStyle(color: Colors.redAccent)),
                       ),
-                    ] else const SizedBox(height: 24),
-                    
-                    TextFormField(
-                      controller: _firstNameController,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!.accountFormFirstName,
-                        labelStyle: const TextStyle(color: Colors.grey),
-                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12)),
-                      ),
-                      validator: (val) => val == null || val.isEmpty ? AppLocalizations.of(context)!.errorFirstNameRequired : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _lastNameController,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(context)!.accountFormLastName,
-                        labelStyle: const TextStyle(color: Colors.grey),
-                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12)),
-                      ),
-                      validator: (val) => val == null || val.isEmpty ? AppLocalizations.of(context)!.errorLastNameRequired : null,
-                    ),
-                    const SizedBox(height: 24),
+                    ] else const SizedBox(height: 32),
 
-                    // --- NICKNAME MET POTLOODJE ---
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -214,7 +190,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                       builder: (_) => EditNicknameScreen(
                                         initialNickname: profileService.nickname,
                                         isAuthenticated: profileService.isAuthenticated,
-                                        onSaved: () {}, // UI update automatisch via ref.watch
+                                        onSaved: () {},
                                       ),
                                     ),
                                   );
@@ -226,19 +202,68 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ),
                       ],
                     ),
-                    // ------------------------------
 
                     const SizedBox(height: 16),
+                    
                     TextFormField(
                       controller: _bioController,
                       maxLines: 3,
                       style: TextStyle(color: isDark ? Colors.white : Colors.black),
                       decoration: InputDecoration(
-                        labelText: 'Bio',
+                        labelText: AppLocalizations.of(context)!.bio,
                         labelStyle: const TextStyle(color: Colors.grey),
                         enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12)),
                       ),
                     ),
+                    
+                    const SizedBox(height: 32),
+                    Divider(color: isDark ? Colors.white24 : Colors.black12),
+                    const SizedBox(height: 24),
+
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        AppLocalizations.of(context)!.settingsAccountDetails,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        AppLocalizations.of(context)!.editProfilePrivateDataDesc,
+                        style: const TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _firstNameController,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.accountFormFirstName,
+                        labelStyle: const TextStyle(color: Colors.grey),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12)),
+                      ),
+                      validator: (val) => val == null || val.isEmpty ? AppLocalizations.of(context)!.errorFirstNameRequired : null,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    TextFormField(
+                      controller: _lastNameController,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.accountFormLastName,
+                        labelStyle: const TextStyle(color: Colors.grey),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12)),
+                      ),
+                      validator: (val) => val == null || val.isEmpty ? AppLocalizations.of(context)!.errorLastNameRequired : null,
+                    ),
+                    
                     const SizedBox(height: 32),
                     SizedBox(
                       width: double.infinity,

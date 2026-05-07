@@ -31,6 +31,7 @@ class MyProfileScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final profileService = ref.watch(userProfileServiceProvider);
     final userId = ref.watch(authProvider).userId ?? profileService.authUserId;
+    final isAuth = ref.watch(authProvider).isAuthenticated;
 
     if (userId == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -43,9 +44,30 @@ class MyProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          profileService.nickname ?? AppLocalizations.of(context)!.navProfile,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              profileService.nickname ?? AppLocalizations.of(context)!.navProfile,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditNicknameScreen(
+                      initialNickname: profileService.nickname,
+                      isAuthenticated: isAuth,
+                      onSaved: () {},
+                    ),
+                  ),
+                );
+              },
+              child: const Icon(Icons.edit, color: Colors.blueAccent, size: 18),
+            ),
+          ],
         ),
         centerTitle: false,
         actions: [
@@ -76,12 +98,12 @@ class MyProfileScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(profileStatsProvider(userId)),
             child: ListView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               children: [
                 Row(
                   children: [
                     UserAvatar(name: nickname, imageUrl: profileService.avatarUrl, size: 80),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -99,18 +121,8 @@ class MyProfileScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                if (profileService.firstName != null)
-                  Text(
-                    '${profileService.firstName} ${profileService.lastName ?? ''}',
-                    style: TextStyle(
-                      fontSize: 18, 
-                      fontWeight: FontWeight.bold, 
-                      color: isDark ? Colors.white : Colors.black
-                    ),
-                  ),
                 if (bio != null && bio.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Text(
                     bio,
                     style: TextStyle(
@@ -120,7 +132,7 @@ class MyProfileScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: ShadButton.outline(

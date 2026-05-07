@@ -316,6 +316,7 @@
   "editProfileBioHint": "Tell something about yourself...",
   
   "settingsAccountDetails": "Account Details",
+  "editProfilePrivateDataDesc": "These details are private and are only used for communication.",
 
   "guestTitle": "Welcome as Guest",
   "guestSubtitle": "Create an account or log in to vibe with your squad, earn VP and customize your profile.",

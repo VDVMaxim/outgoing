@@ -1588,6 +1588,12 @@ abstract class AppLocalizations {
   /// **'Accountgegevens'**
   String get settingsAccountDetails;
 
+  /// No description provided for @editProfilePrivateDataDesc.
+  ///
+  /// In nl, this message translates to:
+  /// **'Deze gegevens zijn privé en worden enkel voor communicatie gebruikt.'**
+  String get editProfilePrivateDataDesc;
+
   /// No description provided for @guestTitle.
   ///
   /// In nl, this message translates to:

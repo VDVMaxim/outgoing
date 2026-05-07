@@ -794,6 +794,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsAccountDetails => 'Accountgegevens';
 
   @override
+  String get editProfilePrivateDataDesc =>
+      'Deze gegevens zijn privé en worden enkel voor communicatie gebruikt.';
+
+  @override
   String get guestTitle => 'Welkom als Gast';
 
   @override

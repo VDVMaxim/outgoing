@@ -801,6 +801,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsAccountDetails => 'Informations du compte';
 
   @override
+  String get editProfilePrivateDataDesc =>
+      'Ces informations sont privées et ne sont utilisées que pour la communication.';
+
+  @override
   String get guestTitle => 'Bienvenue en tant qu\'invité';
 
   @override

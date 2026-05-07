@@ -792,6 +792,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAccountDetails => 'Account Details';
 
   @override
+  String get editProfilePrivateDataDesc =>
+      'These details are private and are only used for communication.';
+
+  @override
   String get guestTitle => 'Welcome as Guest';
 
   @override
