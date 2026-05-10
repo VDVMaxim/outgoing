@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:flutter_clubapp/core/providers/follow_provider.dart';
+import 'package:flutter_clubapp/features/auth/presentation/providers/auth_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/follow_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
+
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 import 'package:flutter_clubapp/features/settings/screens/settings_screen.dart';
@@ -13,7 +15,13 @@ import 'search_users_screen.dart';
 class MyProfileScreen extends ConsumerWidget {
   const MyProfileScreen({super.key});
 
-  void _navigateToConnections(BuildContext context, WidgetRef ref, int initialTab, String userId, String nickname) {
+  void _navigateToConnections(
+    BuildContext context,
+    WidgetRef ref,
+    int initialTab,
+    String userId,
+    String nickname,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -29,8 +37,8 @@ class MyProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final profileService = ref.watch(userProfileServiceProvider);
-    final userId = ref.watch(authProvider).userId ?? profileService.authUserId;
+    final profileState = ref.watch(userProfileProvider);
+    final userId = ref.watch(authProvider).userId ?? profileState.authUserId;
     final isAuth = ref.watch(authProvider).isAuthenticated;
 
     if (userId == null) {
@@ -48,8 +56,11 @@ class MyProfileScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              profileService.nickname ?? AppLocalizations.of(context)!.navProfile,
-              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+              profileState.nickname ?? AppLocalizations.of(context)!.navProfile,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(width: 8),
             GestureDetector(
@@ -58,7 +69,7 @@ class MyProfileScreen extends ConsumerWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => EditNicknameScreen(
-                      initialNickname: profileService.nickname,
+                      initialNickname: profileState.nickname,
                       isAuthenticated: isAuth,
                       onSaved: () {},
                     ),
@@ -72,15 +83,27 @@ class MyProfileScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           IconButton(
-            icon: Icon(Icons.search, color: isDark ? Colors.white : Colors.black),
+            icon: Icon(
+              Icons.search,
+              color: isDark ? Colors.white : Colors.black,
+            ),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchUsersScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
+              );
             },
           ),
           IconButton(
-            icon: Icon(Icons.settings, color: isDark ? Colors.white : Colors.black),
+            icon: Icon(
+              Icons.settings,
+              color: isDark ? Colors.white : Colors.black,
+            ),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
             },
           ),
           const SizedBox(width: 8),
@@ -88,33 +111,65 @@ class MyProfileScreen extends ConsumerWidget {
       ),
       body: profileStatsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text(AppLocalizations.of(context)!.errorLoadingProfile)),
+        error: (e, st) => Center(
+          child: Text(AppLocalizations.of(context)!.errorLoadingProfile),
+        ),
         data: (profileStats) {
-          final nickname = profileStats?.nickname ?? profileService.nickname ?? AppLocalizations.of(context)!.eventsUnknownCrowd;
-          final bio = profileStats?.bio ?? profileService.bio;
+          final nickname = profileState.nickname ??
+              (isAuth
+                  ? AppLocalizations.of(context)!.eventsUnknownCrowd
+                  : AppLocalizations.of(context)!.settingsAnonymous);
+          final bio = profileState.bio ?? profileStats?.bio;
           final followers = profileStats?.followerCount ?? 0;
           final following = profileStats?.followingCount ?? 0;
 
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(profileStatsProvider(userId)),
+            onRefresh: () async {
+              ref.invalidate(profileStatsProvider(userId));
+              await ref.read(userProfileProvider.notifier).loadProfileFromSupabase();
+            },
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 Row(
                   children: [
-                    UserAvatar(name: nickname, imageUrl: profileService.avatarUrl, size: 80),
+                    UserAvatar(
+                      name: nickname,
+                      imageUrl: profileState.avatarUrl,
+                      size: 80,
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           GestureDetector(
-                            onTap: () => _navigateToConnections(context, ref, 0, userId, nickname),
-                            child: _buildStatColumn(AppLocalizations.of(context)!.followers, followers.toString(), isDark),
+                            onTap: () => _navigateToConnections(
+                              context,
+                              ref,
+                              0,
+                              userId,
+                              nickname,
+                            ),
+                            child: _buildStatColumn(
+                              AppLocalizations.of(context)!.followers,
+                              followers.toString(),
+                              isDark,
+                            ),
                           ),
                           GestureDetector(
-                            onTap: () => _navigateToConnections(context, ref, 1, userId, nickname),
-                            child: _buildStatColumn(AppLocalizations.of(context)!.following, following.toString(), isDark),
+                            onTap: () => _navigateToConnections(
+                              context,
+                              ref,
+                              1,
+                              userId,
+                              nickname,
+                            ),
+                            child: _buildStatColumn(
+                              AppLocalizations.of(context)!.following,
+                              following.toString(),
+                              isDark,
+                            ),
                           ),
                         ],
                       ),
@@ -126,7 +181,7 @@ class MyProfileScreen extends ConsumerWidget {
                   Text(
                     bio,
                     style: TextStyle(
-                      fontSize: 15, 
+                      fontSize: 15,
                       color: isDark ? Colors.white70 : Colors.black87,
                       height: 1.4,
                     ),
@@ -137,7 +192,12 @@ class MyProfileScreen extends ConsumerWidget {
                   width: double.infinity,
                   child: ShadButton.outline(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
                     },
                     child: Text(AppLocalizations.of(context)!.editProfile),
                   ),
@@ -157,20 +217,21 @@ class MyProfileScreen extends ConsumerWidget {
         Text(
           count,
           style: TextStyle(
-            fontSize: 20, 
-            fontWeight: FontWeight.bold, 
-            color: isDark ? Colors.white : Colors.black
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 14, 
-            color: isDark ? Colors.white54 : Colors.black54
+            fontSize: 14,
+            color: isDark ? Colors.white54 : Colors.black54,
           ),
         ),
       ],
     );
   }
 }
+

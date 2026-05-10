@@ -5,7 +5,7 @@ import 'package:flutter_clubapp/core/widgets/animated_background.dart';
 import 'package:flutter_clubapp/features/onboarding/screens/onboarding_setup.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
 import 'package:flutter_clubapp/features/auth/screens/login_screen.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/auth/presentation/providers/auth_provider.dart';
 
 class OptionScreen extends ConsumerWidget {
   const OptionScreen({super.key});
@@ -46,14 +46,9 @@ class OptionScreen extends ConsumerWidget {
                   description: l10n.optionScreenAnonymousDesc,
                   isDark: isDark,
                   onTap: () async {
-                    // FIX: Haal providers op vóór de await!
-                    final authService = ref.read(authServiceProvider);
-                    final authNotifier = ref.read(authProvider.notifier);
-                    
-                    // Gooi eventuele oude ghost-sessies weg zodat je ECHT anoniem bent!
-                    await authService.signOut();
-                    authNotifier.refresh();
-                    
+                    await ref.read(authProvider.notifier).signOut();
+                    await ref.read(authProvider.notifier).signInAnonymously();
+
                     if (context.mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,

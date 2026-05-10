@@ -7,10 +7,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/constants/env.dart';
 import 'features/onboarding/screens/splash_screen.dart';
-import 'core/providers/service_providers.dart';
-import 'core/providers/shared_prefs_provider.dart';
-import 'core/services/settings_service.dart';
-import 'core/services/push_notification_service.dart'; 
+import 'package:flutter_clubapp/features/settings/presentation/providers/settings_provider.dart';
+import 'package:flutter_clubapp/core/providers/shared_prefs_provider.dart';
+import 'package:flutter_clubapp/core/services/push_notification_service.dart';
+
+final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  return PushNotificationService();
+});
 
 const Color _kSplashSurface = Color(0xFF09090B);
 
@@ -21,24 +24,20 @@ ThemeData _appThemeForBrightness(Brightness brightness) {
       canvasColor: _kSplashSurface,
     );
   }
-  return ThemeData.light(useMaterial3: true).copyWith(
-    scaffoldBackgroundColor: Colors.white,
-    canvasColor: Colors.white,
-  );
+  return ThemeData.light(
+    useMaterial3: true,
+  ).copyWith(scaffoldBackgroundColor: Colors.white, canvasColor: Colors.white);
 }
 
 Future<void> _initializeSupabase() async {
-  await Supabase.initialize(
-    url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
-  );
+  await Supabase.initialize(url: Env.supabaseUrl, anonKey: Env.supabaseAnonKey);
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await _initializeSupabase();
-  
+
   // Laad SharedPreferences zodat onze Notifiers er synchroon aan kunnen
   final prefs = await SharedPreferences.getInstance();
 
@@ -74,11 +73,7 @@ class ClubApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('nl'),
-        Locale('en'),
-        Locale('fr'),
-      ],
+      supportedLocales: const [Locale('nl'), Locale('en'), Locale('fr')],
       localeResolutionCallback: (deviceLocale, supportedLocales) {
         if (locale != null) return locale;
         if (deviceLocale == null) return const Locale('en');

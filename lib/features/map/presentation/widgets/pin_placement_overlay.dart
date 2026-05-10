@@ -38,7 +38,11 @@ class PinPlacementOverlay extends StatelessWidget {
               color: isDark ? const Color(0xFF18181B) : Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(0, 5))
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 15,
+                  offset: Offset(0, 5),
+                ),
               ],
             ),
             child: Column(
@@ -56,11 +60,17 @@ class PinPlacementOverlay extends StatelessWidget {
                 GestureDetector(
                   onTap: onTimePick,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.blueAccent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3), width: 2),
+                      border: Border.all(
+                        color: Colors.blueAccent.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
                     child: Text(
                       '${pinTargetTime.hour.toString().padLeft(2, '0')}:${pinTargetTime.minute.toString().padLeft(2, '0')}',

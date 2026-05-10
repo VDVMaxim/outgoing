@@ -9,7 +9,8 @@ class UserAvatar extends StatefulWidget {
   final bool isOnline;
   final bool showPulse;
   final VoidCallback? onPulseTrigger;
-  final bool isSpeaking; // FIX: Voor de Discord Walkie-Talkie ring
+  final bool isSpeaking;
+  final Object? pulseKey;
 
   const UserAvatar({
     super.key,
@@ -21,6 +22,7 @@ class UserAvatar extends StatefulWidget {
     this.showPulse = false,
     this.onPulseTrigger,
     this.isSpeaking = false,
+    this.pulseKey,
   });
 
   @override
@@ -36,17 +38,31 @@ class _UserAvatarState extends State<UserAvatar> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(
+        milliseconds: 1200,
+      ), // Iets langer voor een mooie golf
       vsync: this,
     );
+    // Begint nu exact op avatar grootte (1.0) en groeit naar buiten (1.8)
     _pulseAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.5,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
-    _pulseOpacityAnimation = Tween<double>(
       begin: 1.0,
+      end: 1.8,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
+
+    _pulseOpacityAnimation = Tween<double>(
+      begin: 0.8,
       end: 0.0,
     ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
+  }
+
+  @override
+  void didUpdateWidget(UserAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showPulse &&
+        widget.pulseKey != null &&
+        widget.pulseKey != oldWidget.pulseKey) {
+      triggerPulse();
+    }
   }
 
   @override
@@ -58,10 +74,11 @@ class _UserAvatarState extends State<UserAvatar> with TickerProviderStateMixin {
   void triggerPulse() {
     _pulseController.reset();
     _pulseController.forward();
+    widget.onPulseTrigger?.call();
   }
 
   String get initials {
-    if (widget.name.isEmpty) return '?';
+    if (widget.name.trim().isEmpty) return '?';
 
     final parts = widget.name.trim().split(RegExp(r'\s+'));
     if (parts.length >= 2) {
@@ -78,103 +95,101 @@ class _UserAvatarState extends State<UserAvatar> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    Widget avatarContent = AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: widget.size,
+      height: widget.size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: backgroundColor,
+        border: Border.all(
+          color: widget.isSpeaking
+              ? const Color(0xFF43B581)
+              : Colors.transparent,
+          width: 3,
+        ),
+        boxShadow: widget.isSpeaking
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF43B581).withValues(alpha: 0.6),
+                  blurRadius: 12,
+                  spreadRadius: 4,
+                ),
+              ]
+            : [],
+        image: widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+            ? DecorationImage(
+                image: NetworkImage(widget.imageUrl!),
+                fit: BoxFit.cover,
+              )
+            : null,
+      ),
+      child: widget.imageUrl == null || widget.imageUrl!.isEmpty
+          ? Center(
+              child: Text(
+                initials,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: widget.size * 0.4,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : null,
+    );
+
     return SizedBox(
       width: widget.size,
-      height: widget.size + 16,
+      height: widget.size, // FIX 1: Verwijder de extra onzichtbare +16 padding
       child: Stack(
-        alignment: Alignment.topCenter,
+        alignment: Alignment.center, // FIX 2: Netjes uitlijnen in het midden
+        clipBehavior: Clip.none,
         children: [
-          Stack(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: widget.size,
-                height: widget.size,
+          // FIX 3: Pulse zit nu achter de avatar en groeit als een ring naar buiten
+          if (widget.showPulse)
+            AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _pulseAnimation.value,
+                  child: Opacity(
+                    opacity: _pulseOpacityAnimation.value,
+                    child: Container(
+                      width: widget.size,
+                      height: widget.size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blueAccent, width: 3),
+                        color: Colors.blueAccent.withValues(alpha: 0.15),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
+          avatarContent,
+
+          if (widget.showStatus)
+            Positioned(
+              right: -widget.size * 0.05,
+              bottom: -widget.size * 0.05,
+              child: Container(
+                width: widget.size * 0.36,
+                height: widget.size * 0.36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: backgroundColor,
-                  // FIX: Exacte Discord-stijl groene ring!
+                  color: widget.isOnline
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFF44336),
                   border: Border.all(
-                    color: widget.isSpeaking ? const Color(0xFF43B581) : Colors.transparent, 
-                    width: 3
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    width: 2,
                   ),
-                  boxShadow: widget.isSpeaking
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFF43B581).withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          )
-                        ]
-                      : [],
-                  image: widget.imageUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(widget.imageUrl!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
                 ),
-                child: widget.imageUrl == null
-                    ? Center(
-                        child: Text(
-                          initials,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: widget.size * 0.4,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
+                child: widget.isOnline
+                    ? _OnlinePulsingDot(size: widget.size * 0.36)
                     : null,
-              ),
-              if (widget.showStatus)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: widget.size * 0.36,
-                    height: widget.size * 0.36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: widget.isOnline
-                          ? const Color(0xFF4CAF50)
-                          : const Color(0xFFF44336),
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        width: 2,
-                      ),
-                    ),
-                    child: widget.isOnline
-                        ? _OnlinePulsingDot(size: widget.size * 0.36)
-                        : null,
-                  ),
-                ),
-            ],
-          ),
-          if (widget.showPulse)
-            Positioned(
-              bottom: 0,
-              child: AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: Opacity(
-                      opacity: _pulseOpacityAnimation.value,
-                      child: Container(
-                        width: widget.size * 0.4,
-                        height: widget.size * 0.4,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFF2196F3),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
               ),
             ),
         ],

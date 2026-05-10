@@ -1,8 +1,10 @@
+import 'package:flutter_clubapp/features/map/data/location_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
+import 'package:flutter_clubapp/features/places/domain/models/place.dart';
+
+import 'package:flutter_clubapp/features/places/presentation/providers/place_provider.dart';
+
 
 final eventsProvider = FutureProvider.autoDispose<List<Place>>((ref) async {
   LatLng? userLocation;
@@ -12,6 +14,6 @@ final eventsProvider = FutureProvider.autoDispose<List<Place>>((ref) async {
       userLocation = LatLng(pos.latitude, pos.longitude);
     }
   } catch (_) {}
-  
+
   return ref.read(clubRepositoryProvider).getEvents(userLocation: userLocation);
 });

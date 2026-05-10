@@ -57,7 +57,10 @@ class _SearchUsersScreenState extends ConsumerState<SearchUsersScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -106,14 +109,15 @@ class _SearchUsersScreenState extends ConsumerState<SearchUsersScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => PublicProfileScreen(userId: user['user_id']),
+                              builder: (_) =>
+                                  PublicProfileScreen(userId: user['user_id']),
                             ),
                           );
                         },
                         contentPadding: const EdgeInsets.symmetric(vertical: 4),
                         leading: UserAvatar(
                           name: user['nickname'] ?? '?',
-                          imageUrl: user['avatar_url'], 
+                          imageUrl: user['avatar_url'],
                           size: 40,
                         ),
                         title: Text(
@@ -123,7 +127,11 @@ class _SearchUsersScreenState extends ConsumerState<SearchUsersScreen> {
                             color: isDark ? Colors.white : Colors.black,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          size: 20,
+                          color: Colors.grey,
+                        ),
                       );
                     },
                   ),

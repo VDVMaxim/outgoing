@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/providers/favorites_provider.dart';
-import 'package:flutter_clubapp/core/services/settings_service.dart';
+import 'package:flutter_clubapp/features/places/domain/models/place.dart';
+
+import 'package:flutter_clubapp/features/events/presentation/providers/favorites_provider.dart';
+import 'package:flutter_clubapp/features/settings/presentation/providers/settings_provider.dart';
 import 'package:flutter_clubapp/features/events/providers/events_provider.dart';
-import '../../../places/widgets/place_bottom_sheet.dart';
+import 'package:flutter_clubapp/features/places/presentation/widgets/place_bottom_sheet.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
@@ -31,7 +32,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => PlaceBottomSheet(place: place),
+      builder: (context) => ClubBottomSheet(place: place),
     );
   }
 
@@ -40,7 +41,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
     final currentMode = ref.watch(themeProvider);
     final favorites = ref.watch(favoritesProvider);
     final eventsAsyncValue = ref.watch(eventsProvider);
-    
+
     final isDark =
         currentMode == ThemeMode.dark ||
         (currentMode == ThemeMode.system &&
@@ -104,10 +105,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
       body: eventsAsyncValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
-          child: Text(
-            l10n.eventsError,
-            style: TextStyle(color: textColor),
-          ),
+          child: Text(l10n.eventsError, style: TextStyle(color: textColor)),
         ),
         data: (allPlaces) {
           List<Place> events = allPlaces.where((p) {
@@ -119,7 +117,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
               final nameMatch = p.name.toLowerCase().contains(q);
               final orgMatch = p.organizer?.toLowerCase().contains(q) ?? false;
               final genreMatch = p.genre?.toLowerCase().contains(q) ?? false;
-              final eventMatch = p.eventName?.toLowerCase().contains(q) ?? false;
+              final eventMatch =
+                  p.eventName?.toLowerCase().contains(q) ?? false;
               if (!nameMatch && !orgMatch && !genreMatch && !eventMatch) {
                 return false;
               }
@@ -136,10 +135,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
 
           if (events.isEmpty) {
             return Center(
-              child: Text(
-                l10n.eventsEmpty,
-                style: TextStyle(color: textColor),
-              ),
+              child: Text(l10n.eventsEmpty, style: TextStyle(color: textColor)),
             );
           }
 
@@ -180,7 +176,9 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                           size: 24,
                         ),
                         onPressed: () {
-                          ref.read(favoritesProvider.notifier).toggleFavorite(place.id);
+                          ref
+                              .read(favoritesProvider.notifier)
+                              .toggleFavorite(place.id);
                         },
                       ),
                     ],
@@ -213,13 +211,17 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                             Icon(
                               Icons.shield,
                               size: 14,
-                              color: place.isVereniging ? Colors.blueAccent : Colors.grey,
+                              color: place.isVereniging
+                                  ? Colors.blueAccent
+                                  : Colors.grey,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               place.organizer!,
                               style: TextStyle(
-                                color: place.isVereniging ? Colors.blueAccent : Colors.grey,
+                                color: place.isVereniging
+                                    ? Colors.blueAccent
+                                    : Colors.grey,
                               ),
                             ),
                           ],
@@ -269,15 +271,19 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                                 Icon(
                                   Icons.local_fire_department,
                                   size: 16,
-                                  color: isDark ? Colors.white54 : Colors.black54,
+                                  color: isDark
+                                      ? Colors.white54
+                                      : Colors.black54,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  place.recentLikes > 0 
-                                      ? '${place.recentLikes} Vibes' 
+                                  place.recentLikes > 0
+                                      ? '${place.recentLikes} Vibes'
                                       : l10n.eventsUnknownCrowd,
                                   style: TextStyle(
-                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.black54,
                                   ),
                                 ),
                               ],

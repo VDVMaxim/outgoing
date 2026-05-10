@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/auth/presentation/providers/auth_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:flutter_clubapp/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthFormState {
   final String email;
@@ -9,14 +11,14 @@ class AuthFormState {
   final String lastName;
   final String nickname;
   final String bio;
-  
+
   final String? emailError;
   final String? passwordError;
   final String? confirmPasswordError;
   final String? firstNameError;
   final String? lastNameError;
   final String? nicknameError;
-  
+
   final AsyncValue<void> submissionStatus;
 
   const AuthFormState({
@@ -37,10 +39,19 @@ class AuthFormState {
   });
 
   AuthFormState copyWith({
-    String? email, String? password, String? confirmPassword,
-    String? firstName, String? lastName, String? nickname, String? bio,
-    String? emailError, String? passwordError, String? confirmPasswordError,
-    String? firstNameError, String? lastNameError, String? nicknameError,
+    String? email,
+    String? password,
+    String? confirmPassword,
+    String? firstName,
+    String? lastName,
+    String? nickname,
+    String? bio,
+    String? emailError,
+    String? passwordError,
+    String? confirmPasswordError,
+    String? firstNameError,
+    String? lastNameError,
+    String? nicknameError,
     AsyncValue<void>? submissionStatus,
     bool clearErrors = false,
   }) {
@@ -54,8 +65,12 @@ class AuthFormState {
       bio: bio ?? this.bio,
       emailError: clearErrors ? null : (emailError ?? this.emailError),
       passwordError: clearErrors ? null : (passwordError ?? this.passwordError),
-      confirmPasswordError: clearErrors ? null : (confirmPasswordError ?? this.confirmPasswordError),
-      firstNameError: clearErrors ? null : (firstNameError ?? this.firstNameError),
+      confirmPasswordError: clearErrors
+          ? null
+          : (confirmPasswordError ?? this.confirmPasswordError),
+      firstNameError: clearErrors
+          ? null
+          : (firstNameError ?? this.firstNameError),
       lastNameError: clearErrors ? null : (lastNameError ?? this.lastNameError),
       nicknameError: clearErrors ? null : (nicknameError ?? this.nicknameError),
       submissionStatus: submissionStatus ?? this.submissionStatus,
@@ -66,40 +81,63 @@ class AuthFormState {
 class AuthFormNotifier extends AutoDisposeNotifier<AuthFormState> {
   @override
   AuthFormState build() {
-    // We lezen de huidige nickname uit (anoniem of eerder opgeslagen)
-    // en stellen deze meteen in als startwaarde voor het formulier!
-    final profile = ref.read(userProfileServiceProvider);
-    
-    return AuthFormState(
-      nickname: profile.nickname ?? '',
-    );
+    final profileState = ref.read(userProfileProvider);
+
+    return AuthFormState(nickname: profileState.nickname ?? '');
   }
 
-  void updateEmail(String value) => state = state.copyWith(email: value.trim(), clearErrors: true);
-  void updatePassword(String value) => state = state.copyWith(password: value, clearErrors: true);
-  void updateConfirmPassword(String value) => state = state.copyWith(confirmPassword: value, clearErrors: true);
-  void updateFirstName(String value) => state = state.copyWith(firstName: value.trim(), clearErrors: true);
-  void updateLastName(String value) => state = state.copyWith(lastName: value.trim(), clearErrors: true);
-  void updateNickname(String value) => state = state.copyWith(nickname: value.trim(), clearErrors: true);
+  void updateEmail(String value) =>
+      state = state.copyWith(email: value.trim(), clearErrors: true);
+  void updatePassword(String value) =>
+      state = state.copyWith(password: value, clearErrors: true);
+  void updateConfirmPassword(String value) =>
+      state = state.copyWith(confirmPassword: value, clearErrors: true);
+  void updateFirstName(String value) =>
+      state = state.copyWith(firstName: value.trim(), clearErrors: true);
+  void updateLastName(String value) =>
+      state = state.copyWith(lastName: value.trim(), clearErrors: true);
+  void updateNickname(String value) =>
+      state = state.copyWith(nickname: value.trim(), clearErrors: true);
   void updateBio(String value) => state = state.copyWith(bio: value.trim());
 
   bool validateRegistrationPage(int page) {
     bool isValid = true;
     String? fNameErr, lNameErr, nickErr, emailErr, passErr, confPassErr;
 
-    if (page == 0 && state.firstName.isEmpty) { fNameErr = 'errorFirstNameRequired'; isValid = false; }
-    if (page == 1 && state.lastName.isEmpty) { lNameErr = 'errorLastNameRequired'; isValid = false; }
-    if (page == 2 && state.nickname.length < 3) { nickErr = 'errorNicknameLength'; isValid = false; }
-    if (page == 4 && (!state.email.contains('@') || state.email.isEmpty)) { emailErr = 'errorInvalidEmail'; isValid = false; }
+    if (page == 0 && state.firstName.isEmpty) {
+      fNameErr = 'errorFirstNameRequired';
+      isValid = false;
+    }
+    if (page == 1 && state.lastName.isEmpty) {
+      lNameErr = 'errorLastNameRequired';
+      isValid = false;
+    }
+    if (page == 2 && state.nickname.length < 3) {
+      nickErr = 'errorNicknameLength';
+      isValid = false;
+    }
+    if (page == 4 && (!state.email.contains('@') || state.email.isEmpty)) {
+      emailErr = 'errorInvalidEmail';
+      isValid = false;
+    }
     if (page == 5) {
-      if (state.password.length < 6) { passErr = 'errorPasswordLength'; isValid = false; }
-      if (state.password != state.confirmPassword) { confPassErr = 'errorPasswordMismatch'; isValid = false; }
+      if (state.password.length < 6) {
+        passErr = 'errorPasswordLength';
+        isValid = false;
+      }
+      if (state.password != state.confirmPassword) {
+        confPassErr = 'errorPasswordMismatch';
+        isValid = false;
+      }
     }
 
     state = state.copyWith(
-      firstNameError: fNameErr, lastNameError: lNameErr,
-      nicknameError: nickErr, emailError: emailErr,
-      passwordError: passErr, confirmPasswordError: confPassErr,
+      firstNameError: fNameErr,
+      lastNameError: lNameErr,
+      nicknameError: nickErr,
+      emailError: emailErr,
+      passwordError: passErr,
+      confirmPasswordError: confPassErr,
     );
     return isValid;
   }
@@ -107,20 +145,38 @@ class AuthFormNotifier extends AutoDisposeNotifier<AuthFormState> {
   Future<void> login() async {
     if (state.email.isEmpty || state.password.isEmpty) return;
     state = state.copyWith(submissionStatus: const AsyncLoading());
-    final success = await ref.read(authProvider.notifier).signIn(email: state.email, password: state.password);
-    state = state.copyWith(submissionStatus: success ? const AsyncData(null) : AsyncError("Login failed", StackTrace.current));
+    final result = await ref
+        .read(authProvider.notifier)
+        .signIn(email: state.email, password: state.password);
+    state = state.copyWith(
+      submissionStatus: result.status == AuthResultStatus.success
+          ? const AsyncData(null)
+          : AsyncError(result.errorMessage ?? "Login failed", StackTrace.current),
+    );
   }
 
   Future<bool> register() async {
     state = state.copyWith(submissionStatus: const AsyncLoading());
-    final success = await ref.read(authProvider.notifier).signUp(
-      email: state.email, password: state.password,
-      firstName: state.firstName, lastName: state.lastName,
-      nickname: state.nickname, bio: state.bio,
+    final result = await ref
+        .read(authProvider.notifier)
+        .signUp(
+          email: state.email,
+          password: state.password,
+          firstName: state.firstName,
+          lastName: state.lastName,
+          nickname: state.nickname,
+          bio: state.bio,
+        );
+    state = state.copyWith(
+      submissionStatus: result.status == AuthResultStatus.success
+          ? const AsyncData(null)
+          : AsyncError(result.errorMessage ?? "Registration failed", StackTrace.current),
     );
-    state = state.copyWith(submissionStatus: success ? const AsyncData(null) : AsyncError("Registration failed", StackTrace.current));
-    return success;
+    return result.status == AuthResultStatus.success;
   }
 }
 
-final authFormProvider = NotifierProvider.autoDispose<AuthFormNotifier, AuthFormState>(() => AuthFormNotifier());
+final authFormProvider =
+    NotifierProvider.autoDispose<AuthFormNotifier, AuthFormState>(
+      () => AuthFormNotifier(),
+    );

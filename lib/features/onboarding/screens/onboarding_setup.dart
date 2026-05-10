@@ -1,4 +1,3 @@
-// lib/features/onboarding/screens/onboarding_setup.dart
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
@@ -8,7 +7,7 @@ import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.da
 import 'package:flutter_clubapp/features/onboarding/widgets/notification_step.dart';
 import 'package:flutter_clubapp/features/navigation/screens/main_navigation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
 
 class OnboardingSetup extends ConsumerStatefulWidget {
   const OnboardingSetup({super.key});
@@ -19,8 +18,9 @@ class OnboardingSetup extends ConsumerStatefulWidget {
 
 class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   final TextEditingController _nicknameController = TextEditingController();
-  final GlobalKey<OnboardingWizardState> _wizardKey = GlobalKey<OnboardingWizardState>();
-  
+  final GlobalKey<OnboardingWizardState> _wizardKey =
+      GlobalKey<OnboardingWizardState>();
+
   bool _isInitialized = false;
   bool _hasNickname = false;
 
@@ -31,14 +31,14 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   }
 
   Future<void> _initializeProfile() async {
-    final profile = ref.read(userProfileServiceProvider);
+    final profileState = ref.read(userProfileProvider);
     if (mounted) {
       setState(() {
-        _hasNickname = profile.hasNickname;
+        _hasNickname = profileState.hasNickname;
         _isInitialized = true;
 
-        if (profile.hasNickname) {
-          _nicknameController.text = profile.nickname!;
+        if (profileState.hasNickname) {
+          _nicknameController.text = profileState.nickname!;
         }
       });
     }
@@ -51,13 +51,13 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   }
 
   Future<void> _finishOnboarding() async {
-    final profile = ref.read(userProfileServiceProvider);
-    
+    final notifier = ref.read(userProfileProvider.notifier);
+
     if (!_hasNickname && _nicknameController.text.trim().isNotEmpty) {
-      profile.nickname = _nicknameController.text.trim();
+      await notifier.setNickname(_nicknameController.text.trim());
     }
-    
-    profile.hasCompletedOnboarding = true;
+
+    await notifier.setHasCompletedOnboarding(true);
 
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -99,12 +99,10 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
             ),
           ]
         : [
-            _NicknameWizardStep(
-              controller: _nicknameController,
-            ),
+            _NicknameWizardStep(controller: _nicknameController),
             NotificationStep(wizardKey: _wizardKey),
             _CompleteWizardStep(
-              hasRegistrationCompleted: true, // Fix voor de infinite spinner!
+              hasRegistrationCompleted: true,
               onComplete: _onCompletePressed,
             ),
           ];
@@ -121,7 +119,9 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
           return !skipNickname && currentStep == 0;
         },
         nextButtonText: (context, currentStep, totalSteps) {
-          if (!skipNickname && currentStep == 0) return AppLocalizations.of(context)!.accountFormNext;
+          if (!skipNickname && currentStep == 0) {
+            return AppLocalizations.of(context)!.accountFormNext;
+          }
           return '';
         },
       ),
@@ -132,9 +132,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
 class _NicknameWizardStep implements OnboardingStep {
   final TextEditingController controller;
 
-  _NicknameWizardStep({
-    required this.controller,
-  });
+  _NicknameWizardStep({required this.controller});
 
   @override
   Widget build(BuildContext context, VoidCallback onStateRefresh) {

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../core/models/association.dart';
-import '../../associations/providers/association_provider.dart';
+import 'package:flutter_clubapp/features/associations/domain/models/association.dart';
+import 'package:flutter_clubapp/features/associations/presentation/providers/association_provider.dart';
 
 class AssociationDetailsScreen extends ConsumerWidget {
   final Association association;
@@ -20,7 +20,7 @@ class AssociationDetailsScreen extends ConsumerWidget {
     final membership = state?.userAssociations
         .where((m) => m.associationId == association.id)
         .firstOrNull;
-        
+
     final isMember = membership != null && membership.role == 'member';
     final isPending = membership != null && membership.role == 'pending';
     final isLoading = stateAsync.isLoading || (state?.isLoading ?? false);
@@ -34,21 +34,24 @@ class AssociationDetailsScreen extends ConsumerWidget {
             pinned: true,
             backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
             iconTheme: IconThemeData(
-              color: isDark ? Colors.white : Colors.black, 
+              color: isDark ? Colors.white : Colors.black,
             ),
             flexibleSpace: FlexibleSpaceBar(
-              background: association.bannerUrl != null && association.bannerUrl!.isNotEmpty
-                  ? Image.network(
-                      association.bannerUrl!,
-                      fit: BoxFit.cover,
-                    )
+              background:
+                  association.bannerUrl != null &&
+                      association.bannerUrl!.isNotEmpty
+                  ? Image.network(association.bannerUrl!, fit: BoxFit.cover)
                   : Container(
                       color: isDark ? Colors.white10 : Colors.black12,
-                      child: Icon(Icons.groups, size: 80, color: isDark ? Colors.white24 : Colors.black26),
+                      child: Icon(
+                        Icons.groups,
+                        size: 80,
+                        color: isDark ? Colors.white24 : Colors.black26,
+                      ),
                     ),
             ),
           ),
-          
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -64,10 +67,14 @@ class AssociationDetailsScreen extends ConsumerWidget {
                         color: isDark ? const Color(0xFF18181B) : Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isDark ? const Color(0xFF09090B) : Colors.white,
+                          color: isDark
+                              ? const Color(0xFF09090B)
+                              : Colors.white,
                           width: 4,
                         ),
-                        image: association.logoUrl != null && association.logoUrl!.isNotEmpty
+                        image:
+                            association.logoUrl != null &&
+                                association.logoUrl!.isNotEmpty
                             ? DecorationImage(
                                 image: NetworkImage(association.logoUrl!),
                                 fit: BoxFit.cover,
@@ -78,10 +85,12 @@ class AssociationDetailsScreen extends ConsumerWidget {
                             color: Colors.black.withValues(alpha: 0.15),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
-                      child: association.logoUrl == null || association.logoUrl!.isEmpty
+                      child:
+                          association.logoUrl == null ||
+                              association.logoUrl!.isEmpty
                           ? Icon(
                               Icons.shield,
                               size: 40,
@@ -110,7 +119,11 @@ class AssociationDetailsScreen extends ConsumerWidget {
                       if (isMember)
                         const Padding(
                           padding: EdgeInsets.only(left: 8.0),
-                          child: Icon(Icons.verified, color: Colors.blueAccent, size: 32),
+                          child: Icon(
+                            Icons.verified,
+                            color: Colors.blueAccent,
+                            size: 32,
+                          ),
                         ),
                     ],
                   ),
@@ -118,29 +131,44 @@ class AssociationDetailsScreen extends ConsumerWidget {
                   if (isMember || isPending) ...[
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: isMember 
-                            ? Colors.blueAccent.withValues(alpha: 0.15) 
+                        color: isMember
+                            ? Colors.blueAccent.withValues(alpha: 0.15)
                             : Colors.amber.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isMember ? Colors.blueAccent.withValues(alpha: 0.3) : Colors.amber.withValues(alpha: 0.3)
-                        )
+                          color: isMember
+                              ? Colors.blueAccent.withValues(alpha: 0.3)
+                              : Colors.amber.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isMember ? Icons.check_circle : Icons.hourglass_empty,
+                            isMember
+                                ? Icons.check_circle
+                                : Icons.hourglass_empty,
                             size: 18,
                             color: isMember ? Colors.blueAccent : Colors.amber,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            isMember ? AppLocalizations.of(context)!.assocActiveMember : AppLocalizations.of(context)!.assocPendingRequest,
+                            isMember
+                                ? AppLocalizations.of(
+                                    context,
+                                  )!.assocActiveMember
+                                : AppLocalizations.of(
+                                    context,
+                                  )!.assocPendingRequest,
                             style: TextStyle(
-                              color: isMember ? Colors.blueAccent : Colors.amber,
+                              color: isMember
+                                  ? Colors.blueAccent
+                                  : Colors.amber,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
@@ -158,9 +186,14 @@ class AssociationDetailsScreen extends ConsumerWidget {
                       runSpacing: 8,
                       children: association.tags.map((tag) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                            color: isDark
+                                ? Colors.white10
+                                : Colors.black.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -187,7 +220,8 @@ class AssociationDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    association.description != null && association.description!.isNotEmpty
+                    association.description != null &&
+                            association.description!.isNotEmpty
                         ? association.description!
                         : AppLocalizations.of(context)!.assocNoDescription,
                     style: TextStyle(
@@ -203,12 +237,12 @@ class AssociationDetailsScreen extends ConsumerWidget {
                     width: double.infinity,
                     height: 56,
                     child: _buildActionButton(
-                      context, 
-                      ref, 
-                      association.id, 
-                      isMember, 
-                      isPending, 
-                      isLoading
+                      context,
+                      ref,
+                      association.id,
+                      isMember,
+                      isPending,
+                      isLoading,
                     ),
                   ),
                   const SizedBox(height: 48),
@@ -222,31 +256,52 @@ class AssociationDetailsScreen extends ConsumerWidget {
   }
 
   Widget _buildActionButton(
-    BuildContext context, 
-    WidgetRef ref, 
-    String associationId, 
-    bool isMember, 
-    bool isPending, 
-    bool isLoading
+    BuildContext context,
+    WidgetRef ref,
+    String associationId,
+    bool isMember,
+    bool isPending,
+    bool isLoading,
   ) {
     if (isMember) {
       return ShadButton.destructive(
-        onPressed: isLoading ? null : () => ref.read(associationProvider.notifier).leaveAssociation(associationId),
-        child: Text(AppLocalizations.of(context)!.assocLeave, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        onPressed: isLoading
+            ? null
+            : () => ref
+                  .read(associationProvider.notifier)
+                  .leaveAssociation(associationId),
+        child: Text(
+          AppLocalizations.of(context)!.assocLeave,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       );
     }
 
     if (isPending) {
       return ShadButton.outline(
-        onPressed: isLoading ? null : () => ref.read(associationProvider.notifier).leaveAssociation(associationId),
-        child: Text(AppLocalizations.of(context)!.assocCancelRequest, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        onPressed: isLoading
+            ? null
+            : () => ref
+                  .read(associationProvider.notifier)
+                  .leaveAssociation(associationId),
+        child: Text(
+          AppLocalizations.of(context)!.assocCancelRequest,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       );
     }
 
     return ShadButton(
       backgroundColor: Colors.blueAccent,
-      onPressed: isLoading ? null : () => ref.read(associationProvider.notifier).joinAssociation(associationId),
-      child: Text(AppLocalizations.of(context)!.assocRequestMembership, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      onPressed: isLoading
+          ? null
+          : () => ref
+                .read(associationProvider.notifier)
+                .joinAssociation(associationId),
+      child: Text(
+        AppLocalizations.of(context)!.assocRequestMembership,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
     );
   }
 }

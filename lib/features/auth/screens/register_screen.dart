@@ -1,7 +1,8 @@
 // lib/features/auth/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/auth/presentation/providers/auth_provider.dart';
+
 import 'package:flutter_clubapp/core/widgets/app_text_field.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker.dart';
 import 'package:flutter_clubapp/core/utils/nickname_generator.dart';
@@ -23,7 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
   static const int _totalPages = 6;
-  
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -81,7 +82,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            ref.read(authProvider).errorMessage ?? AppLocalizations.of(context)!.errorRegistrationFailed,
+            ref.read(authProvider).errorMessage ??
+                AppLocalizations.of(context)!.errorRegistrationFailed,
           ),
           backgroundColor: Colors.red,
         ),
@@ -93,7 +95,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
-    
+
     final formState = ref.watch(authFormProvider);
     final formNotifier = ref.read(authFormProvider.notifier);
     final isLoading = formState.submissionStatus is AsyncLoading;
@@ -205,7 +207,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildFirstNamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
+  Widget _buildFirstNamePage(
+    bool isDark,
+    AppLocalizations l10n,
+    AuthFormState state,
+    AuthFormNotifier notifier,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -243,7 +250,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildLastNamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
+  Widget _buildLastNamePage(
+    bool isDark,
+    AppLocalizations l10n,
+    AuthFormState state,
+    AuthFormNotifier notifier,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -281,7 +293,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildNicknamePage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
+  Widget _buildNicknamePage(
+    bool isDark,
+    AppLocalizations l10n,
+    AuthFormState state,
+    AuthFormNotifier notifier,
+  ) {
     final tempController = TextEditingController(text: state.nickname);
 
     return NicknamePicker(
@@ -295,7 +312,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildBioPage(bool isDark, AuthFormState state, AuthFormNotifier notifier) {
+  Widget _buildBioPage(
+    bool isDark,
+    AuthFormState state,
+    AuthFormNotifier notifier,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -334,7 +355,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildEmailPage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
+  Widget _buildEmailPage(
+    bool isDark,
+    AppLocalizations l10n,
+    AuthFormState state,
+    AuthFormNotifier notifier,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -373,7 +399,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  Widget _buildPasswordPage(bool isDark, AppLocalizations l10n, AuthFormState state, AuthFormNotifier notifier) {
+  Widget _buildPasswordPage(
+    bool isDark,
+    AppLocalizations l10n,
+    AuthFormState state,
+    AuthFormNotifier notifier,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -443,18 +474,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String? _translateError(String? key, AppLocalizations l10n) {
     if (key == null) return null;
     switch (key) {
-      case 'errorFirstNameRequired': return l10n.errorFirstNameRequired;
-      case 'errorLastNameRequired': return l10n.errorLastNameRequired;
-      case 'errorEmailRequired': return l10n.errorEmailRequired;
-      case 'errorInvalidEmail': return l10n.errorInvalidEmail;
-      case 'errorPasswordRequired': return l10n.errorPasswordRequired;
-      case 'errorPasswordLength': return l10n.errorPasswordLength;
-      case 'errorConfirmPasswordRequired': return l10n.errorConfirmPasswordRequired;
-      case 'errorPasswordMismatch': return l10n.errorPasswordMismatch;
-      case 'errorNicknameRequired': return l10n.errorNicknameRequired;
-      case 'errorNicknameLength': return l10n.errorNicknameLength;
-      case 'errorEmailInUse': return l10n.errorEmailInUse;
-      default: return key;
+      case 'errorFirstNameRequired':
+        return l10n.errorFirstNameRequired;
+      case 'errorLastNameRequired':
+        return l10n.errorLastNameRequired;
+      case 'errorEmailRequired':
+        return l10n.errorEmailRequired;
+      case 'errorInvalidEmail':
+        return l10n.errorInvalidEmail;
+      case 'errorPasswordRequired':
+        return l10n.errorPasswordRequired;
+      case 'errorPasswordLength':
+        return l10n.errorPasswordLength;
+      case 'errorConfirmPasswordRequired':
+        return l10n.errorConfirmPasswordRequired;
+      case 'errorPasswordMismatch':
+        return l10n.errorPasswordMismatch;
+      case 'errorNicknameRequired':
+        return l10n.errorNicknameRequired;
+      case 'errorNicknameLength':
+        return l10n.errorNicknameLength;
+      case 'errorEmailInUse':
+        return l10n.errorEmailInUse;
+      default:
+        return key;
     }
   }
 }

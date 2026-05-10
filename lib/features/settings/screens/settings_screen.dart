@@ -5,26 +5,29 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:flutter_clubapp/core/services/settings_service.dart';
+import 'package:flutter_clubapp/features/auth/presentation/providers/auth_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:flutter_clubapp/features/settings/presentation/providers/settings_provider.dart';
+
 import 'package:flutter_clubapp/core/config/app_config.dart';
 import 'package:flutter_clubapp/core/widgets/nickname_picker_with_button.dart';
-import 'package:flutter_clubapp/core/services/auth_service.dart';
+import 'package:flutter_clubapp/features/auth/domain/repositories/auth_repository.dart';
 import 'package:flutter_clubapp/features/settings/screens/faq_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/language_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/push_notifications_screen.dart';
 import 'package:flutter_clubapp/features/settings/screens/web_view_screen.dart';
+// NIEUW: Importeer de zojuist gemaakte pagina
+import 'package:flutter_clubapp/features/settings/screens/account_details_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
     final authService = ref.read(authServiceProvider);
-    final authNotifier = ref.read(authProvider.notifier);
 
     await authService.signOut();
-    authNotifier.refresh();
-    
+    ref.invalidate(authProvider);
+
     if (context.mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
@@ -32,7 +35,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
-    
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -46,8 +49,11 @@ class SettingsScreen extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
-              l10n.settingsDeleteAccount, 
-              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              l10n.settingsDeleteAccount,
+              style: const TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -56,12 +62,10 @@ class SettingsScreen extends ConsumerWidget {
 
     if (confirmed == true && context.mounted) {
       final authService = ref.read(authServiceProvider);
-      final authNotifier = ref.read(authProvider.notifier);
-
       final result = await authService.deleteAccount();
-      
+
       if (result.status == AuthResultStatus.success) {
-        authNotifier.refresh();
+        ref.invalidate(authProvider);
         if (context.mounted) {
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
@@ -86,7 +90,11 @@ class SettingsScreen extends ConsumerWidget {
         (mode == ThemeMode.system &&
             Theme.of(context).brightness == Brightness.dark);
     final l10n = AppLocalizations.of(context)!;
-    final isAuth = ref.watch(authProvider).isAuthenticated;
+    
+    final authState = ref.watch(authProvider);
+    final isAuth = authState.isAuthenticated;
+    final isAnonymous = authState.isAnonymous;
+    final isRegisteredUser = isAuth && !isAnonymous;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF09090B) : Colors.white,
@@ -94,7 +102,10 @@ class SettingsScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -108,12 +119,26 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (isAuth) ...[
+          if (isRegisteredUser) ...[
             _buildSectionHeader(l10n.settingsAccount),
             _buildCard(
               isDark,
               Column(
                 children: [
+                  // NIEUW: Account Details Tile
+                  _SettingsListTile(
+                    isDark: isDark,
+                    icon: Icons.person_outline,
+                    iconColor: Colors.blueAccent,
+                    title: l10n.settingsAccountDetails,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AccountDetailsScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 56, endIndent: 16),
                   _SettingsListTile(
                     isDark: isDark,
                     icon: Icons.logout,
@@ -137,6 +162,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
           ],
+          // LET OP: Anonieme sectie is volledig weggehaald!
 
           _buildSectionHeader(l10n.settingsPreferences),
           _buildCard(
@@ -178,7 +204,9 @@ class SettingsScreen extends ConsumerWidget {
                     key: const ValueKey('haptics_switch'),
                     value: ref.watch(settingsProvider).hapticsEnabled,
                     onChanged: (val) {
-                      ref.read(settingsProvider.notifier).setHapticsEnabled(val);
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setHapticsEnabled(val);
                       if (val) HapticFeedback.mediumImpact();
                     },
                   ),
@@ -192,9 +220,7 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const LanguageScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const LanguageScreen()),
                     );
                   },
                 ),
@@ -262,9 +288,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: l10n.settingsRateApp,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.settingsRateAppSoon),
-                      ),
+                      SnackBar(content: Text(l10n.settingsRateAppSoon)),
                     );
                   },
                 ),
@@ -381,20 +405,16 @@ class SettingsScreen extends ConsumerWidget {
         await launchUrl(emailUri);
       } else {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                l10n.errorNoEmailApp,
-              ),
-            ),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.errorNoEmailApp)));
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorEmailGeneric)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.errorEmailGeneric)));
       }
     }
   }
@@ -429,7 +449,9 @@ class _SettingsListTile extends StatelessWidget {
       leading: Icon(icon, color: iconColor),
       title: Text(
         title,
-        style: TextStyle(color: textColor ?? (isDark ? Colors.white : Colors.black)),
+        style: TextStyle(
+          color: textColor ?? (isDark ? Colors.white : Colors.black),
+        ),
       ),
       trailing: showArrow
           ? Icon(Icons.chevron_right, color: Colors.grey[600])
@@ -473,10 +495,10 @@ class _EditNicknameScreenState extends ConsumerState<EditNicknameScreen> {
   Future<void> _handleSave() async {
     final newName = _controller.text.trim();
     if (newName.isNotEmpty && newName.length >= 3) {
-      final profile = ref.read(userProfileServiceProvider);
-      profile.nickname = newName;
+      final notifier = ref.read(userProfileProvider.notifier);
+      await notifier.setNickname(newName);
       if (widget.isAuthenticated) {
-        await profile.syncNicknameToProfile();
+        await notifier.syncNicknameToProfile();
       }
       widget.onSaved();
 
@@ -497,7 +519,10 @@ class _EditNicknameScreenState extends ConsumerState<EditNicknameScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -525,7 +550,9 @@ class _EditNicknameScreenState extends ConsumerState<EditNicknameScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ShadButton(
-                  onPressed: _controller.text.trim().length >= 3 ? _handleSave : null,
+                  onPressed: _controller.text.trim().length >= 3
+                      ? _handleSave
+                      : null,
                   child: Text(
                     l10n.settingsSave,
                     style: const TextStyle(

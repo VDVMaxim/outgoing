@@ -42,7 +42,9 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
         });
         widget.onFiltersChanged(_selectedFilters);
       },
-      backgroundColor: widget.isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+      backgroundColor: widget.isDark
+          ? Colors.white10
+          : Colors.black.withValues(alpha: 0.05),
       selectedColor: Colors.blueAccent.withValues(alpha: 0.2),
       checkmarkColor: Colors.blueAccent,
       labelStyle: TextStyle(
@@ -108,7 +110,7 @@ class _MapFilterSheetState extends State<MapFilterSheet> {
               onPressed: () => Navigator.pop(context),
               child: Text(l10n.apply),
             ),
-          )
+          ),
         ],
       ),
     );

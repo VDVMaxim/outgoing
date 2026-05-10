@@ -3,13 +3,13 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/core/services/app_startup.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
+
 import 'package:flutter_clubapp/features/navigation/screens/main_navigation.dart';
 import 'onboarding_intro_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
-
   @override
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
@@ -45,7 +45,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _runStartup() async {
     final t0 = DateTime.now();
     final result = await AppStartup.verify(ProviderScope.containerOf(context));
-    
+
     if (!mounted) return;
 
     const minSplash = Duration(milliseconds: 1100);
@@ -69,12 +69,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   void _goOnboarding() {
-    final hasCompleted = ref.read(userProfileServiceProvider).hasCompletedOnboarding;
+    final hasCompleted = ref.read(userProfileProvider).hasCompletedOnboarding;
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
-        pageBuilder: (context, a1, a2) => hasCompleted 
-              ? const MainNavigation()
+        pageBuilder: (context, a1, a2) => hasCompleted
+            ? const MainNavigation()
             : const OnboardingIntroScreen(),
         transitionsBuilder: (context, a1, a2, child) =>
             FadeTransition(opacity: a1, child: child),

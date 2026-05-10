@@ -1,15 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_clubapp/core/models/place.dart';
-import '../domain/club_repository.dart';
+import 'package:flutter_clubapp/features/places/domain/models/place.dart';
+import 'package:flutter_clubapp/features/places/domain/repositories/club_repository.dart';
 
 class RepositoryException implements Exception {
   final String message;
   final dynamic originalError;
   RepositoryException(this.message, [this.originalError]);
   @override
-  String toString() => 'RepositoryException: $message ${originalError != null ? "($originalError)" : ""}';
+  String toString() =>
+      'RepositoryException: $message ${originalError != null ? "($originalError)" : ""}';
 }
 
 class SupabaseClubRepository implements ClubRepository {
@@ -31,7 +32,9 @@ class SupabaseClubRepository implements ClubRepository {
     const int chunkSize = 150;
 
     for (var i = 0; i < placeIds.length; i += chunkSize) {
-      final end = (i + chunkSize < placeIds.length) ? i + chunkSize : placeIds.length;
+      final end = (i + chunkSize < placeIds.length)
+          ? i + chunkSize
+          : placeIds.length;
       final chunk = placeIds.sublist(i, end);
 
       final tagsChunk = await _client
@@ -62,15 +65,19 @@ class SupabaseClubRepository implements ClubRepository {
 
     final tagsByPlace = <String, List<String>>{};
     final facilitiesByPlace = <String, List<String>>{};
-    
+
     for (final tagRow in tagsWithNames) {
       final placeId = tagRow['place_id'] as String;
       final tagData = tagRow['tags'];
       if (tagData != null && tagData['name'] != null) {
         if (tagData['category'] == 'facility') {
-          facilitiesByPlace.putIfAbsent(placeId, () => []).add(tagData['name'] as String);
+          facilitiesByPlace
+              .putIfAbsent(placeId, () => [])
+              .add(tagData['name'] as String);
         } else {
-          tagsByPlace.putIfAbsent(placeId, () => []).add(tagData['name'] as String);
+          tagsByPlace
+              .putIfAbsent(placeId, () => [])
+              .add(tagData['name'] as String);
         }
       }
     }
@@ -80,7 +87,9 @@ class SupabaseClubRepository implements ClubRepository {
       final placeId = assocRow['place_id'] as String;
       final assocData = assocRow['associations'];
       if (assocData != null && assocData['name'] != null) {
-        assocsByPlace.putIfAbsent(placeId, () => []).add(assocData['name'] as String);
+        assocsByPlace
+            .putIfAbsent(placeId, () => [])
+            .add(assocData['name'] as String);
       }
     }
 
@@ -105,7 +114,8 @@ class SupabaseClubRepository implements ClubRepository {
         dislikesByPlace[placeId] = (dislikesByPlace[placeId] ?? 0) + 1;
       }
 
-      if (!lastVibeByPlace.containsKey(placeId) || createdAt.isAfter(lastVibeByPlace[placeId]!)) {
+      if (!lastVibeByPlace.containsKey(placeId) ||
+          createdAt.isAfter(lastVibeByPlace[placeId]!)) {
         lastVibeByPlace[placeId] = createdAt;
       }
     }
@@ -113,40 +123,53 @@ class SupabaseClubRepository implements ClubRepository {
     return placesList.map((json) {
       final placeId = json['id'] as String;
       final enrichedJson = Map<String, dynamic>.from(json);
-      
+
       enrichedJson['tags'] = tagsByPlace[placeId] ?? [];
       enrichedJson['facilities'] = facilitiesByPlace[placeId] ?? [];
       enrichedJson['associations'] = assocsByPlace[placeId] ?? [];
       enrichedJson['opening_hours'] = hoursByPlace[placeId] ?? [];
       enrichedJson['recent_likes'] = likesByPlace[placeId] ?? 0;
       enrichedJson['recent_dislikes'] = dislikesByPlace[placeId] ?? 0;
-      enrichedJson['last_vibe_update'] = lastVibeByPlace[placeId]?.toIso8601String();
-      
+      enrichedJson['last_vibe_update'] = lastVibeByPlace[placeId]
+          ?.toIso8601String();
+
       return Place.fromJson(enrichedJson);
     }).toList();
   }
 
   @override
-  Future<List<Place>> getPlacesInViewport(double minLat, double minLng, double maxLat, double maxLng, {String searchQuery = ''}) async {
+  Future<List<Place>> getPlacesInViewport(
+    double minLat,
+    double minLng,
+    double maxLat,
+    double maxLng, {
+    String searchQuery = '',
+  }) async {
     try {
-      final placesResponse = await _client.rpc('get_place_markers_in_viewport', params: {
-        'min_lat': minLat,
-        'min_lng': minLng,
-        'max_lat': maxLat,
-        'max_lng': maxLng,
-        'search_query': searchQuery,
-      });
+      final placesResponse = await _client.rpc(
+        'get_place_markers_in_viewport',
+        params: {
+          'min_lat': minLat,
+          'min_lng': minLng,
+          'max_lat': maxLat,
+          'max_lng': maxLng,
+          'search_query': searchQuery,
+        },
+      );
 
-      final eventsResponse = await _client.rpc('get_event_markers_in_viewport', params: {
-        'min_lat': minLat,
-        'min_lng': minLng,
-        'max_lat': maxLat,
-        'max_lng': maxLng,
-        'search_query': searchQuery,
-      });
+      final eventsResponse = await _client.rpc(
+        'get_event_markers_in_viewport',
+        params: {
+          'min_lat': minLat,
+          'min_lng': minLng,
+          'max_lat': maxLat,
+          'max_lng': maxLng,
+          'search_query': searchQuery,
+        },
+      );
 
       final List<dynamic> combinedList = [];
-      
+
       if (placesResponse != null) {
         for (final p in placesResponse as Iterable<dynamic>) {
           combinedList.add({
@@ -162,7 +185,7 @@ class SupabaseClubRepository implements ClubRepository {
           });
         }
       }
-      
+
       if (eventsResponse != null) {
         for (final e in eventsResponse as Iterable<dynamic>) {
           combinedList.add({
@@ -180,7 +203,6 @@ class SupabaseClubRepository implements ClubRepository {
       }
 
       return combinedList.map((json) => Place.fromJson(json)).toList();
-
     } catch (e, stackTrace) {
       debugPrint('🚨 ERROR in getPlacesInViewport: $e\n$stackTrace');
       throw RepositoryException('Failed to fetch places in viewport', e);
@@ -190,10 +212,7 @@ class SupabaseClubRepository implements ClubRepository {
   @override
   Future<List<Place>> getDiscoverPlaces({LatLng? userLocation}) async {
     try {
-      final placesResponse = await _client
-          .from('places')
-          .select()
-          .limit(300);
+      final placesResponse = await _client.from('places').select().limit(300);
 
       final enriched = await _enrichPlaces(placesResponse as List<dynamic>);
 
@@ -221,10 +240,18 @@ class SupabaseClubRepository implements ClubRepository {
       final eventsResponse = await _client
           .from('events')
           .select()
-          .gte('start_datetime', DateTime.now().toUtc().subtract(const Duration(days: 1)).toIso8601String())
+          .gte(
+            'start_datetime',
+            DateTime.now()
+                .toUtc()
+                .subtract(const Duration(days: 1))
+                .toIso8601String(),
+          )
           .limit(100);
 
-      final List<Place> mappedEvents = (eventsResponse as List<dynamic>).map((row) {
+      final List<Place> mappedEvents = (eventsResponse as List<dynamic>).map((
+        row,
+      ) {
         final Map<String, dynamic> json = Map.from(row as Map<String, dynamic>);
         return Place(
           id: json['id'] as String,
@@ -280,10 +307,9 @@ class SupabaseClubRepository implements ClubRepository {
           .maybeSingle();
 
       if (placeResponse == null) return null;
-      
+
       final result = await _enrichPlaces([placeResponse]);
       return result.isNotEmpty ? result.first : null;
-
     } catch (e, stackTrace) {
       debugPrint('🚨 ERROR in getPlaceById: $e\n$stackTrace');
       throw RepositoryException('Failed to fetch place by ID', e);

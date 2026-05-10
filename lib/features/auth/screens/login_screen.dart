@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/auth/presentation/providers/auth_provider.dart';
+
 import 'package:flutter_clubapp/core/widgets/app_text_field.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
@@ -16,20 +17,20 @@ class LoginScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
-    
+
     final formState = ref.watch(authFormProvider);
     final formNotifier = ref.read(authFormProvider.notifier);
-    
+
     final isLoading = formState.submissionStatus is AsyncLoading;
 
-    // We can't do this in build cleanly without a post-frame callback, 
+    // We can't do this in build cleanly without a post-frame callback,
     // but the original code had _checkIfAlreadyLoggedIn. We can use a listener for side effects.
     ref.listen(authProvider, (previous, next) {
       if (next.isAuthenticated) {
         onSuccess?.call();
       }
     });
-    
+
     ref.listen(authFormProvider, (previous, next) {
       next.submissionStatus.whenOrNull(
         error: (error, stackTrace) {
@@ -41,10 +42,11 @@ class LoginScreen extends ConsumerWidget {
           );
         },
         data: (data) {
-          if (previous?.submissionStatus is AsyncLoading && next.submissionStatus is AsyncData) {
+          if (previous?.submissionStatus is AsyncLoading &&
+              next.submissionStatus is AsyncData) {
             // Success is handled by the authProvider listener above since auth state changes
           }
-        }
+        },
       );
     });
 
@@ -95,7 +97,7 @@ class LoginScreen extends ConsumerWidget {
                 onChanged: formNotifier.updateEmail,
               ),
               const SizedBox(height: 20),
-              // We'll use a local state for obscuring password to keep it simple, 
+              // We'll use a local state for obscuring password to keep it simple,
               // or just store it in the form provider. Let's use a Hook or simple ConsumerStatefulWidget just for obscure?
               // The prompt asked for ConsumerWidget. We can add obscure to the provider or just use a StateProvider.
               Consumer(
@@ -113,11 +115,12 @@ class LoginScreen extends ConsumerWidget {
                       color: Colors.grey,
                     ),
                     onTrailingTap: () {
-                      ref.read(_obscurePasswordProvider.notifier).state = !obscurePassword;
+                      ref.read(_obscurePasswordProvider.notifier).state =
+                          !obscurePassword;
                     },
                     onChanged: formNotifier.updatePassword,
                   );
-                }
+                },
               ),
               const SizedBox(height: 32),
               SizedBox(
@@ -181,14 +184,20 @@ class LoginScreen extends ConsumerWidget {
       ),
     );
   }
+
   String? _translateError(String? key, AppLocalizations l10n) {
     if (key == null) return null;
     switch (key) {
-      case 'errorEmailRequired': return l10n.errorEmailRequired;
-      case 'errorInvalidEmail': return l10n.errorInvalidEmail;
-      case 'errorPasswordRequired': return l10n.errorPasswordRequired;
-      case 'errorEmailInUse': return l10n.errorEmailInUse;
-      default: return key;
+      case 'errorEmailRequired':
+        return l10n.errorEmailRequired;
+      case 'errorInvalidEmail':
+        return l10n.errorInvalidEmail;
+      case 'errorPasswordRequired':
+        return l10n.errorPasswordRequired;
+      case 'errorEmailInUse':
+        return l10n.errorEmailInUse;
+      default:
+        return key;
     }
   }
 }

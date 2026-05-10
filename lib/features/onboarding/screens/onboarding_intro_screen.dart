@@ -21,11 +21,7 @@ class OnboardingIntroScreen extends StatelessWidget {
         children: [
           const AnimatedBlurBackground(child: SizedBox.expand()),
           OnboardingWizard(
-            steps: [
-              WelcomeStep(),
-              SquadModeStep(),
-              VoiceMattersStep(),
-            ],
+            steps: [WelcomeStep(), SquadModeStep(), VoiceMattersStep()],
             onComplete: () {
               Navigator.pushReplacement(
                 context,

@@ -9,7 +9,9 @@ Marker buildUserLocationMarker({
   required bool isCompassMode,
 }) {
   final double coneSize = 140.0;
-  final double rotationAngle = isCompassMode ? 0.0 : (currentHeading * math.pi / 180.0);
+  final double rotationAngle = isCompassMode
+      ? 0.0
+      : (currentHeading * math.pi / 180.0);
 
   return Marker(
     point: location,
@@ -34,8 +36,12 @@ Marker buildUserLocationMarker({
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
-              BoxShadow(color: Colors.blueAccent.withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 2)
-            ]
+              BoxShadow(
+                color: Colors.blueAccent.withValues(alpha: 0.5),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
           ),
         ),
       ],

@@ -1,14 +1,17 @@
+import 'package:flutter_clubapp/features/places/presentation/providers/place_provider.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../repositories/repository_provider.dart';
+
 
 enum AppStartupFailureKind { timeout, unknown }
 
 class AppStartupResult {
   const AppStartupResult._({required this.ok, this.failureKind, this.detail});
   const AppStartupResult.success() : this._(ok: true);
-  factory AppStartupResult.failure(AppStartupFailureKind kind, {String? detail}) =>
-      AppStartupResult._(ok: false, failureKind: kind, detail: detail);
+  factory AppStartupResult.failure(
+    AppStartupFailureKind kind, {
+    String? detail,
+  }) => AppStartupResult._(ok: false, failureKind: kind, detail: detail);
 
   final bool ok;
   final AppStartupFailureKind? failureKind;
@@ -22,12 +25,18 @@ class AppStartup {
   static Future<AppStartupResult> verify(ProviderContainer container) async {
     try {
       final repo = container.read(clubRepositoryProvider);
-      await repo.getDiscoverPlaces().timeout(_placesTimeout, onTimeout: () => throw TimeoutException('places'));
+      await repo.getDiscoverPlaces().timeout(
+        _placesTimeout,
+        onTimeout: () => throw TimeoutException('places'),
+      );
       return const AppStartupResult.success();
     } on TimeoutException {
       return AppStartupResult.failure(AppStartupFailureKind.timeout);
     } catch (e) {
-      return AppStartupResult.failure(AppStartupFailureKind.unknown, detail: e.toString());
+      return AppStartupResult.failure(
+        AppStartupFailureKind.unknown,
+        detail: e.toString(),
+      );
     }
   }
 }

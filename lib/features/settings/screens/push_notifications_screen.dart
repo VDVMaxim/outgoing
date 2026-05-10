@@ -75,7 +75,9 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
           ),
           if (_notificationsEnabled) ...[
             const SizedBox(height: 24),
-            _buildSectionHeader(AppLocalizations.of(context)!.notificationTypes),
+            _buildSectionHeader(
+              AppLocalizations.of(context)!.notificationTypes,
+            ),
             const SizedBox(height: 8),
             _buildSection(
               isDark,
@@ -242,11 +244,14 @@ class _PushNotificationsScreenState extends State<PushNotificationsScreen> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildTimePicker(isDark, AppLocalizations.of(context)!.to, _quietHoursTo, (
-                            time,
-                          ) {
-                            setState(() => _quietHoursTo = time);
-                          }),
+                          child: _buildTimePicker(
+                            isDark,
+                            AppLocalizations.of(context)!.to,
+                            _quietHoursTo,
+                            (time) {
+                              setState(() => _quietHoursTo = time);
+                            },
+                          ),
                         ),
                       ],
                     ),

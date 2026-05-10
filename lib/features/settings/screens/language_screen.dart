@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/services/settings_service.dart';
+import 'package:flutter_clubapp/features/settings/presentation/providers/settings_provider.dart';
 
 class LanguageScreen extends ConsumerWidget {
   const LanguageScreen({super.key});
@@ -115,7 +115,11 @@ class _LanguageOption extends ConsumerWidget {
               ),
             ),
             if (isSelected)
-              const Icon(Icons.check_circle, color: Colors.blueAccent, size: 28),
+              const Icon(
+                Icons.check_circle,
+                color: Colors.blueAccent,
+                size: 28,
+              ),
           ],
         ),
       ),

@@ -4,8 +4,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_clubapp/core/models.dart';
-import 'package:flutter_clubapp/core/repositories/repository_provider.dart';
+import 'package:flutter_clubapp/features/places/domain/models/place.dart';
+
+import 'package:flutter_clubapp/features/places/presentation/providers/place_provider.dart';
 
 class MapState {
   final bool isLoading;
@@ -55,7 +56,8 @@ class MapState {
   }) {
     return MapState(
       isLoading: isLoading ?? this.isLoading,
-      hasLocationPermission: hasLocationPermission ?? this.hasLocationPermission,
+      hasLocationPermission:
+          hasLocationPermission ?? this.hasLocationPermission,
       selectedFilters: selectedFilters ?? this.selectedFilters,
       searchQuery: searchQuery ?? this.searchQuery,
       currentZoom: currentZoom ?? this.currentZoom,
@@ -63,7 +65,9 @@ class MapState {
       currentHeading: currentHeading ?? this.currentHeading,
       isFollowingUser: isFollowingUser ?? this.isFollowingUser,
       isCompassMode: isCompassMode ?? this.isCompassMode,
-      selectedPlaceId: selectedPlaceId != null ? (selectedPlaceId == 'clear' ? null : selectedPlaceId) : this.selectedPlaceId,
+      selectedPlaceId: selectedPlaceId != null
+          ? (selectedPlaceId == 'clear' ? null : selectedPlaceId)
+          : this.selectedPlaceId,
       isPlacingPin: isPlacingPin ?? this.isPlacingPin,
       pinTargetTime: pinTargetTime ?? this.pinTargetTime,
       cachedPlaces: cachedPlaces ?? this.cachedPlaces,
@@ -105,17 +109,22 @@ class MapNotifier extends Notifier<MapState> {
   Future<void> checkInitialPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      if (state.hasLocationPermission) state = state.copyWith(hasLocationPermission: false);
+      if (state.hasLocationPermission) {
+        state = state.copyWith(hasLocationPermission: false);
+      }
       return;
     }
     final permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
       if (!state.hasLocationPermission) {
         state = state.copyWith(hasLocationPermission: true);
         startLocationTracking();
       }
     } else {
-      if (state.hasLocationPermission) state = state.copyWith(hasLocationPermission: false);
+      if (state.hasLocationPermission) {
+        state = state.copyWith(hasLocationPermission: false);
+      }
     }
   }
 
@@ -125,7 +134,9 @@ class MapNotifier extends Notifier<MapState> {
   }
 
   void _listenToServiceStatus() {
-    _serviceStatusSubscription = Geolocator.getServiceStatusStream().listen((status) {
+    _serviceStatusSubscription = Geolocator.getServiceStatusStream().listen((
+      status,
+    ) {
       if (status == ServiceStatus.enabled) {
         checkInitialPermission();
       } else {
@@ -140,14 +151,23 @@ class MapNotifier extends Notifier<MapState> {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
     LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return;
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
 
     _locationSubscription?.cancel();
-    _locationSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
-    ).listen((Position position) {
-      state = state.copyWith(liveUserLocation: LatLng(position.latitude, position.longitude));
-    });
+    _locationSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 5,
+          ),
+        ).listen((Position position) {
+          state = state.copyWith(
+            liveUserLocation: LatLng(position.latitude, position.longitude),
+          );
+        });
   }
 
   void _startCompassTracking() {
@@ -158,7 +178,10 @@ class MapNotifier extends Notifier<MapState> {
     });
   }
 
-  void fetchPlacesForCurrentBounds(MapCamera camera, {bool clearCache = false}) async {
+  void fetchPlacesForCurrentBounds(
+    MapCamera camera, {
+    bool clearCache = false,
+  }) async {
     final currentCenter = camera.center;
     final currentZoom = camera.zoom;
 
@@ -168,9 +191,17 @@ class MapNotifier extends Notifier<MapState> {
     } else if (_lastFetchCenter != null && _lastFetchZoom != null) {
       final zoomDiff = (currentZoom - _lastFetchZoom!).abs();
       if (zoomDiff < 1.0) {
-        final distanceScrolled = const Distance().as(LengthUnit.Meter, _lastFetchCenter!, currentCenter);
+        final distanceScrolled = const Distance().as(
+          LengthUnit.Meter,
+          _lastFetchCenter!,
+          currentCenter,
+        );
         final bounds = camera.visibleBounds;
-        final screenWidthMeters = const Distance().as(LengthUnit.Meter, bounds.southWest, bounds.southEast);
+        final screenWidthMeters = const Distance().as(
+          LengthUnit.Meter,
+          bounds.southWest,
+          bounds.southEast,
+        );
         if (distanceScrolled < (screenWidthMeters * 0.4)) return;
       }
     }
@@ -188,7 +219,15 @@ class MapNotifier extends Notifier<MapState> {
     _lastFetchZoom = currentZoom;
 
     try {
-      final places = await ref.read(clubRepositoryProvider).getPlacesInViewport(minLat, minLng, maxLat, maxLng, searchQuery: state.searchQuery);
+      final places = await ref
+          .read(clubRepositoryProvider)
+          .getPlacesInViewport(
+            minLat,
+            minLng,
+            maxLat,
+            maxLng,
+            searchQuery: state.searchQuery,
+          );
       final newCache = Map<String, Place>.from(state.cachedPlaces);
       for (final p in places) {
         if (p.hasValidLocation) newCache[p.id] = p;
@@ -216,7 +255,7 @@ class MapNotifier extends Notifier<MapState> {
 
   void toggleMyLocation() {
     if (state.liveUserLocation == null) return;
-    
+
     if (!state.isFollowingUser && !state.isCompassMode) {
       state = state.copyWith(isFollowingUser: true, isCompassMode: false);
     } else if (state.isFollowingUser && !state.isCompassMode) {
@@ -253,13 +292,21 @@ class MapNotifier extends Notifier<MapState> {
   void setPlacingPin(bool isPlacing) {
     state = state.copyWith(isPlacingPin: isPlacing);
     if (isPlacing) {
-      state = state.copyWith(pinTargetTime: DateTime.now().add(const Duration(minutes: 30)));
+      state = state.copyWith(
+        pinTargetTime: DateTime.now().add(const Duration(minutes: 30)),
+      );
     }
   }
 
   void setPinTargetTime(DateTime time) {
     final now = DateTime.now();
-    DateTime target = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    DateTime target = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      time.hour,
+      time.minute,
+    );
     if (target.isBefore(now)) target = target.add(const Duration(days: 1));
     state = state.copyWith(pinTargetTime: target);
   }

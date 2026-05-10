@@ -1,4 +1,4 @@
-import 'package:flutter_clubapp/core/models/vibe_check.dart';
+import 'package:flutter_clubapp/features/vibe/domain/models/vibe_check.dart';
 
 abstract class VibeRepository {
   Future<void> submitVibeCheck({

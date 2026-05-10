@@ -151,12 +151,16 @@ class _AuthSuccessScreenState extends State<AuthSuccessScreen>
                     ),
                   ),
                   const SizedBox(height: 48),
-                  
+
                   // De knop is nu ALTIJD zichtbaar, met een fallback als widget.onContinue null is
                   TextButton(
-                    onPressed: widget.onContinue ?? () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
+                    onPressed:
+                        widget.onContinue ??
+                        () {
+                          Navigator.of(
+                            context,
+                          ).popUntil((route) => route.isFirst);
+                        },
                     child: Text(
                       l10n.accountSuccessContinue,
                       style: const TextStyle(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_clubapp/core/services/settings_service.dart';
-import '../../../squad/providers/squad_provider.dart';
+import 'package:flutter_clubapp/features/settings/presentation/providers/settings_provider.dart';
+import 'package:flutter_clubapp/features/squad/presentation/providers/squad_provider.dart';
 
 class MapControls extends ConsumerWidget {
   final AnimationController fabAnimController;
@@ -34,14 +34,12 @@ class MapControls extends ConsumerWidget {
       builder: (context, child) {
         final double start = index * 0.15;
         final double end = start + 0.5;
-        final double t = ((fabAnimController.value - start) / (end - start)).clamp(0.0, 1.0);
+        final double t = ((fabAnimController.value - start) / (end - start))
+            .clamp(0.0, 1.0);
         final curvedValue = Curves.easeInBack.transform(t);
         return Transform.translate(
           offset: Offset(curvedValue * 150, 0),
-          child: Opacity(
-            opacity: 1.0 - t,
-            child: child,
-          ),
+          child: Opacity(opacity: 1.0 - t, child: child),
         );
       },
       child: child,
@@ -63,7 +61,9 @@ class MapControls extends ConsumerWidget {
               FloatingActionButton(
                 heroTag: 'place_pin_fab',
                 onPressed: onPlacePinTap,
-                backgroundColor: isDark ? const Color(0xFF18181B) : Colors.white,
+                backgroundColor: isDark
+                    ? const Color(0xFF18181B)
+                    : Colors.white,
                 child: const Icon(Icons.push_pin, color: Colors.blueAccent),
               ),
               0,
@@ -92,7 +92,11 @@ class MapControls extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                     color: squadState.isMuted ? Colors.redAccent : Colors.green,
                     boxShadow: const [
-                      BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
                     ],
                   ),
                   child: Icon(
@@ -115,8 +119,15 @@ class MapControls extends ConsumerWidget {
                     ? Colors.blueAccent
                     : (isDark ? const Color(0xFF18181B) : Colors.white),
                 child: Icon(
-                    isCompassMode ? Icons.explore : (isFollowingUser ? Icons.my_location : Icons.location_searching),
-                    color: isCompassMode ? Colors.white : (isDark ? Colors.white : Colors.black)),
+                  isCompassMode
+                      ? Icons.explore
+                      : (isFollowingUser
+                            ? Icons.my_location
+                            : Icons.location_searching),
+                  color: isCompassMode
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black),
+                ),
               ),
               2,
             ),

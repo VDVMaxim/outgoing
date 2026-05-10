@@ -432,6 +432,36 @@ CREATE TRIGGER update_push_tokens_updated_at
     BEFORE UPDATE ON user_push_tokens
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- ==========================================
+-- FASE 1: AUTH TRIGGER VOOR AUTOMATISCHE PROFIELEN
+-- ==========================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  -- Insert the base profile, extracting metadata if it exists, using fallbacks for anonymous users
+  INSERT INTO public.profiles (user_id, first_name, last_name, email, nickname)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'first_name', 'Gast'),
+    COALESCE(new.raw_user_meta_data->>'last_name', ''),
+    COALESCE(new.email, 'anon_' || substr(new.id::text, 1, 8) || '@clubapp.be'),
+    COALESCE(new.raw_user_meta_data->>'nickname', 'Anon_' || substr(new.id::text, 1, 6))
+  );
+
+  -- Insert the corresponding vibe profile
+  INSERT INTO public.vibe_profiles (user_id)
+  VALUES (new.id);
+
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+-- ==========================================
+
+
 CREATE OR REPLACE FUNCTION create_squad(p_user_id UUID, p_nickname TEXT, p_lat FLOAT8, p_lng FLOAT8)
 RETURNS json
 LANGUAGE plpgsql
@@ -443,10 +473,21 @@ DECLARE
     v_member RECORD;
 BEGIN
     v_pin := lpad(floor(random() * 1000000)::text, 6, '0');
-    INSERT INTO squads (pin, created_by) VALUES (v_pin, p_user_id) RETURNING * INTO v_squad;
+    
+    -- Maak de squad aan
+    INSERT INTO squads (pin, created_by) 
+    VALUES (v_pin, p_user_id) 
+    RETURNING * INTO v_squad;
+    
+    -- Voeg de maker toe als eerste lid
     INSERT INTO squad_members (squad_id, user_id, nickname, latitude, longitude)
-    VALUES (v_squad.id, p_user_id, p_nickname, p_lat, p_lng) RETURNING * INTO v_member;
-    RETURN json_build_object('squad', row_to_json(v_squad), 'member', row_to_json(v_member));
+    VALUES (v_squad.id, p_user_id, p_nickname, p_lat, p_lng) 
+    RETURNING * INTO v_member;
+    
+    RETURN json_build_object(
+        'squad', row_to_json(v_squad), 
+        'member', row_to_json(v_member)
+    );
 END;
 $$;
 
@@ -511,16 +552,37 @@ BEGIN
         e.id,
         e.latitude,
         e.longitude,
-        (
-            SELECT COALESCE(SUM(CASE WHEN is_positive THEN 1 ELSE -1 END), 0)::INT 
+        COALESCE((
+            SELECT SUM(CASE WHEN is_positive THEN 1 ELSE -1 END)::INT 
             FROM vibe_checks vc 
             WHERE vc.event_id = e.id AND vc.created_at >= NOW() - INTERVAL '12 hours'
-        ) AS hotness_score
+        ), 0) AS hotness_score
     FROM events e
     WHERE e.location && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography
     AND (e.end_datetime IS NULL OR e.end_datetime > NOW())
     AND (search_query = '' OR e.title ILIKE '%' || search_query || '%'); 
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION profiles(sm squad_members)
+RETURNS profiles
+LANGUAGE sql STABLE
+AS $$
+  SELECT p.* FROM profiles p WHERE p.user_id = sm.user_id LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION profiles(spj squad_pin_joins)
+RETURNS profiles
+LANGUAGE sql STABLE
+AS $$
+  SELECT p.* FROM profiles p WHERE p.user_id = spj.user_id LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION profiles(va vibe_actions)
+RETURNS profiles
+LANGUAGE sql STABLE
+AS $$
+  SELECT p.* FROM profiles p WHERE p.user_id = va.user_id LIMIT 1;
 $$;
 
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;

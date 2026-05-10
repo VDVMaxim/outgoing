@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_clubapp/core/models/vibe_check.dart';
+import 'package:flutter_clubapp/features/vibe/domain/models/vibe_check.dart';
 import '../domain/vibe_repository.dart';
 
 class SupabaseVibeRepository implements VibeRepository {

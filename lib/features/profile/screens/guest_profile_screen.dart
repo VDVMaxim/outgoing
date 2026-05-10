@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/services/settings_service.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
+import 'package:flutter_clubapp/features/settings/presentation/providers/settings_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
+
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
 
@@ -13,15 +14,15 @@ class GuestProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeProvider);
-    final isDark = currentMode == ThemeMode.dark ||
+    final isDark =
+        currentMode == ThemeMode.dark ||
         (currentMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-            
+
     final l10n = AppLocalizations.of(context)!;
     final textColor = isDark ? Colors.white : Colors.black87;
-    
-    // Haal de lokale nickname op in plaats van "Guest"
-    final nickname = ref.watch(userProfileServiceProvider).nickname ?? 'Anoniem';
+
+    final nickname = ref.watch(userProfileProvider).nickname ?? 'Anoniem';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -38,7 +39,7 @@ class GuestProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Welkom, $nickname!', 
+                'Welkom, $nickname!',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -48,7 +49,7 @@ class GuestProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                l10n.guestSubtitle, 
+                l10n.guestSubtitle,
                 style: TextStyle(
                   fontSize: 16,
                   color: isDark ? Colors.white70 : Colors.black54,

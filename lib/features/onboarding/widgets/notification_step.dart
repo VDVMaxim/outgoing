@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_clubapp/core/services/push_notification_service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/features/onboarding/widgets/onboarding_wizard.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
 
 class NotificationStep implements OnboardingStep {
   final GlobalKey<OnboardingWizardState> wizardKey;
@@ -38,9 +38,9 @@ class NotificationStep implements OnboardingStep {
           Text(
             AppLocalizations.of(context)!.notifStepTitle,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -1,
-                ),
+              fontWeight: FontWeight.bold,
+              letterSpacing: -1,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -63,8 +63,10 @@ class NotificationStep implements OnboardingStep {
                 return ShadButton(
                   onPressed: () async {
                     // Call the abstraction, not OneSignal directly
-                    await ref.read(pushNotificationServiceProvider).requestPermission();
-                    
+                    await ref
+                        .read(pushNotificationServiceProvider)
+                        .requestPermission();
+
                     // Go to the next screen after they answer the prompt
                     wizardKey.currentState?.goToNextPage();
                   },
@@ -76,7 +78,7 @@ class NotificationStep implements OnboardingStep {
                     ),
                   ),
                 );
-              }
+              },
             ),
           ),
           const SizedBox(height: 16),

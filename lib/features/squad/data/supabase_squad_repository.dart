@@ -2,16 +2,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_clubapp/core/models/squad.dart';
-import 'package:flutter_clubapp/core/models/squad_member.dart';
-import 'package:flutter_clubapp/core/models/squad_pin.dart';
+import 'package:flutter_clubapp/features/squad/domain/models/squad.dart';
+import 'package:flutter_clubapp/features/squad/domain/models/squad_member.dart';
+import 'package:flutter_clubapp/features/squad/domain/models/squad_pin.dart';
 import '../domain/squad_repository.dart';
 
 class SupabaseSquadRepository implements SquadRepository {
   final SupabaseClient _supabase;
-  
+
   RealtimeChannel? _squadChannel;
-  final _squadMembersController = StreamController<List<SquadMember>>.broadcast();
+  final _squadMembersController =
+      StreamController<List<SquadMember>>.broadcast();
 
   RealtimeChannel? _pinsChannel;
   final _pinsController = StreamController<List<SquadPin>>.broadcast();
@@ -19,17 +20,29 @@ class SupabaseSquadRepository implements SquadRepository {
   SupabaseSquadRepository(this._supabase);
 
   String get _currentUserId {
-    return _supabase.auth.currentUser?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+    final id = _supabase.auth.currentUser?.id;
+    if (id == null) {
+      throw Exception(
+        'Gebruiker moet (anoniem) ingelogd zijn om een squad te gebruiken.',
+      );
+    }
+    return id;
   }
 
   @override
-  Future<Map<String, dynamic>> createSquadWithMember(String nickname, LatLng position) async {
-    final response = await _supabase.rpc('create_squad', params: {
-      'p_user_id': _currentUserId,
-      'p_nickname': nickname,
-      'p_lat': position.latitude,
-      'p_lng': position.longitude,
-    });
+  Future<Map<String, dynamic>> createSquadWithMember(
+    String nickname,
+    LatLng position,
+  ) async {
+    final response = await _supabase.rpc(
+      'create_squad',
+      params: {
+        'p_user_id': _currentUserId,
+        'p_nickname': nickname,
+        'p_lat': position.latitude,
+        'p_lng': position.longitude,
+      },
+    );
 
     return {
       'squad': Squad.fromJson(response['squad']),
@@ -38,7 +51,11 @@ class SupabaseSquadRepository implements SquadRepository {
   }
 
   @override
-  Future<SquadMember> joinSquad(String squadId, String nickname, LatLng position) async {
+  Future<SquadMember> joinSquad(
+    String squadId,
+    String nickname,
+    LatLng position,
+  ) async {
     final response = await _supabase
         .from('squad_members')
         .insert({
@@ -49,7 +66,7 @@ class SupabaseSquadRepository implements SquadRepository {
           'longitude': position.longitude,
           'updated_at': DateTime.now().toIso8601String(),
         })
-        .select()
+        .select('*, profiles(avatar_url)')
         .single();
 
     return SquadMember.fromJson(response);
@@ -91,22 +108,26 @@ class SupabaseSquadRepository implements SquadRepository {
   @override
   Stream<List<SquadMember>> subscribeToSquad(String squadId) {
     _squadChannel?.unsubscribe();
-    
-    _squadChannel = _supabase.channel('public:squad_members:squad_id=eq.$squadId');
 
-    _squadChannel!.onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'squad_members',
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.eq,
-        column: 'squad_id',
-        value: squadId,
-      ),
-      callback: (payload) {
-        _fetchSquadMembers(squadId);
-      },
-    ).subscribe();
+    _squadChannel = _supabase.channel(
+      'public:squad_members:squad_id=eq.$squadId',
+    );
+
+    _squadChannel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'squad_members',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'squad_id',
+            value: squadId,
+          ),
+          callback: (payload) {
+            _fetchSquadMembers(squadId);
+          },
+        )
+        .subscribe();
 
     _fetchSquadMembers(squadId);
 
@@ -117,10 +138,12 @@ class SupabaseSquadRepository implements SquadRepository {
     try {
       final response = await _supabase
           .from('squad_members')
-          .select()
+          .select('*, profiles(avatar_url)')
           .eq('squad_id', squadId);
 
-      final members = (response as List).map((json) => SquadMember.fromJson(json)).toList();
+      final members = (response as List)
+          .map((json) => SquadMember.fromJson(json))
+          .toList();
       _squadMembersController.add(members);
     } catch (e) {
       debugPrint('Error fetching squad members: $e');
@@ -134,14 +157,23 @@ class SupabaseSquadRepository implements SquadRepository {
   }
 
   @override
-  Future<void> createPin(String squadId, String userId, LatLng position, DateTime targetTime) async {
-    final pinResponse = await _supabase.from('squad_pins').insert({
-      'squad_id': squadId,
-      'creator_id': userId,
-      'latitude': position.latitude,
-      'longitude': position.longitude,
-      'target_time': targetTime.toUtc().toIso8601String(),
-    }).select().single();
+  Future<void> createPin(
+    String squadId,
+    String userId,
+    LatLng position,
+    DateTime targetTime,
+  ) async {
+    final pinResponse = await _supabase
+        .from('squad_pins')
+        .insert({
+          'squad_id': squadId,
+          'creator_id': userId,
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'target_time': targetTime.toUtc().toIso8601String(),
+        })
+        .select()
+        .single();
 
     await _supabase.from('squad_pin_joins').insert({
       'pin_id': pinResponse['id'],
@@ -162,21 +194,28 @@ class SupabaseSquadRepository implements SquadRepository {
   @override
   Stream<List<SquadPin>> subscribeToPins(String squadId) {
     _pinsChannel?.unsubscribe();
-    
+
     _pinsChannel = _supabase.channel('public:squad_pins_events_$squadId');
 
-    _pinsChannel!.onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'squad_pins',
-      filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'squad_id', value: squadId),
-      callback: (_) => _fetchPins(squadId),
-    ).onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'squad_pin_joins',
-      callback: (_) => _fetchPins(squadId),
-    ).subscribe();
+    _pinsChannel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'squad_pins',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'squad_id',
+            value: squadId,
+          ),
+          callback: (_) => _fetchPins(squadId),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'squad_pin_joins',
+          callback: (_) => _fetchPins(squadId),
+        )
+        .subscribe();
 
     _fetchPins(squadId);
     return _pinsController.stream;
@@ -188,9 +227,17 @@ class SupabaseSquadRepository implements SquadRepository {
           .from('squad_pins')
           .select('*, squad_pin_joins(user_id)')
           .eq('squad_id', squadId)
-          .gte('target_time', DateTime.now().subtract(const Duration(hours: 2)).toUtc().toIso8601String());
+          .gte(
+            'target_time',
+            DateTime.now()
+                .subtract(const Duration(hours: 2))
+                .toUtc()
+                .toIso8601String(),
+          );
 
-      final pins = (response as List).map((json) => SquadPin.fromJson(json)).toList();
+      final pins = (response as List)
+          .map((json) => SquadPin.fromJson(json))
+          .toList();
       _pinsController.add(pins);
     } catch (e) {
       debugPrint('Error fetching pins: $e');

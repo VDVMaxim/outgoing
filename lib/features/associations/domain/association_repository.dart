@@ -1,4 +1,4 @@
-import 'package:flutter_clubapp/core/models/association.dart';
+import 'package:flutter_clubapp/features/associations/domain/models/association.dart';
 
 abstract class AssociationRepository {
   Future<List<Association>> getAllAssociations();

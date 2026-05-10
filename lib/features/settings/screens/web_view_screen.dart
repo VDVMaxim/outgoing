@@ -12,7 +12,6 @@ class WebViewScreen extends StatefulWidget {
 }
 
 class _WebViewScreenState extends State<WebViewScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -25,12 +24,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open link'))
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not open link')));
       }
     }
-    
+
     if (mounted) {
       Navigator.pop(context);
     }

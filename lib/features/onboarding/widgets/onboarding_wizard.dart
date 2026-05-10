@@ -20,7 +20,7 @@ class OnboardingWizard extends StatefulWidget {
   final VoidCallback onComplete;
   final bool showProgressIndicator;
   final bool Function(int currentStep, int totalSteps)?
-      showProgressIndicatorForStep;
+  showProgressIndicatorForStep;
   final bool showBackButton;
   final bool showNextButton;
   final bool Function(int currentStep, int totalSteps)? showNextButtonForStep;
@@ -44,7 +44,7 @@ class OnboardingWizard extends StatefulWidget {
 
   @override
   // FIX: Verwijzing is nu publiek (zonder underscore)
-  State<OnboardingWizard> createState() => OnboardingWizardState(); 
+  State<OnboardingWizard> createState() => OnboardingWizardState();
 }
 
 // FIX: Klasse is nu publiek gemaakt door de underscore weg te halen!
@@ -167,7 +167,8 @@ class OnboardingWizardState extends State<OnboardingWizard> {
                         Icons.arrow_back,
                         color: isDark ? Colors.white : Colors.black,
                       ),
-                      onPressed: goToPreviousPage, // Gebruik de publieke functie
+                      onPressed:
+                          goToPreviousPage, // Gebruik de publieke functie
                     )
                   : null,
               title: Text(
@@ -221,7 +222,10 @@ class OnboardingWizardState extends State<OnboardingWizard> {
                   setState(() => _currentStep = index);
                 },
                 children: widget.steps.map((step) {
-                  return step.build(context, refreshCurrentStep); // Gebruik publieke functie
+                  return step.build(
+                    context,
+                    refreshCurrentStep,
+                  ); // Gebruik publieke functie
                 }).toList(),
               ),
             ),
@@ -243,7 +247,9 @@ class OnboardingWizardState extends State<OnboardingWizard> {
                   width: double.infinity,
                   height: 56,
                   child: ShadButton(
-                    onPressed: _isLoading ? null : goToNextPage, // Gebruik publieke functie
+                    onPressed: _isLoading
+                        ? null
+                        : goToNextPage, // Gebruik publieke functie
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:flutter_clubapp/core/providers/follow_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/follow_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
+
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
 
 class PublicProfileScreen extends ConsumerWidget {
@@ -11,14 +12,22 @@ class PublicProfileScreen extends ConsumerWidget {
 
   const PublicProfileScreen({super.key, required this.userId});
 
-  Future<void> _toggleFollow(BuildContext context, WidgetRef ref, bool isFollowing) async {
-    final currentUserId = ref.read(userProfileServiceProvider).authUserId;
+  Future<void> _toggleFollow(
+    BuildContext context,
+    WidgetRef ref,
+    bool isFollowing,
+  ) async {
+    final currentUserId = ref.read(userProfileProvider).authUserId;
     if (currentUserId == null) return;
 
     if (isFollowing) {
-      await ref.read(followControllerProvider.notifier).unfollowUser(userId, currentUserId);
+      await ref
+          .read(followControllerProvider.notifier)
+          .unfollowUser(userId, currentUserId);
     } else {
-      await ref.read(followControllerProvider.notifier).followUser(userId, currentUserId);
+      await ref
+          .read(followControllerProvider.notifier)
+          .followUser(userId, currentUserId);
     }
   }
 
@@ -26,7 +35,7 @@ class PublicProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final profileAsync = ref.watch(profileStatsProvider(userId));
-    final isMyProfile = ref.read(userProfileServiceProvider).authUserId == userId;
+    final isMyProfile = ref.read(userProfileProvider).authUserId == userId;
     final isProcessing = ref.watch(followControllerProvider).isLoading;
 
     return Scaffold(
@@ -35,13 +44,19 @@ class PublicProfileScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: profileAsync.when(
           data: (profile) => Text(
             profile?.nickname ?? AppLocalizations.of(context)!.navProfile,
-            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           loading: () => const Text(''),
           error: (_, _) => Text(AppLocalizations.of(context)!.error),
@@ -49,10 +64,17 @@ class PublicProfileScreen extends ConsumerWidget {
       ),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text(AppLocalizations.of(context)!.errorLoadingProfile)),
+        error: (e, st) => Center(
+          child: Text(AppLocalizations.of(context)!.errorLoadingProfile),
+        ),
         data: (profile) {
           if (profile == null) {
-            return Center(child: Text(AppLocalizations.of(context)!.userNotFound, style: const TextStyle(color: Colors.grey)));
+            return Center(
+              child: Text(
+                AppLocalizations.of(context)!.userNotFound,
+                style: const TextStyle(color: Colors.grey),
+              ),
+            );
           }
 
           return ListView(
@@ -60,14 +82,26 @@ class PublicProfileScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  UserAvatar(name: profile.nickname, imageUrl: profile.avatarUrl, size: 80),
+                  UserAvatar(
+                    name: profile.nickname,
+                    imageUrl: profile.avatarUrl,
+                    size: 80,
+                  ),
                   const SizedBox(width: 24),
                   Expanded(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildStatColumn(AppLocalizations.of(context)!.followers, profile.followerCount.toString(), isDark),
-                        _buildStatColumn(AppLocalizations.of(context)!.following, profile.followingCount.toString(), isDark),
+                        _buildStatColumn(
+                          AppLocalizations.of(context)!.followers,
+                          profile.followerCount.toString(),
+                          isDark,
+                        ),
+                        _buildStatColumn(
+                          AppLocalizations.of(context)!.following,
+                          profile.followingCount.toString(),
+                          isDark,
+                        ),
                       ],
                     ),
                   ),
@@ -78,7 +112,7 @@ class PublicProfileScreen extends ConsumerWidget {
                 Text(
                   profile.bio!,
                   style: TextStyle(
-                    fontSize: 15, 
+                    fontSize: 15,
                     color: isDark ? Colors.white70 : Colors.black87,
                     height: 1.4,
                   ),
@@ -90,15 +124,32 @@ class PublicProfileScreen extends ConsumerWidget {
                   width: double.infinity,
                   child: profile.isFollowing
                       ? ShadButton.outline(
-                          onPressed: isProcessing ? null : () => _toggleFollow(context, ref, true),
-                          child: isProcessing 
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          onPressed: isProcessing
+                              ? null
+                              : () => _toggleFollow(context, ref, true),
+                          child: isProcessing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : Text(AppLocalizations.of(context)!.unfollow),
                         )
                       : ShadButton(
-                          onPressed: isProcessing ? null : () => _toggleFollow(context, ref, false),
-                          child: isProcessing 
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          onPressed: isProcessing
+                              ? null
+                              : () => _toggleFollow(context, ref, false),
+                          child: isProcessing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
                               : Text(AppLocalizations.of(context)!.follow),
                         ),
                 ),
@@ -116,17 +167,17 @@ class PublicProfileScreen extends ConsumerWidget {
         Text(
           count,
           style: TextStyle(
-            fontSize: 20, 
-            fontWeight: FontWeight.bold, 
-            color: isDark ? Colors.white : Colors.black
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 14, 
-            color: isDark ? Colors.white54 : Colors.black54
+            fontSize: 14,
+            color: isDark ? Colors.white54 : Colors.black54,
           ),
         ),
       ],

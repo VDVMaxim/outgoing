@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_clubapp/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_clubapp/l10n/app_localizations.dart';
-import 'package:flutter_clubapp/core/providers/service_providers.dart';
-import 'package:flutter_clubapp/core/providers/follow_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:flutter_clubapp/features/profile/presentation/providers/follow_provider.dart';
 import 'package:flutter_clubapp/core/widgets/user_avatar.dart';
-import 'package:flutter_clubapp/core/widgets/level_indicator.dart';
+import 'package:flutter_clubapp/features/vibe/presentation/widgets/level_indicator.dart';
 import 'package:flutter_clubapp/features/settings/screens/settings_screen.dart';
 import 'package:flutter_clubapp/features/profile/screens/edit_profile_screen.dart';
 import 'package:flutter_clubapp/features/auth/screens/register_screen.dart';
 import 'package:flutter_clubapp/features/auth/screens/login_screen.dart';
-import 'package:flutter_clubapp/features/vibe_system/presentation/screens/vibe_screens.dart';
-import 'package:flutter_clubapp/features/vibe/providers/vibe_provider.dart';
-import 'package:flutter_clubapp/features/associations/providers/association_provider.dart';
+import 'package:flutter_clubapp/features/vibe/presentation/screens/vibe_screens.dart';
+import 'package:flutter_clubapp/features/vibe/presentation/providers/vibe_provider.dart';
+import 'package:flutter_clubapp/features/associations/presentation/providers/association_provider.dart';
 import 'package:flutter_clubapp/features/settings/screens/associations_settings_screen.dart';
 import 'package:flutter_clubapp/features/profile/screens/connections_screen.dart';
 import 'search_users_screen.dart';
@@ -50,18 +51,23 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black;
+    
     final authState = ref.watch(authProvider);
     final isAuth = authState.isAuthenticated;
-    final profileService = ref.watch(userProfileServiceProvider);
+    final isAnonymous = authState.isAnonymous;
+    final isRegisteredUser = isAuth && !isAnonymous;
 
-    final userId = authState.userId ?? profileService.authUserId;
+    final profileState = ref.watch(userProfileProvider);
+
+    final userId = authState.userId ?? profileState.authUserId;
     final profileStatsAsync = userId != null ? ref.watch(profileStatsProvider(userId)) : null;
 
-    final nickname = isAuth 
-        ? (profileStatsAsync?.valueOrNull?.nickname ?? profileService.nickname ?? AppLocalizations.of(context)!.eventsUnknownCrowd) 
-        : (profileService.nickname ?? AppLocalizations.of(context)!.settingsAnonymous);
+    final nickname = profileState.nickname ?? 
+        (isRegisteredUser 
+            ? AppLocalizations.of(context)!.eventsUnknownCrowd 
+            : AppLocalizations.of(context)!.settingsAnonymous);
         
-    final bio = isAuth ? (profileStatsAsync?.valueOrNull?.bio ?? profileService.bio) : null;
+    final bio = profileState.bio ?? profileStatsAsync?.valueOrNull?.bio;
     final followers = profileStatsAsync?.valueOrNull?.followerCount ?? 0;
     final following = profileStatsAsync?.valueOrNull?.followingCount ?? 0;
 
@@ -84,7 +90,7 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => EditNicknameScreen(
-                      initialNickname: profileService.nickname,
+                      initialNickname: profileState.nickname,
                       isAuthenticated: isAuth,
                       onSaved: () {},
                     ),
@@ -97,7 +103,7 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
         ),
         centerTitle: false,
         actions: [
-          if (isAuth)
+          if (isRegisteredUser)
             IconButton(
               icon: Icon(Icons.search, color: textColor),
               onPressed: () {
@@ -113,10 +119,13 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: isAuth 
+      body: isRegisteredUser 
           ? RefreshIndicator(
               onRefresh: () async {
-                if (userId != null) ref.invalidate(profileStatsProvider(userId));
+                if (userId != null) {
+                  ref.invalidate(profileStatsProvider(userId));
+                  await ref.read(userProfileProvider.notifier).loadProfileFromSupabase();
+                }
                 await ref.read(associationProvider.notifier).loadData();
               },
               child: DefaultTabController(
@@ -132,7 +141,7 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
                             children: [
                               Row(
                                 children: [
-                                  UserAvatar(name: nickname, imageUrl: profileService.avatarUrl, size: 80),
+                                  UserAvatar(name: nickname, imageUrl: profileState.avatarUrl, size: 80),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Row(
@@ -390,8 +399,8 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
 
   Widget _buildAssociationsTab(bool isDark, WidgetRef ref) {
     final assocState = ref.watch(associationProvider);
-    final memberships = assocState.value?.userAssociations ?? []; 
-
+    final memberships = assocState.value?.userAssociations ?? [];
+    
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -409,7 +418,7 @@ class _ProfileTabScreenState extends ConsumerState<ProfileTabScreen> {
           ...memberships.map((membership) {
             final assoc = membership.association;
             if (assoc == null) return const SizedBox.shrink();
-            
+             
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(

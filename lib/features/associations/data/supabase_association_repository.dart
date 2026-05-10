@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_clubapp/core/models/association.dart';
+import 'package:flutter_clubapp/features/associations/domain/models/association.dart';
 import '../domain/association_repository.dart';
 
 class SupabaseAssociationRepository implements AssociationRepository {
@@ -13,7 +13,7 @@ class SupabaseAssociationRepository implements AssociationRepository {
         .from('associations')
         .select('*, association_tags(tags(name))')
         .order('name');
-    
+
     return (response as List)
         .map((json) => Association.fromJson(json))
         .toList();
@@ -36,7 +36,7 @@ class SupabaseAssociationRepository implements AssociationRepository {
     await _client.from('association_members').insert({
       'association_id': associationId,
       'user_id': userId,
-      'role': 'pending'
+      'role': 'pending',
     });
   }
 
